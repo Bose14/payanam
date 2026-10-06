@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RideSync — Motorcycle Group Riding Platform</title>
+  
+  <!-- Leaflet CSS for dark map integration -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="dark-theme">
+  <!-- Device Shell Wrapper for Mobile-First Testing -->
+  <div class="app-layout-wrapper">
+    <!-- Mobile Screen Container -->
+    <div class="mobile-frame" id="mobileFrame">
+      
+      <!-- Top Status Bar (Simulated Mobile Header) -->
+      <header class="mobile-status-bar">
+        <span class="status-time" id="statusClock">05:30</span>
+        <div class="status-indicators">
+          <span class="signal-icon">⚡ RideSync DB</span>
+          <span class="battery-icon" id="headerBattery">🔋 92%</span>
+        </div>
+      </header>
+
+      <!-- Main Screens Container -->
+      <main class="app-screens">
+        
+        <!-- SCREEN 0: PHONE & OTP AUTHENTICATION -->
+        <section id="screenAuth" class="screen">
+          <div class="auth-screen-content">
+            <div class="auth-hero-header">
+              <div class="auth-logo-badge">🏍️</div>
+              <h1 class="auth-hero-title">RideSync</h1>
+              <p class="auth-hero-sub">Plan, navigate, track and coordinate motorcycle group rides together live.</p>
+            </div>
+
+            <!-- Auth Step 1: Phone Number Input -->
+            <div id="authStepPhone" class="auth-card-body">
+              <label class="sub-text" style="display:block; margin-bottom:8px; font-weight:600;">ENTER YOUR PHONE NUMBER</label>
+              
+              <div class="phone-input-combo">
+                <select id="authCountryCode" class="country-select">
+                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+971">🇦🇪 +971</option>
+                  <option value="+61">🇦🇺 +61</option>
+                </select>
+                <input type="tel" id="authPhoneInput" class="phone-input-field" placeholder="98765 43210" maxlength="15" />
+              </div>
+
+              <button class="btn-auth-action" onclick="RideSyncAuth.requestOtp()">
+                <span>Get 6-Digit OTP</span>
+                <span>→</span>
+              </button>
+
+              <div class="auth-divider">
+                <span>OR 1-TAP TEST ACCOUNTS IN DB</span>
+              </div>
+
+              <!-- Quick DB Rider Accounts Picker -->
+              <div class="quick-accounts-section">
+                <div class="quick-accounts-title">
+                  <span>Pre-Configured DB Riders</span>
+                  <span style="color:var(--accent-cyan); font-size:10px;">PostgreSQL Ready</span>
+                </div>
+                <div class="quick-accounts-grid">
+                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-bose')">
+                    <div class="account-left">
+                      <div class="account-avatar" style="background:#FF6B00">B</div>
+                      <div class="account-info">
+                        <div class="account-name-row">
+                          <span class="account-name">Bose</span>
+                          <span class="account-role-tag">Lead</span>
+                        </div>
+                        <span class="account-bike">KTM 390 Adventure · +91 98765 43210</span>
+                      </div>
+                    </div>
+                    <span class="account-quick-arrow">›</span>
+                  </div>
+
+                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-arun')">
+                    <div class="account-left">
+                      <div class="account-avatar" style="background:#00E5FF">A</div>
+                      <div class="account-info">
+                        <div class="account-name-row">
+                          <span class="account-name">Arun</span>
+                          <span class="account-role-tag" style="background:rgba(0,229,255,0.2); color:var(--accent-cyan);">Sweeper</span>
+                        </div>
+                        <span class="account-bike">BMW G310 GS · +91 98765 43211</span>
+                      </div>
+                    </div>
+                    <span class="account-quick-arrow">›</span>
+                  </div>
+
+                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-karthi')">
+                    <div class="account-left">
+                      <div class="account-avatar" style="background:#FFD600; color:#000;">K</div>
+                      <div class="account-info">
+                        <div class="account-name-row">
+                          <span class="account-name">Karthi</span>
+                          <span class="account-role-tag" style="background:rgba(255,214,0,0.2); color:var(--accent-amber);">Rider</span>
+                        </div>
+                        <span class="account-bike">RE Hunter 350 · +91 98765 43212</span>
+                      </div>
+                    </div>
+                    <span class="account-quick-arrow">›</span>
+                  </div>
+
+                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-vicky')">
+                    <div class="account-left">
+                      <div class="account-avatar" style="background:#00E676; color:#000;">V</div>
+                      <div class="account-info">
+                        <div class="account-name-row">
+                          <span class="account-name">Vicky</span>
+                          <span class="account-role-tag" style="background:rgba(0,230,118,0.2); color:var(--accent-green);">Rider</span>
+                        </div>
+                        <span class="account-bike">Scrambler 400X · +91 98765 43213</span>
+                      </div>
+                    </div>
+                    <span class="account-quick-arrow">›</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Auth Step 2: OTP Verification -->
+            <div id="authStepOtp" class="auth-card-body" style="display:none;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                <button class="btn-link-action" onclick="RideSyncAuth.resetOtpState()">← Change Number</button>
+                <span class="badge-ready">SMS Sent ⚡</span>
+              </div>
+
+              <h3 style="font-size:18px; margin-bottom:4px;">Enter 6-Digit OTP</h3>
+              <p class="sub-text">Sent to <strong id="authPhoneDisplay" style="color:var(--text-primary);">+91 98765 43210</strong></p>
+
+              <div class="otp-inputs">
+                <input type="text" maxlength="1" class="otp-digit" />
+                <input type="text" maxlength="1" class="otp-digit" />
+                <input type="text" maxlength="1" class="otp-digit" />
+                <input type="text" maxlength="1" class="otp-digit" />
+                <input type="text" maxlength="1" class="otp-digit" />
+                <input type="text" maxlength="1" class="otp-digit" />
+              </div>
+
+              <button class="btn-auth-action" onclick="RideSyncAuth.verifyOtp()">
+                <span>Verify & Ride 🏍️</span>
+              </button>
+
+              <div class="otp-resend-row">
+                <span style="color:var(--text-muted);">Didn't receive SMS?</span>
+                <button id="btnResendOtp" class="btn-link-action" disabled onclick="RideSyncAuth.requestOtp()">Resend in 30s</button>
+              </div>
+            </div>
+
+            <!-- Auth Step 3: New Rider Profile Setup -->
+            <div id="authStepProfile" class="auth-card-body" style="display:none;">
+              <h3 style="font-size:18px; margin-bottom:4px;">Setup Rider Profile</h3>
+              <p class="sub-text" style="margin-bottom:16px;">New rider account detected. Complete your setup for group safety.</p>
+
+              <div class="input-group">
+                <label>Verified Phone</label>
+                <input type="text" id="newProfilePhone" class="app-input" disabled />
+              </div>
+
+              <div class="input-group">
+                <label>Full Name / Rider Tag</label>
+                <input type="text" id="newProfileName" class="app-input" placeholder="e.g. Alex Rider" />
+              </div>
+
+              <div class="input-row-2">
+                <div class="input-group">
+                  <label>Motorcycle Model</label>
+                  <input type="text" id="newProfileBike" class="app-input" placeholder="e.g. Duke 390 / Himalayan" />
+                </div>
+                <div class="input-group">
+                  <label>Blood Group</label>
+                  <select id="newProfileBlood" class="app-input">
+                    <option value="O+ve">O +ve</option>
+                    <option value="A+ve">A +ve</option>
+                    <option value="B+ve">B +ve</option>
+                    <option value="AB+ve">AB +ve</option>
+                    <option value="O-ve">O -ve</option>
+                    <option value="A-ve">A -ve</option>
+                    <option value="B-ve">B -ve</option>
+                    <option value="AB-ve">AB -ve</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label>Emergency Contact Name</label>
+                <input type="text" id="newProfileEmergencyName" class="app-input" placeholder="e.g. Rahul (Brother)" />
+              </div>
+
+              <div class="input-group">
+                <label>Emergency Contact Phone</label>
+                <input type="tel" id="newProfileEmergencyPhone" class="app-input" placeholder="+91 98765 00000" />
+              </div>
+
+              <button class="btn-auth-action" onclick="RideSyncAuth.completeNewRiderRegistration()">
+                <span>Save Profile & Start Riding 🚀</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SCREEN 1: HOME SCREEN -->
+        <section id="screenHome" class="screen active">
+          <div class="screen-header">
+            <div>
+              <p class="greeting-sub">Good morning, Rider</p>
+              <h1 class="user-greeting">Bose 👋</h1>
+            </div>
+            <div class="profile-badge-btn" onclick="openProfileModal()">
+              <div class="avatar-ring">
+                <span class="avatar-initial">B</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Stats Pill (Dynamically loaded from DB) -->
+          <div class="stats-ribbon">
+            <div class="stat-item">
+              <span class="stat-val" id="statGroupRides">14</span>
+              <span class="stat-lbl">Group Rides</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-val" id="statTotalKm">3,840</span>
+              <span class="stat-lbl">Total KM</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-val" id="statCurrentBike">KTM 390</span>
+              <span class="stat-lbl">Current Bike</span>
+            </div>
+          </div>
+
+          <!-- Primary Action Buttons -->
+          <div class="home-primary-actions">
+            <button class="btn btn-primary" onclick="navigateTo('screenCreateRide')">
+              <span class="btn-icon">🏍️</span>
+              <div class="btn-text-block">
+                <span class="btn-title">Create Group Ride</span>
+                <span class="btn-desc">Plan route & invite riders</span>
+              </div>
+            </button>
+            <button class="btn btn-secondary" onclick="openJoinModal()">
+              <span class="btn-icon">🔗</span>
+              <div class="btn-text-block">
+                <span class="btn-title">Join with Code</span>
+                <span class="btn-desc">Enter ride invite code</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Upcoming Active Rides Section -->
+          <div class="section-title-row">
+            <h2>Active & Upcoming Rides</h2>
+            <span class="badge-count" id="badgeActiveCount">1 active</span>
+          </div>
+
+          <div id="homeActiveRidesContainer">
+            <!-- Dynamically populated from DB -->
+          </div>
+
+          <!-- Recent Past Rides -->
+          <div class="section-title-row" style="margin-top: 24px;">
+            <h2>Recent Completed</h2>
+            <a href="javascript:void(0)" onclick="navigateTo('screenHistory')" class="link-see-all">View All</a>
+          </div>
+
+          <div id="homeRecentRidesContainer">
+            <!-- Dynamically populated from DB -->
+          </div>
+        </section>
+
+        <!-- SCREEN 2: CREATE RIDE & ROUTE BUILDER -->
+        <section id="screenCreateRide" class="screen">
+          <div class="screen-top-bar">
+            <button class="icon-back-btn" onclick="navigateTo('screenHome')">←</button>
+            <h2>Plan Group Ride</h2>
+            <button class="btn-ghost-save" onclick="saveAndProceedToLobby()">Save</button>
+          </div>
+
+          <div class="form-scrollable">
+            <div class="input-group">
+              <label>Ride Name</label>
+              <input type="text" id="inputRideName" class="app-input" value="Kodaikanal Weekend Ride" placeholder="e.g. Ooty Monsoon Ride" />
+            </div>
+
+            <div class="input-row-2">
+              <div class="input-group">
+                <label>Date</label>
+                <input type="date" class="app-input" id="inputRideDate" value="2026-10-10" />
+              </div>
+              <div class="input-group">
+                <label>Start Time</label>
+                <input type="time" class="app-input" id="inputRideTime" value="05:00" />
+              </div>
+            </div>
+
+            <!-- Route Waypoints Section -->
+            <div class="section-title-row" style="margin-top: 16px;">
+              <div>
+                <h3 style="margin:0; font-size:16px;">Route & Stops (OSRM Ready)</h3>
+                <p class="sub-text">Drag or add fuel, tea, and viewpoints</p>
+              </div>
+              <button class="btn-pill-action" onclick="openDiscoveryModal()">+ Discover Stops</button>
+            </div>
+
+            <div class="waypoint-list" id="waypointList">
+              <!-- Rendered dynamically from DB -->
+            </div>
+
+            <button class="btn-add-stop" onclick="promptAddCustomStop()">
+              ➕ Add Custom Stop / Waypoint
+            </button>
+
+            <!-- Planned Route Overview Box -->
+            <div class="route-preview-box">
+              <div class="route-stat">
+                <span class="lbl">Road Distance (OSRM)</span>
+                <span class="val" id="routeTotalDistance">324.8 km</span>
+              </div>
+              <div class="route-stat">
+                <span class="lbl">Riding Duration</span>
+                <span class="val" id="routeTotalTime">8 hrs 30 mins</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SCREEN 3: RIDE LOBBY -->
+        <section id="screenRideLobby" class="screen">
+          <div class="screen-top-bar">
+            <button class="icon-back-btn" onclick="navigateTo('screenHome')">←</button>
+            <h2>Ride Lobby</h2>
+            <button class="icon-share-btn" onclick="shareRideCode()">📤</button>
+          </div>
+
+          <div class="lobby-content">
+            <div class="lobby-banner">
+              <span class="badge-code">RIDE CODE: <strong id="lobbyRideCode">KODAI26</strong></span>
+              <h2 class="lobby-ride-title" id="lobbyRideTitle">Kodaikanal Weekend Ride</h2>
+              <p class="lobby-ride-date" id="lobbyRideDateTime">Saturday, Oct 10 · 05:00 AM Departure</p>
+            </div>
+
+            <!-- Share Invite Link Box -->
+            <div class="invite-box" onclick="copyInviteLink()">
+              <div class="invite-info">
+                <span class="invite-title">Invite your riding group</span>
+                <span class="invite-sub" id="lobbyInviteLink">ridesync.app/join/KODAI26</span>
+              </div>
+              <button class="btn-copy">Copy</button>
+            </div>
+
+            <!-- Riders Joined List -->
+            <div class="section-title-row">
+              <h3 id="lobbyRidersCountHeader">Riders Joined (4)</h3>
+              <span class="badge-ready" id="lobbyReadyBadge">3 Ready</span>
+            </div>
+
+            <div class="lobby-rider-list" id="lobbyRiderListContainer">
+              <!-- Dynamically populated from DB -->
+            </div>
+
+            <div class="lobby-actions">
+              <button class="btn btn-primary btn-large-start" onclick="startLiveRideSession()">
+                🚀 START LIVE RIDE NOW
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SCREEN 4: LIVE RIDE MAP (PRIMARY SCREEN) -->
+        <section id="screenLiveMap" class="screen">
+          
+          <!-- Live Top Floating Header -->
+          <div class="live-map-header">
+            <div class="live-left">
+              <button class="btn-header-back" onclick="confirmExitRide()">←</button>
+              <div>
+                <span class="live-status-pill">
+                  <span class="live-pulse"></span> LIVE RIDE
+                </span>
+                <h3 class="live-ride-heading" id="liveRideHeading">Kodaikanal Weekend Ride</h3>
+              </div>
+            </div>
+            <div class="live-header-actions">
+              <button class="btn-icon-map" title="Toggle Simulation" onclick="toggleTelemetrySim()">
+                <span id="simBtnIcon">⏸️</span>
+              </button>
+              <button class="btn-icon-map" title="Ride Chat" onclick="toggleChatSheet()">
+                💬 <span class="badge-unread" id="unreadBadge">1</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Alert Warning Banners (Dynamic: Separation & Deviation) -->
+          <div class="live-alerts-container" id="liveAlertsContainer">
+            <!-- Alerts rendered dynamically -->
+          </div>
+
+          <!-- Full Screen Map Viewport -->
+          <div id="liveRideMap" class="map-viewport"></div>
+
+          <!-- Map Overlay Floating Controls -->
+          <div class="map-overlay-controls">
+            <button class="map-btn-floating" onclick="recenterOnGroup()" title="Recenter on Group">
+              🎯 Recenter
+            </button>
+            <button class="map-btn-floating" onclick="openAddPinDialog()" title="Drop Custom Pin">
+              📍 Drop Pin
+            </button>
+          </div>
+
+          <!-- Glove-Friendly Quick Action Bar -->
+          <div class="glove-action-bar">
+            <button class="glove-btn tea" onclick="triggerQuickAction('tea', '☕ Tea Stop')">
+              <span class="glove-icon">☕</span>
+              <span class="glove-lbl">TEA</span>
+            </button>
+            <button class="glove-btn fuel" onclick="triggerQuickAction('fuel', '⛽ Fuel Stop')">
+              <span class="glove-icon">⛽</span>
+              <span class="glove-lbl">FUEL</span>
+            </button>
+            <button class="glove-btn food" onclick="triggerQuickAction('food', '🍴 Food Stop')">
+              <span class="glove-icon">🍴</span>
+              <span class="glove-lbl">FOOD</span>
+            </button>
+            <button class="glove-btn photo" onclick="triggerQuickAction('photo', '📸 Photo Stop')">
+              <span class="glove-icon">📸</span>
+              <span class="glove-lbl">PHOTO</span>
+            </button>
+            <button class="glove-btn sos" onclick="triggerSosEmergency()">
+              <span class="glove-icon">🚨</span>
+              <span class="glove-lbl">SOS</span>
+            </button>
+          </div>
+
+          <!-- Live Riders Bottom Sheet -->
+          <div class="riders-bottom-sheet" id="ridersBottomSheet">
+            <div class="sheet-drag-handle" onclick="toggleSheetExpand()"></div>
+            
+            <div class="sheet-header">
+              <span class="sheet-title" id="bottomSheetTitle">Group Telemetry (4 Riders)</span>
+              <span class="connection-status-dot connected">Realtime DB Connected</span>
+            </div>
+
+            <div class="rider-telemetry-cards" id="riderCardsContainer">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- SCREEN 5: RIDE COMPLETED SUMMARY -->
+        <section id="screenRideSummary" class="screen">
+          <div class="screen-top-bar">
+            <button class="icon-back-btn" onclick="navigateTo('screenHome')">✕</button>
+            <h2>Ride Summary</h2>
+            <button class="icon-share-btn" onclick="shareRideSummary()">📤</button>
+          </div>
+
+          <div class="summary-content">
+            <div class="summary-hero-card">
+              <div class="summary-badge">🏆 RIDE COMPLETED</div>
+              <h2 class="summary-title" id="summaryRideTitle">Kodaikanal Weekend Ride</h2>
+              <p class="summary-date">Completed · Stored in Database</p>
+
+              <div class="summary-big-metrics">
+                <div class="big-metric">
+                  <span class="bm-val" id="summaryDistanceVal">324.8</span>
+                  <span class="bm-unit">km</span>
+                  <span class="bm-lbl">Distance</span>
+                </div>
+                <div class="big-metric">
+                  <span class="bm-val">8h 42m</span>
+                  <span class="bm-unit">total</span>
+                  <span class="bm-lbl">Duration</span>
+                </div>
+                <div class="big-metric">
+                  <span class="bm-val">68.4</span>
+                  <span class="bm-unit">km/h</span>
+                  <span class="bm-lbl">Avg Speed</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-title-row">
+              <h3>Stops Completed</h3>
+            </div>
+
+            <div class="completed-stops-timeline" id="summaryStopsContainer">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <div class="summary-footer-actions">
+              <button class="btn btn-primary" onclick="navigateTo('screenHome')">Back to Home</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SCREEN 6: RIDE HISTORY -->
+        <section id="screenHistory" class="screen">
+          <div class="screen-top-bar">
+            <button class="icon-back-btn" onclick="navigateTo('screenHome')">←</button>
+            <h2>Ride History</h2>
+            <div></div>
+          </div>
+
+          <div class="history-list" id="historyListContainer">
+            <!-- Rendered dynamically from DB -->
+          </div>
+        </section>
+
+      </main>
+
+      <!-- Bottom Nav Bar -->
+      <nav class="bottom-nav">
+        <button class="nav-item active" id="navHome" onclick="navigateTo('screenHome')">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item" id="navPlan" onclick="navigateTo('screenCreateRide')">
+          <span class="nav-icon">🗺️</span>
+          <span class="nav-label">Plan</span>
+        </button>
+        <button class="nav-item" id="navLive" onclick="openLiveRide()">
+          <span class="nav-icon">🏍️</span>
+          <span class="nav-label">Live Ride</span>
+        </button>
+        <button class="nav-item" id="navHistory" onclick="navigateTo('screenHistory')">
+          <span class="nav-icon">📜</span>
+          <span class="nav-label">History</span>
+        </button>
+      </nav>
+
+    </div><!-- End Mobile Frame -->
+
+    <!-- Web Simulator Control Side Panel -->
+    <aside class="desktop-side-panel">
+      <div class="panel-header">
+        <h2>🛠️ RideSync Telemetry Engine</h2>
+        <span class="badge-dev">DB & Map Architecture</span>
+      </div>
+
+      <p class="panel-desc">
+        Demonstrates live multi-rider peer telemetry, PostGIS corridor projection, separation alerts, glove-friendly quick coordination, and phone OTP database auth.
+      </p>
+
+      <!-- Active DB Profile Quick Switcher -->
+      <div class="control-box">
+        <h3>Current DB Session</h3>
+        <div class="quick-accounts-grid" id="panelQuickAccounts">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Simulation Controller Box -->
+      <div class="control-box">
+        <h3>Live Group Telemetry Simulation</h3>
+        <div class="btn-grid">
+          <button class="panel-btn" onclick="simulateSeparationAlert()">
+            ⚠️ Trigger Karthi Separation (2.4 km)
+          </button>
+          <button class="panel-btn" onclick="simulateOffRouteAlert()">
+            ⚠️ Trigger Route Deviation (>200m)
+          </button>
+          <button class="panel-btn" onclick="simulatePeerSos()">
+            🚨 Trigger Peer SOS Emergency
+          </button>
+          <button class="panel-btn" onclick="resetSimNormal()">
+            🔄 Reset Normal Formation
+          </button>
+        </div>
+      </div>
+
+      <!-- Config / Environment Keys Modal Launcher -->
+      <div class="control-box">
+        <h3>Database & Map Data Configuration</h3>
+        <p class="sub-text">Switch map tiles (Carto Dark, OSM, Stadia, Satellite) and inspect local SQLite database.</p>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="panel-btn-primary" onclick="openDbInspectorModal()" style="background:linear-gradient(135deg, #00E5FF, #0091EA); color:#000; font-weight:800;">
+            🗄️ View SQLite Tables (ridesync.db)
+          </button>
+          <button class="panel-btn-primary" onclick="openConfigModal()">
+            ⚙️ Configure Map & Supabase API
+          </button>
+        </div>
+      </div>
+
+      <div class="control-box">
+        <h3>Active Algorithm Status</h3>
+        <ul class="algo-status-list">
+          <li><strong>Database Engine:</strong> Local SQLite (ridesync.db on port 5000)</li>
+          <li><strong>Routing:</strong> OSRM Real Highway Corridors active</li>
+          <li><strong>Geocoding:</strong> Photon & Nominatim live search active</li>
+          <li><strong>Corridor Deviation:</strong> 200m radius PostGIS filter</li>
+          <li><strong>Separation Debounce:</strong> 40s persistence active</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <!-- MODAL: PROFILE & SETTINGS -->
+  <div class="modal-backdrop" id="modalProfile">
+    <div class="modal-card profile-modal-card">
+      <div class="modal-header">
+        <h3>Rider Profile</h3>
+        <button class="modal-close" onclick="closeModal('modalProfile')">✕</button>
+      </div>
+
+      <div class="profile-card-badge">
+        <div class="profile-avatar-large" id="profileModalAvatar">B</div>
+        <div>
+          <h3 id="profileModalName" style="font-size:18px; margin-bottom:2px;">Bose</h3>
+          <p id="profileModalPhone" style="font-size:12px; color:var(--text-secondary);">+91 98765 43210</p>
+          <span class="account-role-tag" id="profileModalRole" style="margin-top:4px; display:inline-block;">Lead</span>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Motorcycle</label>
+        <input type="text" id="profileEditBike" class="app-input" />
+      </div>
+
+      <div class="input-row-2">
+        <div class="input-group">
+          <label>Blood Group</label>
+          <input type="text" id="profileEditBlood" class="app-input" />
+        </div>
+        <div class="input-group">
+          <label>Total KM</label>
+          <input type="text" id="profileEditKm" class="app-input" disabled />
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Emergency Contact</label>
+        <input type="text" id="profileEditEmergencyName" class="app-input" placeholder="Name" />
+      </div>
+      <div class="input-group">
+        <label>Emergency Phone</label>
+        <input type="text" id="profileEditEmergencyPhone" class="app-input" placeholder="Phone" />
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveProfileChanges()">Save Profile</button>
+        <button class="btn btn-secondary" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="RideSyncAuth.logout()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: JOIN RIDE WITH CODE -->
+  <div class="modal-backdrop" id="modalJoinRide">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Join Ride with Code</h3>
+        <button class="modal-close" onclick="closeModal('modalJoinRide')">✕</button>
+      </div>
+      <div class="input-group">
+        <label>Enter 6-8 Character Ride Code</label>
+        <input type="text" id="inputJoinRideCode" class="app-input" placeholder="e.g. KODAI26" style="text-transform:uppercase; font-size:20px; letter-spacing:2px; font-weight:800; text-align:center;" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" style="width:100%;" onclick="submitJoinRide()">Join Group Ride</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PLACE DISCOVERY -->
+  <div class="modal-backdrop" id="modalPlaceDiscovery">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Discover Stops & Viewpoints</h3>
+        <button class="modal-close" onclick="closeModal('modalPlaceDiscovery')">✕</button>
+      </div>
+      <div class="discovery-search">
+        <input type="text" id="discoverySearchInput" class="app-input" placeholder="Live search stops along route (e.g. Ooty, Fuel, Falls)..." oninput="handlePlaceSearchInput(this.value)" />
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div class="category-pills">
+        <button class="cat-pill active" onclick="filterPlaceCategory(this, 'all')">🌟 All</button>
+        <button class="cat-pill" onclick="filterPlaceCategory(this, 'Viewpoints')">📸 Viewpoints</button>
+        <button class="cat-pill" onclick="filterPlaceCategory(this, 'Tea')">☕ Tea & Coffee</button>
+        <button class="cat-pill" onclick="filterPlaceCategory(this, 'Fuel')">⛽ Fuel</button>
+        <button class="cat-pill" onclick="filterPlaceCategory(this, 'Food')">🍴 Food</button>
+      </div>
+
+      <div class="places-list" id="placesList">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IN-RIDE CHAT -->
+  <div class="modal-backdrop" id="modalChat">
+    <div class="modal-card chat-modal">
+      <div class="modal-header">
+        <h3 id="chatModalHeader">Ride Group Chat</h3>
+        <button class="modal-close" onclick="closeModal('modalChat')">✕</button>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Glove Quick Chips -->
+      <div class="quick-chat-chips">
+        <button class="chip" onclick="sendQuickChat('Wait for me! ✋')">Wait for me</button>
+        <button class="chip" onclick="sendQuickChat('Need Fuel ⛽')">Need Fuel</button>
+        <button class="chip" onclick="sendQuickChat('All Good 👍')">All Good</button>
+        <button class="chip" onclick="sendQuickChat('Stopping in 1 km 🛑')">Stopping</button>
+      </div>
+
+      <div class="chat-input-bar">
+        <input type="text" id="chatInputText" placeholder="Type a message..." class="app-input" onkeydown="if(event.key==='Enter') sendTextMessage()" />
+        <button class="btn-send" onclick="sendTextMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: API & MAP CONFIGURATION -->
+  <div class="modal-backdrop" id="modalConfig">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Map Data & Database Settings</h3>
+        <button class="modal-close" onclick="closeModal('modalConfig')">✕</button>
+      </div>
+      <div class="config-fields">
+        <label class="sub-text" style="font-weight:700; display:block; margin-bottom:6px;">MAP TILE PROVIDER</label>
+        <div class="provider-options">
+          <button class="provider-btn active" data-provider="carto-dark" onclick="selectMapProvider(this, 'carto-dark')">🌙 Carto Dark Matter (Cockpit)</button>
+          <button class="provider-btn" data-provider="osm-standard" onclick="selectMapProvider(this, 'osm-standard')">🗺️ OpenStreetMap Standard</button>
+          <button class="provider-btn" data-provider="stadia-dark" onclick="selectMapProvider(this, 'stadia-dark')">✨ Stadia Alidade Dark</button>
+          <button class="provider-btn" data-provider="satellite-hybrid" onclick="selectMapProvider(this, 'satellite-hybrid')">🛰️ Satellite Hybrid</button>
+        </div>
+
+        <div class="input-group">
+          <label>Supabase Project URL (Optional Live PostgreSQL)</label>
+          <input type="text" id="cfgSupabaseUrl" class="app-input" placeholder="https://your-project.supabase.co" />
+        </div>
+        <div class="input-group">
+          <label>Supabase Anon Key</label>
+          <input type="password" id="cfgSupabaseKey" class="app-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+        </div>
+        <div class="input-group">
+          <label>Google Maps / Mapbox API Key (Optional)</label>
+          <input type="password" id="cfgGoogleKey" class="app-input" placeholder="AIzaSy... / pk.eyJ1..." />
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex; gap:10px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveApiConfig()">Save Configuration</button>
+        <button class="btn btn-secondary" onclick="resetDatabaseToDefault()">Reset DB</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LOCAL DATABASE TABLE INSPECTOR -->
+  <div class="modal-backdrop" id="modalDbInspector">
+    <div class="modal-card db-modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size:18px;">🗄️ Local SQLite Database Inspector</h3>
+          <p class="sub-text" style="color:var(--accent-cyan);">ridesync.db &bull; Port 5000 REST API</p>
+        </div>
+        <button class="modal-close" onclick="closeModal('modalDbInspector')">✕</button>
+      </div>
+
+      <!-- Table Selection Tabs -->
+      <div class="db-tabs-row">
+        <button class="db-tab-btn active" onclick="switchDbTable(this, 'profiles')">👤 profiles (5)</button>
+        <button class="db-tab-btn" onclick="switchDbTable(this, 'rides')">🏍️ rides (2)</button>
+        <button class="db-tab-btn" onclick="switchDbTable(this, 'ride_members')">👥 ride_members (7)</button>
+        <button class="db-tab-btn" onclick="switchDbTable(this, 'waypoints')">📍 waypoints (6)</button>
+        <button class="db-tab-btn" onclick="switchDbTable(this, 'ride_pins')">📌 ride_pins</button>
+        <button class="db-tab-btn" onclick="switchDbTable(this, 'ride_messages')">💬 ride_messages</button>
+      </div>
+
+      <!-- SQL Query Runner Box -->
+      <div class="db-sql-box">
+        <input type="text" id="dbCustomSqlInput" class="db-sql-input" value="SELECT id, name, phone, bike_model, emergency_contact_name, total_km FROM profiles" />
+        <button class="btn btn-primary" style="padding:0 16px; font-size:12px;" onclick="runCustomSqlQuery()">Run SQL</button>
+      </div>
+
+      <!-- Data Table Output Container -->
+      <div class="db-table-scroll" id="dbTableContainer">
+        <div style="padding:20px; text-align:center; color:var(--text-muted);">Loading table data from local SQLite...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS Library -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- RideSync Application Scripts -->
+  <script src="db.js"></script>
+  <script src="maps.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+name: ridesync
+description: Production-ready motorcycle group riding application.
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Backend & Realtime
+  supabase_flutter: ^2.3.4
+  
+  # Maps & Location
+  google_maps_flutter: ^2.5.3
+  geolocator: ^11.0.0
+  flutter_polyline_points: ^2.0.0
+  
+  # State Management & Architecture
+  flutter_bloc: ^8.1.3
+  equatable: ^2.0.5
+  get_it: ^7.6.7
+  
+  # Push Notifications
+  firebase_core: ^2.27.0
+  firebase_messaging: ^14.7.10
+  flutter_local_notifications: ^17.0.0
+  
+  # UI & Utilities
+  google_fonts: ^6.1.0
+  intl: ^0.19.0
+  uuid: ^4.3.3
+  cached_network_image: ^3.3.1
+  flutter_svg: ^2.0.9
+  share_plus: ^7.2.2
+  vibration: ^1.8.4
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/map_styles/
+    - assets/icons/

@@ -1,0 +1,7 @@
+{
+  "dbDriver": "local-sqlite",
+  "sqliteFile": "C:\\Users\\asbos\\.gemini\\antigravity-ide\\scratch\\ridesync\\server\\ridesync.db",
+  "supabaseUrl": "",
+  "supabaseAnonKey": "",
+  "postgresUrl": ""
+}
