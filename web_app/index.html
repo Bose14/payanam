@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>RideSync — Motorcycle Group Riding Platform</title>
+  <title>Payanam — Motorcycle Group Riding Platform</title>
   
   <!-- Leaflet CSS for dark map integration -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -25,7 +25,7 @@
       <header class="mobile-status-bar">
         <span class="status-time" id="statusClock">05:30</span>
         <div class="status-indicators">
-          <span class="signal-icon">⚡ RideSync DB</span>
+          <span class="signal-icon">⚡ Payanam DB</span>
           <span class="battery-icon" id="headerBattery">🔋 92%</span>
         </div>
       </header>
@@ -38,7 +38,7 @@
           <div class="auth-screen-content">
             <div class="auth-hero-header">
               <div class="auth-logo-badge">🏍️</div>
-              <h1 class="auth-hero-title">RideSync</h1>
+              <h1 class="auth-hero-title">Payanam</h1>
               <p class="auth-hero-sub">Plan, navigate, track and coordinate motorcycle group rides together live.</p>
             </div>
 
@@ -57,7 +57,7 @@
                 <input type="tel" id="authPhoneInput" class="phone-input-field" placeholder="98765 43210" maxlength="15" />
               </div>
 
-              <button class="btn-auth-action" onclick="RideSyncAuth.requestOtp()">
+              <button class="btn-auth-action" onclick="PayanamAuth.requestOtp()">
                 <span>Get 6-Digit OTP</span>
                 <span>→</span>
               </button>
@@ -73,7 +73,7 @@
                   <span style="color:var(--accent-cyan); font-size:10px;">PostgreSQL Ready</span>
                 </div>
                 <div class="quick-accounts-grid">
-                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-bose')">
+                  <div class="quick-account-btn" onclick="PayanamAuth.quickLoginTestRider('usr-bose')">
                     <div class="account-left">
                       <div class="account-avatar" style="background:#FF6B00">B</div>
                       <div class="account-info">
@@ -87,7 +87,7 @@
                     <span class="account-quick-arrow">›</span>
                   </div>
 
-                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-arun')">
+                  <div class="quick-account-btn" onclick="PayanamAuth.quickLoginTestRider('usr-arun')">
                     <div class="account-left">
                       <div class="account-avatar" style="background:#00E5FF">A</div>
                       <div class="account-info">
@@ -101,7 +101,7 @@
                     <span class="account-quick-arrow">›</span>
                   </div>
 
-                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-karthi')">
+                  <div class="quick-account-btn" onclick="PayanamAuth.quickLoginTestRider('usr-karthi')">
                     <div class="account-left">
                       <div class="account-avatar" style="background:#FFD600; color:#000;">K</div>
                       <div class="account-info">
@@ -115,7 +115,7 @@
                     <span class="account-quick-arrow">›</span>
                   </div>
 
-                  <div class="quick-account-btn" onclick="RideSyncAuth.quickLoginTestRider('usr-vicky')">
+                  <div class="quick-account-btn" onclick="PayanamAuth.quickLoginTestRider('usr-vicky')">
                     <div class="account-left">
                       <div class="account-avatar" style="background:#00E676; color:#000;">V</div>
                       <div class="account-info">
@@ -135,7 +135,7 @@
             <!-- Auth Step 2: OTP Verification -->
             <div id="authStepOtp" class="auth-card-body" style="display:none;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                <button class="btn-link-action" onclick="RideSyncAuth.resetOtpState()">← Change Number</button>
+                <button class="btn-link-action" onclick="PayanamAuth.resetOtpState()">← Change Number</button>
                 <span class="badge-ready">SMS Sent ⚡</span>
               </div>
 
@@ -151,13 +151,13 @@
                 <input type="text" maxlength="1" class="otp-digit" />
               </div>
 
-              <button class="btn-auth-action" onclick="RideSyncAuth.verifyOtp()">
+              <button class="btn-auth-action" onclick="PayanamAuth.verifyOtp()">
                 <span>Verify & Ride 🏍️</span>
               </button>
 
               <div class="otp-resend-row">
                 <span style="color:var(--text-muted);">Didn't receive SMS?</span>
-                <button id="btnResendOtp" class="btn-link-action" disabled onclick="RideSyncAuth.requestOtp()">Resend in 30s</button>
+                <button id="btnResendOtp" class="btn-link-action" disabled onclick="PayanamAuth.requestOtp()">Resend in 30s</button>
               </div>
             </div>
 
@@ -206,7 +206,7 @@
                 <input type="tel" id="newProfileEmergencyPhone" class="app-input" placeholder="+91 98765 00000" />
               </div>
 
-              <button class="btn-auth-action" onclick="RideSyncAuth.completeNewRiderRegistration()">
+              <button class="btn-auth-action" onclick="PayanamAuth.completeNewRiderRegistration()">
                 <span>Save Profile & Start Riding 🚀</span>
               </button>
             </div>
@@ -550,7 +550,7 @@
     <!-- Web Simulator Control Side Panel -->
     <aside class="desktop-side-panel">
       <div class="panel-header">
-        <h2>🛠️ RideSync Telemetry Engine</h2>
+        <h2>🛠️ Payanam Telemetry Engine</h2>
         <span class="badge-dev">DB & Map Architecture</span>
       </div>
 
@@ -656,7 +656,7 @@
 
       <div style="display:flex; gap:10px; margin-top:16px;">
         <button class="btn btn-primary" style="flex:1;" onclick="saveProfileChanges()">Save Profile</button>
-        <button class="btn btn-secondary" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="RideSyncAuth.logout()">Log Out</button>
+        <button class="btn btn-secondary" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="PayanamAuth.logout()">Log Out</button>
       </div>
     </div>
   </div>
@@ -804,7 +804,7 @@
   <!-- Leaflet JS Library -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   
-  <!-- RideSync Application Scripts -->
+  <!-- Payanam Application Scripts -->
   <script src="db.js"></script>
   <script src="maps.js"></script>
   <script src="auth.js"></script>

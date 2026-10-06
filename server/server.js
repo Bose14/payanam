@@ -1,6 +1,6 @@
 /**
  * RideSync Local Database & Backend Server
- * Uses Node 24 native SQLite (DatabaseSync) to manage a physical database file (ridesync.db)
+ * Uses Node 24 native SQLite (DatabaseSync) to manage a physical database file (payanam.db)
  * Exposes REST API for Authentication, OTP, Profiles, Rides, Waypoints, Live Pins & Chat.
  * Allows easy switching to live Supabase / PostgreSQL by updating config.
  */
@@ -11,7 +11,7 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
 const PORT = process.env.PORT || 5000;
-const DB_FILE = path.join(__dirname, 'ridesync.db');
+const DB_FILE = path.join(__dirname, 'payanam.db');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 // 1. Load or Create Configuration
@@ -238,7 +238,7 @@ const server = http.createServer((req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RideSync Local Database Studio (ridesync.db)</title>
+  <title>RideSync Local Database Studio (payanam.db)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -297,7 +297,7 @@ const server = http.createServer((req, res) => {
         <p class="subtitle">SQLite Relational Engine &bull; Native Node 24</p>
       </div>
     </div>
-    <div class="db-path-badge">📁 server/ridesync.db</div>
+    <div class="db-path-badge">📁 server/payanam.db</div>
   </div>
 
   <div class="layout">
