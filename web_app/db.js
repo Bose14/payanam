@@ -104,9 +104,13 @@ const RideSyncDB = (function () {
   function loadMapConfig() {
     try {
       const cfg = localStorage.getItem(MAP_CONFIG_KEY);
-      if (cfg) return JSON.parse(cfg);
+      if (cfg) {
+        const parsed = JSON.parse(cfg);
+        if (parsed.provider === 'carto-dark') parsed.provider = 'google-roadmap';
+        return parsed;
+      }
     } catch (e) {}
-    return { provider: 'carto-dark' };
+    return { provider: 'google-roadmap' };
   }
 
   function saveMapConfig(cfg) {

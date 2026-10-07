@@ -520,9 +520,9 @@ async function initOrUpdateLiveMap() {
       attributionControl: false
     }).setView([centerLat, centerLng], 12);
 
-    // Attach active Tile Layer
+    // Attach active Tile Layer (Google Maps RoadMap by default)
     const cfg = PayanamDB.getMapConfig();
-    PayanamMaps.attachTileLayer(state.map, cfg.provider || 'carto-dark');
+    PayanamMaps.attachTileLayer(state.map, cfg.provider || 'google-roadmap');
 
     // Click on map to drop custom pin at clicked location
     state.map.on('click', (e) => {
@@ -530,6 +530,9 @@ async function initOrUpdateLiveMap() {
       const lng = e.latlng.lng;
       promptAddPinAtLocation(lat, lng);
     });
+  } else {
+    // Invalidate size on re-render
+    state.map.invalidateSize();
   }
 
   // Draw OSRM Road Polyline & Navigation Maneuvers
@@ -839,9 +842,32 @@ function toggleTelemetrySim() {
 }
 
 function recenterOnGroup() {
-  if (state.map && state.routePolylineLayer) {
-    state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [50, 50] });
-    showToast('🎯 Map recentered on group formation', 'info');
+  if (!state.map) return;
+  state.map.invalidateSize();
+
+  // 1. If we have riders, compute bounds around all riders
+  if (state.riders && state.riders.length > 0) {
+    // If route exists, fit route
+    if (state.routePolylineLayer) {
+      try {
+        state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [60, 60] });
+        showToast('🎯 Map recentered on route formation', 'info');
+        return;
+      } catch(e) {}
+    }
+
+    const latLngs = state.riders.map(r => [r.lat, r.lng]);
+    const bounds = L.latLngBounds(latLngs);
+    state.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+    showToast('🎯 Map recentered on active riders', 'info');
+    return;
+  }
+
+  // 2. Fallback to start waypoint
+  const ride = state.currentRide;
+  if (ride && ride.startLat) {
+    state.map.setView([ride.startLat, ride.startLng], 13);
+    showToast('🎯 Map centered on route start', 'info');
   }
 }
 
