@@ -13,30 +13,30 @@ const PayanamMaps = (function () {
   const tileProviders = {
     'google-roadmap': {
       name: 'Google Maps (Standard RoadMap)',
-      url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      url: 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
       attribution: '&copy; Google Maps',
-      subdomains: '',
+      subdomains: ['0', '1', '2', '3'],
       maxZoom: 21
     },
     'google-satellite': {
       name: 'Google Maps (Satellite Hybrid)',
-      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
       attribution: '&copy; Google Maps',
-      subdomains: '',
+      subdomains: ['0', '1', '2', '3'],
       maxZoom: 21
     },
     'google-terrain': {
       name: 'Google Maps (Terrain & Elevation)',
-      url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+      url: 'https://mt{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
       attribution: '&copy; Google Maps',
-      subdomains: '',
+      subdomains: ['0', '1', '2', '3'],
       maxZoom: 20
     },
     'google-traffic': {
       name: 'Google Maps (Live Traffic)',
-      url: 'https://mt1.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}',
+      url: 'https://mt{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}',
       attribution: '&copy; Google Maps',
-      subdomains: '',
+      subdomains: ['0', '1', '2', '3'],
       maxZoom: 21
     },
     'carto-dark': {
@@ -73,21 +73,37 @@ const PayanamMaps = (function () {
   function attachTileLayer(mapInstance, providerKey = 'google-roadmap') {
     if (!mapInstance) return;
     if (currentTileLayer) {
-      mapInstance.removeLayer(currentTileLayer);
+      try {
+        mapInstance.removeLayer(currentTileLayer);
+      } catch (e) {}
     }
 
     const provider = tileProviders[providerKey] || tileProviders['google-roadmap'];
-    currentTileLayer = L.tileLayer(provider.url, {
+    const layerOptions = {
       attribution: provider.attribution,
-      subdomains: provider.subdomains || 'abc',
-      maxZoom: provider.maxZoom || 20
-    });
+      maxZoom: provider.maxZoom || 20,
+      keepBuffer: 6,
+      updateWhenIdle: false,
+      updateWhenZooming: true
+    };
+    if (provider.subdomains) {
+      layerOptions.subdomains = provider.subdomains;
+    }
+
+    currentTileLayer = L.tileLayer(provider.url, layerOptions);
     currentTileLayer.addTo(mapInstance);
     
-    // Invalidate size to ensure immediate render
+    // Staggered size invalidation to guarantee crisp tile render without black screen
+    try { mapInstance.invalidateSize(); } catch(e) {}
+    requestAnimationFrame(() => {
+      try { mapInstance.invalidateSize(); } catch(e) {}
+    });
     setTimeout(() => {
       try { mapInstance.invalidateSize(); } catch(e) {}
-    }, 100);
+    }, 120);
+    setTimeout(() => {
+      try { mapInstance.invalidateSize(); } catch(e) {}
+    }, 350);
 
     return currentTileLayer;
   }

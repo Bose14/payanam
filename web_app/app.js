@@ -217,13 +217,19 @@ function navigateTo(screenId) {
   else if (screenId === 'screenHistory') document.getElementById('navHistory')?.classList.add('active');
 
   if (screenId === 'screenLiveMap') {
-    setTimeout(() => {
-      initOrUpdateLiveMap();
+    initOrUpdateLiveMap();
+    requestAnimationFrame(() => {
       if (state.map) state.map.invalidateSize();
-    }, 150);
+    });
     setTimeout(() => {
       if (state.map) state.map.invalidateSize();
-    }, 450);
+    }, 100);
+    setTimeout(() => {
+      if (state.map) state.map.invalidateSize();
+    }, 300);
+    setTimeout(() => {
+      if (state.map) state.map.invalidateSize();
+    }, 600);
   } else if (screenId === 'screenCreateRide') {
     renderRoutePlannerWaypoints();
   } else if (screenId === 'screenRideLobby') {
@@ -517,8 +523,10 @@ async function initOrUpdateLiveMap() {
   if (!state.map) {
     state.map = L.map('liveRideMap', {
       zoomControl: false,
-      attributionControl: false
-    }).setView([centerLat, centerLng], 12);
+      attributionControl: false,
+      fadeAnimation: true,
+      zoomAnimation: true
+    }).setView([centerLat, centerLng], 13);
 
     // Attach active Tile Layer (Google Maps RoadMap by default)
     const cfg = PayanamDB.getMapConfig();
@@ -532,46 +540,20 @@ async function initOrUpdateLiveMap() {
     });
   } else {
     // Invalidate size on re-render
-    state.map.invalidateSize();
+    try { state.map.invalidateSize(); } catch(e) {}
   }
 
-  // Draw OSRM Road Polyline & Navigation Maneuvers
+  // Draw immediate fallback straight line so polyline is immediately visible
   if (ride.waypoints && ride.waypoints.length >= 2) {
     const coords = ride.waypoints.map(w => [w.lat, w.lng]);
-    const roadRoute = await PayanamMaps.fetchRoadRoute(coords);
-
-    if (state.routePolylineLayer) {
-      state.map.removeLayer(state.routePolylineLayer);
-    }
-
-    if (roadRoute && roadRoute.latLngs) {
-      // 1. Draw 200m Buffer Corridor (Translucent Orange)
-      if (state.corridorLayer) state.map.removeLayer(state.corridorLayer);
-      state.corridorLayer = L.polyline(roadRoute.latLngs, {
-        color: '#FF6B00',
-        weight: 18,
-        opacity: 0.18,
-        lineCap: 'round',
-        lineJoin: 'round'
-      }).addTo(state.map);
-
-      // 2. Draw Sharp Center Polyline
-      state.routePolylineLayer = L.polyline(roadRoute.latLngs, {
+    if (!state.routePolylineLayer) {
+      state.routePolylineLayer = L.polyline(coords, {
         color: '#FF6B00',
         weight: 6,
         opacity: 0.9,
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(state.map);
-
-      // Fit map bounds to route
-      state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [60, 60] });
-
-      // Update Navigation Banner with first maneuver
-      if (roadRoute.steps && roadRoute.steps.length > 0) {
-        state.navSteps = roadRoute.steps;
-        updateNavBanner(roadRoute.steps[0], roadRoute.distanceKm);
-      }
     }
   }
 
@@ -584,6 +566,45 @@ async function initOrUpdateLiveMap() {
   renderRiderTelemetryCards();
   if (!PayanamMaps.isGpsActive()) {
     startTelemetrySimulation();
+  }
+
+  // Ensure leaflet recalculates dimensions immediately
+  setTimeout(() => {
+    try { state.map.invalidateSize(); } catch(e) {}
+  }, 100);
+
+  // Fetch precision OSRM Road Geometry in the background (non-blocking)
+  if (ride.waypoints && ride.waypoints.length >= 2) {
+    const coords = ride.waypoints.map(w => [w.lat, w.lng]);
+    PayanamMaps.fetchRoadRoute(coords).then(roadRoute => {
+      if (roadRoute && roadRoute.latLngs && state.map) {
+        // 1. Draw 200m Buffer Corridor (Translucent Orange)
+        if (state.corridorLayer) state.map.removeLayer(state.corridorLayer);
+        state.corridorLayer = L.polyline(roadRoute.latLngs, {
+          color: '#FF6B00',
+          weight: 18,
+          opacity: 0.18,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(state.map);
+
+        // 2. Draw Sharp Center Polyline
+        if (state.routePolylineLayer) state.map.removeLayer(state.routePolylineLayer);
+        state.routePolylineLayer = L.polyline(roadRoute.latLngs, {
+          color: '#FF6B00',
+          weight: 6,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
+        }).addTo(state.map);
+
+        // Update Navigation Banner with first maneuver
+        if (roadRoute.steps && roadRoute.steps.length > 0) {
+          state.navSteps = roadRoute.steps;
+          updateNavBanner(roadRoute.steps[0], roadRoute.distanceKm);
+        }
+      }
+    }).catch(err => console.warn('Background OSRM route fetch notice:', err));
   }
 }
 
@@ -843,30 +864,40 @@ function toggleTelemetrySim() {
 
 function recenterOnGroup() {
   if (!state.map) return;
-  state.map.invalidateSize();
+  try { state.map.invalidateSize(); } catch(e) {}
 
-  // 1. If we have riders, compute bounds around all riders
-  if (state.riders && state.riders.length > 0) {
-    // If route exists, fit route
-    if (state.routePolylineLayer) {
-      try {
-        state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [60, 60] });
-        showToast('🎯 Map recentered on route formation', 'info');
-        return;
-      } catch(e) {}
-    }
+  const activeUser = PayanamDB.getActiveUser();
+  const myRider = (state.riders || []).find(r => r.id === activeUser.id) || (state.riders || [])[0];
 
+  // 1. If multiple active riders are riding together, fit group bounds
+  if (state.riders && state.riders.length > 1) {
     const latLngs = state.riders.map(r => [r.lat, r.lng]);
     const bounds = L.latLngBounds(latLngs);
-    state.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
-    showToast('🎯 Map recentered on active riders', 'info');
+    state.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
+    showToast(`🎯 Centered on Group Formation (${state.riders.length} Active Riders)`, 'info');
     return;
   }
 
-  // 2. Fallback to start waypoint
-  const ride = state.currentRide;
-  if (ride && ride.startLat) {
-    state.map.setView([ride.startLat, ride.startLng], 13);
+  // 2. If single rider or focused on my bike
+  if (myRider && typeof myRider.lat === 'number' && typeof myRider.lng === 'number') {
+    state.map.setView([myRider.lat, myRider.lng], 15, { animate: true });
+    showToast(`🎯 Centered on ${myRider.name} (${myRider.bike || 'Motorcycle'})`, 'info');
+    return;
+  }
+
+  // 3. Fallback to route bounds
+  if (state.routePolylineLayer) {
+    try {
+      state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [60, 60], maxZoom: 15, animate: true });
+      showToast('🎯 Map recentered on route formation', 'info');
+      return;
+    } catch(e) {}
+  }
+
+  // 4. Fallback to start waypoint
+  const ride = state.currentRide || PayanamDB.getRides()[0];
+  if (ride && ride.waypoints && ride.waypoints[0]) {
+    state.map.setView([ride.waypoints[0].lat, ride.waypoints[0].lng], 14, { animate: true });
     showToast('🎯 Map centered on route start', 'info');
   }
 }
