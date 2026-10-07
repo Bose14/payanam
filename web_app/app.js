@@ -420,7 +420,7 @@ async function initOrUpdateLiveMap() {
   const mapContainer = document.getElementById('liveRideMap');
   if (!mapContainer) return;
 
-  const ride = state.currentRide || RideSyncDB.getRides()[0];
+  const ride = state.currentRide || PayanamDB.getRides()[0];
   const centerLat = ride.waypoints?.[0]?.lat || 10.2380;
   const centerLng = ride.waypoints?.[0]?.lng || 77.4890;
 
@@ -431,40 +431,200 @@ async function initOrUpdateLiveMap() {
     }).setView([centerLat, centerLng], 12);
 
     // Attach active Tile Layer
-    const cfg = RideSyncDB.getMapConfig();
-    RideSyncMaps.attachTileLayer(state.map, cfg.provider || 'carto-dark');
+    const cfg = PayanamDB.getMapConfig();
+    PayanamMaps.attachTileLayer(state.map, cfg.provider || 'carto-dark');
+
+    // Click on map to drop custom pin at clicked location
+    state.map.on('click', (e) => {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      promptAddPinAtLocation(lat, lng);
+    });
   }
 
-  // Draw OSRM Road Polyline
+  // Draw OSRM Road Polyline & Navigation Maneuvers
   if (ride.waypoints && ride.waypoints.length >= 2) {
     const coords = ride.waypoints.map(w => [w.lat, w.lng]);
-    const roadRoute = await RideSyncMaps.fetchRoadRoute(coords);
+    const roadRoute = await PayanamMaps.fetchRoadRoute(coords);
 
     if (state.routePolylineLayer) {
       state.map.removeLayer(state.routePolylineLayer);
     }
 
     if (roadRoute && roadRoute.latLngs) {
+      // 1. Draw 200m Buffer Corridor (Translucent Orange)
+      if (state.corridorLayer) state.map.removeLayer(state.corridorLayer);
+      state.corridorLayer = L.polyline(roadRoute.latLngs, {
+        color: '#FF6B00',
+        weight: 18,
+        opacity: 0.18,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(state.map);
+
+      // 2. Draw Sharp Center Polyline
       state.routePolylineLayer = L.polyline(roadRoute.latLngs, {
         color: '#FF6B00',
         weight: 6,
-        opacity: 0.85,
+        opacity: 0.9,
         lineCap: 'round',
         lineJoin: 'round'
       }).addTo(state.map);
 
       // Fit map bounds to route
-      state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [40, 40] });
+      state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [60, 60] });
+
+      // Update Navigation Banner with first maneuver
+      if (roadRoute.steps && roadRoute.steps.length > 0) {
+        state.navSteps = roadRoute.steps;
+        updateNavBanner(roadRoute.steps[0], roadRoute.distanceKm);
+      }
     }
   }
 
-  // Render Waypoint Markers
+  // Render Waypoint Markers & Live Dropped Pins
   renderMapWaypoints(ride.waypoints || []);
+  renderMapPins(ride.pins || []);
 
-  // Render Live Riders & Start Telemetry Loop
+  // Render Live Riders & Start Telemetry
   renderRiderMarkers();
   renderRiderTelemetryCards();
-  startTelemetrySimulation();
+  if (!PayanamMaps.isGpsActive()) {
+    startTelemetrySimulation();
+  }
+}
+
+function updateNavBanner(step, totalDistance) {
+  const instructionEl = document.getElementById('navInstructionText');
+  const iconEl = document.getElementById('navManeuverIcon');
+  const nextStopEl = document.getElementById('navNextStopCountdown');
+  const speedEl = document.getElementById('navCurrentSpeed');
+
+  if (instructionEl && step) {
+    instructionEl.innerText = step.instruction || 'Follow planned motorcycle route corridor';
+  }
+
+  if (iconEl && step) {
+    const mod = step.modifier || '';
+    if (mod.includes('right')) iconEl.innerText = '↱';
+    else if (mod.includes('left')) iconEl.innerText = '↰';
+    else if (mod.includes('slight right')) iconEl.innerText = '↗';
+    else if (mod.includes('slight left')) iconEl.innerText = '↖';
+    else if (mod.includes('u-turn')) iconEl.innerText = '↩';
+    else iconEl.innerText = '↑';
+  }
+
+  if (nextStopEl) {
+    const nextWp = state.currentRide?.waypoints?.[1];
+    nextStopEl.innerText = nextWp ? `${nextWp.icon || '📍'} Next: ${nextWp.name} (~${Math.round(totalDistance * 0.3)} km)` : `🏁 Destination in ${totalDistance} km`;
+  }
+
+  if (speedEl && state.riders[0]) {
+    speedEl.innerText = `${Math.round(state.riders[0].speed)} km/h`;
+  }
+}
+
+// -------------------------------------------------------------
+// LIVE DEVICE GPS TRACKING & TOGGLE
+// -------------------------------------------------------------
+function toggleDeviceGps() {
+  const label = document.getElementById('gpsStatusLabel');
+  const icon = document.getElementById('gpsBtnIcon');
+
+  if (!PayanamMaps.isGpsActive()) {
+    const success = PayanamMaps.startLiveGpsTracking(state.map, (pos) => {
+      // Update my rider coordinates in real-time
+      if (state.riders[0]) {
+        state.riders[0].lat = pos.lat;
+        state.riders[0].lng = pos.lng;
+        state.riders[0].speed = pos.speed || 0;
+        state.riders[0].heading = pos.heading || 0;
+        renderRiderMarkers();
+        renderRiderTelemetryCards();
+      }
+
+      const speedEl = document.getElementById('navCurrentSpeed');
+      if (speedEl) speedEl.innerText = `${Math.round(pos.speed)} km/h`;
+
+      // Recenter on device GPS
+      if (state.map) {
+        state.map.panTo([pos.lat, pos.lng]);
+      }
+    }, (errMsg) => {
+      showToast(`⚠️ GPS Error: ${errMsg}`, 'error');
+    });
+
+    if (success) {
+      clearInterval(state.simInterval);
+      if (label) label.innerText = 'LIVE GPS 🛰️';
+      if (icon) icon.innerText = '🟢';
+      showToast('🛰️ Connected to Live Device GPS Hardware!', 'success');
+    }
+  } else {
+    PayanamMaps.stopLiveGpsTracking(state.map);
+    if (label) label.innerText = 'LIVE SIM';
+    if (icon) icon.innerText = '📡';
+    startTelemetrySimulation();
+    showToast('🔄 Switched back to Multi-Rider GPS Simulation', 'info');
+  }
+}
+
+// -------------------------------------------------------------
+// LIVE WEATHER / RAIN RADAR OVERLAY
+// -------------------------------------------------------------
+async function toggleRainRadarOverlay() {
+  const active = await PayanamMaps.toggleRainRadar(state.map);
+  const btn = document.getElementById('btnToggleRadar');
+  if (btn) btn.style.background = active ? 'rgba(0, 229, 255, 0.3)' : '';
+  showToast(active ? '🌧️ Live Weather Radar Tile Layer Active' : '⛅ Live Radar Disabled', active ? 'success' : 'info');
+}
+
+// -------------------------------------------------------------
+// CYCLE MAP TILE LAYERS
+// -------------------------------------------------------------
+const mapProvidersList = ['carto-dark', 'satellite-hybrid', 'osm-standard', 'stadia-dark'];
+let currentProviderIndex = 0;
+
+function cycleMapLayer() {
+  currentProviderIndex = (currentProviderIndex + 1) % mapProvidersList.length;
+  const newProvider = mapProvidersList[currentProviderIndex];
+
+  PayanamMaps.attachTileLayer(state.map, newProvider);
+  const cfg = PayanamDB.getMapConfig();
+  cfg.provider = newProvider;
+  PayanamDB.setMapConfig(cfg);
+
+  showToast(`🗺️ Map Layer: ${newProvider}`, 'info');
+}
+
+function promptAddPinAtLocation(lat, lng) {
+  const title = prompt('Drop pin at clicked location (e.g. ☕ Tea Stall, ⛽ Petrol Bunk, ⚠️ Road Hazard):');
+  if (title && title.trim()) {
+    const activeUser = PayanamDB.getActiveUser();
+    const pin = PayanamDB.addPin(state.currentRide.id, {
+      userId: activeUser.id,
+      type: 'custom',
+      title: title.trim(),
+      lat,
+      lng
+    });
+    renderMapPins(state.currentRide.pins || []);
+    showToast(`📍 Dropped pin "${title}" on map!`, 'success');
+  }
+}
+
+function renderMapPins(pins) {
+  if (!state.map) return;
+  state.pinMarkers.forEach(m => state.map.removeLayer(m));
+  state.pinMarkers = [];
+
+  (pins || []).forEach(pin => {
+    const iconHtml = `<div style="background:#00E5FF; color:#000; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; box-shadow:0 0 10px rgba(0,229,255,0.8);">📍</div>`;
+    const markerIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24] });
+    const marker = L.marker([pin.lat, pin.lng], { icon: markerIcon }).addTo(state.map);
+    marker.bindPopup(`<strong>${pin.title}</strong><br><span style="font-size:11px; color:#94A3B8;">Dropped at ${pin.time || 'Live'}</span>`);
+    state.pinMarkers.push(marker);
+  });
 }
 
 function renderMapWaypoints(waypoints) {

@@ -391,18 +391,33 @@
               <button class="btn-header-back" onclick="confirmExitRide()">←</button>
               <div>
                 <span class="live-status-pill">
-                  <span class="live-pulse"></span> LIVE RIDE
+                  <span class="live-pulse"></span> <span id="gpsStatusLabel">LIVE SIM</span>
                 </span>
                 <h3 class="live-ride-heading" id="liveRideHeading">Kodaikanal Weekend Ride</h3>
               </div>
             </div>
             <div class="live-header-actions">
-              <button class="btn-icon-map" title="Toggle Simulation" onclick="toggleTelemetrySim()">
-                <span id="simBtnIcon">⏸️</span>
+              <button class="btn-icon-map" id="btnToggleGps" title="Toggle Device GPS / Simulation" onclick="toggleDeviceGps()">
+                <span id="gpsBtnIcon">📡</span>
+              </button>
+              <button class="btn-icon-map" id="btnToggleRadar" title="Toggle Live Rain Radar Overlay" onclick="toggleRainRadarOverlay()">
+                <span>🌧️</span>
               </button>
               <button class="btn-icon-map" title="Ride Chat" onclick="toggleChatSheet()">
                 💬 <span class="badge-unread" id="unreadBadge">1</span>
               </button>
+            </div>
+          </div>
+
+          <!-- Turn-by-Turn Maneuver Navigation Bar -->
+          <div class="live-nav-banner" id="liveNavBanner">
+            <div class="nav-maneuver-icon" id="navManeuverIcon">↱</div>
+            <div class="nav-maneuver-info">
+              <div class="nav-instruction" id="navInstructionText">In 800m, Turn Right onto NH44 / Salem Bypass</div>
+              <div class="nav-sub-details">
+                <span id="navNextStopCountdown">☕ Next Stop: Salem Halt (38.4 km)</span>
+                <span class="nav-speed-badge" id="navCurrentSpeed">68 km/h</span>
+              </div>
             </div>
           </div>
 
@@ -418,6 +433,9 @@
           <div class="map-overlay-controls">
             <button class="map-btn-floating" onclick="recenterOnGroup()" title="Recenter on Group">
               🎯 Recenter
+            </button>
+            <button class="map-btn-floating" onclick="cycleMapLayer()" title="Switch Map Layer">
+              🗺️ Layer
             </button>
             <button class="map-btn-floating" onclick="openAddPinDialog()" title="Drop Custom Pin">
               📍 Drop Pin

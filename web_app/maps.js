@@ -1,45 +1,54 @@
 /**
- * RideSync Map & Routing Engine
- * Integrates Map Tile Providers (CartoDB Dark Matter, OSM, Stadia, Mapbox, Google Maps),
- * OSRM Real Road Turn-by-Turn Routing, and Photon Geocoding Place Search
+ * Payanam Live Map & Realtime Navigation Engine
+ * Integrates:
+ * 1. HTML5 High-Precision Device GPS Tracking (Real Latitude, Longitude, Speed & Heading)
+ * 2. Multi-Provider Tile Layers (CartoDB Dark Matter, OSM, Stadia, ESRI Satellite)
+ * 3. Live Weather & Rain Radar Layer (RainViewer API)
+ * 4. OSRM Real Road Routing & Turn-by-Turn Maneuver Instructions
+ * 5. Photon & OpenStreetMap Live Geocoding & Place Discovery
  */
 
-const RideSyncMaps = (function () {
+const PayanamMaps = (function () {
   // Tile Providers Definitions
   const tileProviders = {
     'carto-dark': {
-      name: 'CartoDB Dark Matter (Cockpit Night Mode - Free)',
+      name: 'CartoDB Dark Matter (Cockpit Night Mode)',
       url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       subdomains: 'abcd',
       maxZoom: 19
     },
     'osm-standard': {
-      name: 'OpenStreetMap Standard (Free)',
+      name: 'OpenStreetMap Standard',
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution: '&copy; OpenStreetMap contributors',
       subdomains: 'abc',
       maxZoom: 19
     },
     'stadia-dark': {
       name: 'Stadia Alidade Smooth Dark',
       url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>',
+      attribution: '&copy; Stadia Maps',
       subdomains: '',
       maxZoom: 20
     },
     'satellite-hybrid': {
       name: 'ESRI World Imagery (Satellite)',
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+      attribution: 'Tiles &copy; Esri',
       subdomains: '',
       maxZoom: 18
     }
   };
 
   let currentTileLayer = null;
+  let rainRadarLayer = null;
+  let isRadarActive = false;
+  let watchId = null;
+  let deviceGpsActive = false;
+  let deviceAccuracyCircle = null;
 
-  // Create or update Leaflet tile layer
+  // 1. Attach Tile Layer to Leaflet Map
   function attachTileLayer(mapInstance, providerKey = 'carto-dark') {
     if (!mapInstance) return;
     if (currentTileLayer) {
@@ -56,15 +65,121 @@ const RideSyncMaps = (function () {
     return currentTileLayer;
   }
 
-  // Fetch real road route geometry from OSRM (Open Source Routing Machine API)
+  // 2. Toggle Live Rain & Weather Radar Overlay (RainViewer API)
+  async function toggleRainRadar(mapInstance) {
+    if (!mapInstance) return false;
+
+    if (isRadarActive && rainRadarLayer) {
+      mapInstance.removeLayer(rainRadarLayer);
+      rainRadarLayer = null;
+      isRadarActive = false;
+      return false;
+    }
+
+    try {
+      // Fetch latest radar frame timestamp from RainViewer
+      const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+      const data = await res.json();
+
+      if (data && data.radar && data.radar.past && data.radar.past.length > 0) {
+        const latestFrame = data.radar.past[data.radar.past.length - 1];
+        const radarPath = latestFrame.path;
+        const radarUrl = `https://tilecache.rainviewer.com${radarPath}/256/{z}/{x}/{y}/2/1_1.png`;
+
+        rainRadarLayer = L.tileLayer(radarUrl, {
+          opacity: 0.65,
+          zIndex: 500,
+          maxZoom: 18
+        });
+        rainRadarLayer.addTo(mapInstance);
+        isRadarActive = true;
+        return true;
+      }
+    } catch (e) {
+      console.warn('Could not load live rain radar overlay:', e);
+    }
+    return false;
+  }
+
+  // 3. HTML5 Live Device GPS Geolocation
+  function startLiveGpsTracking(mapInstance, onLocationUpdate, onError) {
+    if (!navigator.geolocation) {
+      if (onError) onError('Geolocation is not supported by your browser');
+      return false;
+    }
+
+    stopLiveGpsTracking(mapInstance);
+
+    deviceGpsActive = true;
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const coords = position.coords;
+        const lat = coords.latitude;
+        const lng = coords.longitude;
+        const accuracy = coords.accuracy || 10;
+        const speed = coords.speed !== null && coords.speed !== undefined ? Math.max(0, coords.speed * 3.6) : 0; // m/s to km/h
+        const heading = coords.heading || 0;
+
+        // Render accuracy circle on map
+        if (mapInstance) {
+          if (!deviceAccuracyCircle) {
+            deviceAccuracyCircle = L.circle([lat, lng], {
+              radius: accuracy,
+              color: '#00E5FF',
+              fillColor: '#00E5FF',
+              fillOpacity: 0.15,
+              weight: 1
+            }).addTo(mapInstance);
+          } else {
+            deviceAccuracyCircle.setLatLng([lat, lng]);
+            deviceAccuracyCircle.setRadius(accuracy);
+          }
+        }
+
+        if (onLocationUpdate) {
+          onLocationUpdate({
+            lat,
+            lng,
+            accuracy,
+            speed,
+            heading,
+            timestamp: position.timestamp
+          });
+        }
+      },
+      (err) => {
+        console.warn('Geolocation watch error:', err.message);
+        if (onError) onError(err.message);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000
+      }
+    );
+
+    return true;
+  }
+
+  function stopLiveGpsTracking(mapInstance) {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+    deviceGpsActive = false;
+    if (deviceAccuracyCircle && mapInstance) {
+      mapInstance.removeLayer(deviceAccuracyCircle);
+      deviceAccuracyCircle = null;
+    }
+  }
+
+  // 4. Fetch Real Road Route Geometry and Maneuvers from OSRM
   async function fetchRoadRoute(coordinates) {
     if (!coordinates || coordinates.length < 2) return null;
 
     try {
-      // coordinates format: [ [lat, lng], [lat, lng], ... ]
-      // OSRM expects: lng,lat;lng,lat;...
       const coordString = coordinates.map(c => `${c[1]},${c[0]}`).join(';');
-      const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson&steps=false`;
+      const url = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson&steps=true`;
 
       const response = await fetch(url);
       if (!response.ok) throw new Error(`OSRM HTTP error: ${response.status}`);
@@ -72,10 +187,29 @@ const RideSyncMaps = (function () {
 
       if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
         const route = data.routes[0];
-        // GeoJSON coordinates are [lng, lat], convert back to Leaflet [lat, lng]
         const latLngs = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+
+        // Extract navigation steps & maneuvers
+        const steps = [];
+        if (route.legs) {
+          route.legs.forEach(leg => {
+            if (leg.steps) {
+              leg.steps.forEach(s => {
+                steps.push({
+                  instruction: s.maneuver ? formatManeuverText(s.maneuver, s.name) : s.name || 'Continue on route',
+                  modifier: s.maneuver ? s.maneuver.modifier : 'straight',
+                  type: s.maneuver ? s.maneuver.type : 'turn',
+                  distanceMeters: Math.round(s.distance),
+                  durationSec: Math.round(s.duration)
+                });
+              });
+            }
+          });
+        }
+
         return {
           latLngs,
+          steps,
           distanceKm: (route.distance / 1000).toFixed(1),
           durationMins: Math.round(route.duration / 60)
         };
@@ -84,15 +218,29 @@ const RideSyncMaps = (function () {
       console.warn('OSRM live routing failed or offline, using geodesic interpolation:', e);
     }
 
-    // Fallback: interpolate smooth points between coordinates
     return {
       latLngs: coordinates,
+      steps: [
+        { instruction: 'Follow planned motorcycle route corridor', distanceMeters: 1000, modifier: 'straight' }
+      ],
       distanceKm: calculateStraightLineDistance(coordinates).toFixed(1),
       durationMins: Math.round(calculateStraightLineDistance(coordinates) * 1.4)
     };
   }
 
-  // Live place search with Photon API (Geocoding backed by OpenStreetMap)
+  function formatManeuverText(maneuver, streetName) {
+    const type = maneuver.type;
+    const mod = maneuver.modifier ? ` ${maneuver.modifier}` : '';
+    const street = streetName ? ` onto ${streetName}` : '';
+    if (type === 'depart') return `Head${mod}${street}`;
+    if (type === 'arrive') return `Arrive at destination`;
+    if (type === 'turn') return `Turn${mod}${street}`;
+    if (type === 'fork') return `Keep${mod} at the fork${street}`;
+    if (type === 'roundabout') return `Enter roundabout and take exit${street}`;
+    return `Continue${street || ' on route'}`;
+  }
+
+  // 5. Live Place Search with Photon API (Backed by OpenStreetMap)
   async function searchPlaces(query, centerLat = 12.9176, centerLng = 77.6233) {
     if (!query || query.trim().length < 2) return [];
 
@@ -105,7 +253,7 @@ const RideSyncMaps = (function () {
       if (data.features) {
         return data.features.map(f => {
           const props = f.properties;
-          const coords = f.geometry.coordinates; // [lng, lat]
+          const coords = f.geometry.coordinates;
           const name = props.name || props.street || query;
           const addressParts = [props.city || props.district, props.state, props.country].filter(Boolean);
           return {
@@ -146,8 +294,16 @@ const RideSyncMaps = (function () {
   return {
     tileProviders,
     attachTileLayer,
+    toggleRainRadar,
+    startLiveGpsTracking,
+    stopLiveGpsTracking,
+    isGpsActive: () => deviceGpsActive,
+    isRadarActive: () => isRadarActive,
     fetchRoadRoute,
     searchPlaces,
     haversine
   };
 })();
+
+// Backwards compatibility alias
+const RideSyncMaps = PayanamMaps;

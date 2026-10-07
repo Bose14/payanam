@@ -853,6 +853,67 @@ body {
   justify-content: center;
 }
 
+/* Live Turn-by-Turn Navigation Bar */
+.live-nav-banner {
+  position: absolute;
+  top: 72px;
+  left: 14px;
+  right: 14px;
+  background: rgba(21, 26, 35, 0.95);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 229, 255, 0.15);
+  z-index: 500;
+}
+
+.nav-maneuver-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--primary-orange), #E65100);
+  color: #FFF;
+  font-size: 22px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px var(--primary-orange-glow);
+}
+
+.nav-maneuver-info {
+  flex: 1;
+}
+
+.nav-instruction {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.nav-sub-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.nav-speed-badge {
+  background: rgba(0, 230, 118, 0.2);
+  color: var(--accent-green);
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'Outfit', sans-serif;
+}
+
 /* Map Viewport */
 .map-viewport {
   width: 100%;
@@ -863,7 +924,7 @@ body {
 /* Live Alert Banners */
 .live-alerts-container {
   position: absolute;
-  top: 76px;
+  top: 146px;
   left: 14px;
   right: 14px;
   z-index: 500;
