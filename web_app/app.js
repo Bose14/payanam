@@ -133,7 +133,13 @@ function navigateTo(screenId) {
   else if (screenId === 'screenHistory') document.getElementById('navHistory')?.classList.add('active');
 
   if (screenId === 'screenLiveMap') {
-    setTimeout(initOrUpdateLiveMap, 200);
+    setTimeout(() => {
+      initOrUpdateLiveMap();
+      if (state.map) state.map.invalidateSize();
+    }, 150);
+    setTimeout(() => {
+      if (state.map) state.map.invalidateSize();
+    }, 450);
   } else if (screenId === 'screenCreateRide') {
     renderRoutePlannerWaypoints();
   } else if (screenId === 'screenRideLobby') {
@@ -582,7 +588,7 @@ async function toggleRainRadarOverlay() {
 // -------------------------------------------------------------
 // CYCLE MAP TILE LAYERS
 // -------------------------------------------------------------
-const mapProvidersList = ['carto-dark', 'satellite-hybrid', 'osm-standard', 'stadia-dark'];
+const mapProvidersList = ['google-roadmap', 'google-satellite', 'google-terrain', 'google-traffic', 'carto-dark', 'osm-standard', 'satellite-hybrid'];
 let currentProviderIndex = 0;
 
 function cycleMapLayer() {
@@ -594,7 +600,17 @@ function cycleMapLayer() {
   cfg.provider = newProvider;
   PayanamDB.setMapConfig(cfg);
 
-  showToast(`🗺️ Map Layer: ${newProvider}`, 'info');
+  const readableNames = {
+    'google-roadmap': 'Google Maps (RoadMap)',
+    'google-satellite': 'Google Maps (Satellite Hybrid)',
+    'google-terrain': 'Google Maps (Terrain)',
+    'google-traffic': 'Google Maps (Live Traffic)',
+    'carto-dark': 'Carto Dark Matter',
+    'osm-standard': 'OpenStreetMap',
+    'satellite-hybrid': 'ESRI Satellite'
+  };
+
+  showToast(`🗺️ Map Layer: ${readableNames[newProvider] || newProvider}`, 'info');
 }
 
 function promptAddPinAtLocation(lat, lng) {

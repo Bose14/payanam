@@ -11,6 +11,34 @@
 const PayanamMaps = (function () {
   // Tile Providers Definitions
   const tileProviders = {
+    'google-roadmap': {
+      name: 'Google Maps (Standard RoadMap)',
+      url: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps',
+      subdomains: '',
+      maxZoom: 21
+    },
+    'google-satellite': {
+      name: 'Google Maps (Satellite Hybrid)',
+      url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps',
+      subdomains: '',
+      maxZoom: 21
+    },
+    'google-terrain': {
+      name: 'Google Maps (Terrain & Elevation)',
+      url: 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps',
+      subdomains: '',
+      maxZoom: 20
+    },
+    'google-traffic': {
+      name: 'Google Maps (Live Traffic)',
+      url: 'https://mt1.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}',
+      attribution: '&copy; Google Maps',
+      subdomains: '',
+      maxZoom: 21
+    },
     'carto-dark': {
       name: 'CartoDB Dark Matter (Cockpit Night Mode)',
       url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
@@ -24,13 +52,6 @@ const PayanamMaps = (function () {
       attribution: '&copy; OpenStreetMap contributors',
       subdomains: 'abc',
       maxZoom: 19
-    },
-    'stadia-dark': {
-      name: 'Stadia Alidade Smooth Dark',
-      url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; Stadia Maps',
-      subdomains: '',
-      maxZoom: 20
     },
     'satellite-hybrid': {
       name: 'ESRI World Imagery (Satellite)',
@@ -49,19 +70,25 @@ const PayanamMaps = (function () {
   let deviceAccuracyCircle = null;
 
   // 1. Attach Tile Layer to Leaflet Map
-  function attachTileLayer(mapInstance, providerKey = 'carto-dark') {
+  function attachTileLayer(mapInstance, providerKey = 'google-roadmap') {
     if (!mapInstance) return;
     if (currentTileLayer) {
       mapInstance.removeLayer(currentTileLayer);
     }
 
-    const provider = tileProviders[providerKey] || tileProviders['carto-dark'];
+    const provider = tileProviders[providerKey] || tileProviders['google-roadmap'];
     currentTileLayer = L.tileLayer(provider.url, {
       attribution: provider.attribution,
       subdomains: provider.subdomains || 'abc',
-      maxZoom: provider.maxZoom || 19
+      maxZoom: provider.maxZoom || 20
     });
     currentTileLayer.addTo(mapInstance);
+    
+    // Invalidate size to ensure immediate render
+    setTimeout(() => {
+      try { mapInstance.invalidateSize(); } catch(e) {}
+    }, 100);
+
     return currentTileLayer;
   }
 
