@@ -416,3 +416,6 @@ const RideSyncDB = (function () {
   };
 })();
 
+// Payanam Namespace Alias
+const PayanamDB = RideSyncDB;
+

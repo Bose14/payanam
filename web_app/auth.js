@@ -365,3 +365,7 @@ const RideSyncAuth = (function () {
     resetOtpState
   };
 })();
+
+// Payanam Namespace Alias
+const PayanamAuth = RideSyncAuth;
+
