@@ -35,7 +35,91 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHomeScreen();
   renderHistoryScreen();
   renderSidePanelAccounts();
+
+  // Always request Location & Notification permissions on launch
+  requestPermissionsOnLaunch();
 });
+
+// -------------------------------------------------------------
+// PERMISSION & REALTIME LOCATION ENGINE
+// -------------------------------------------------------------
+async function requestPermissionsOnLaunch() {
+  // 1. Request Notification Permission
+  if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        showToast('🔔 Notifications enabled for group safety & SOS alerts!', 'success');
+        sendBrowserNotification('Payanam Ready 🏍️', 'Location tracking and emergency alerts are active.');
+      }
+    } catch (e) {
+      console.warn('Notification permission error:', e);
+    }
+  }
+
+  // 2. Request Geolocation Access & Pinpoint User
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const accuracy = Math.round(position.coords.accuracy || 10);
+        const speed = position.coords.speed !== null && position.coords.speed !== undefined ? Math.round(position.coords.speed * 3.6) : 0;
+
+        console.log(`[Payanam GPS] Live Location Acquired: ${lat}, ${lng} (±${accuracy}m)`);
+
+        // Update active user's location in state
+        if (state.riders && state.riders[0]) {
+          state.riders[0].lat = lat;
+          state.riders[0].lng = lng;
+          state.riders[0].speed = speed;
+          state.riders[0].lastSeen = 'Live GPS';
+        }
+
+        // Update map if already loaded
+        if (state.map) {
+          state.map.setView([lat, lng], 14);
+          renderRiderMarkers();
+          renderRiderTelemetryCards();
+        }
+
+        // Update GPS Status Pill
+        const gpsLabel = document.getElementById('gpsStatusLabel');
+        if (gpsLabel) gpsLabel.innerText = `GPS ±${accuracy}m 🟢`;
+
+        const headerSignal = document.querySelector('.signal-icon');
+        if (headerSignal) headerSignal.innerHTML = `📍 GPS Live (±${accuracy}m)`;
+
+        showToast(`📍 Live GPS Located (Accuracy ±${accuracy}m)`, 'success');
+      },
+      (err) => {
+        console.warn('Geolocation initial prompt error/denied:', err.message);
+        showToast('📍 Please allow location access to pinpoint your live motorcycle position', 'info');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  }
+}
+
+// Send Real OS / Browser Notification
+function sendBrowserNotification(title, body, icon = '🏍️') {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png',
+        badge: 'https://cdn-icons-png.flaticon.com/512/3721/3721619.png',
+        vibrate: [200, 100, 200]
+      });
+    } catch (e) {
+      console.warn('Could not dispatch OS notification:', e);
+    }
+  }
+}
 
 function initAppClock() {
   const updateTime = () => {
@@ -833,6 +917,10 @@ function showAlertBanner(type, message, persistent = false) {
     <button class="btn-dismiss-alert" onclick="document.getElementById('${alertId}').remove()">✕</button>
   `;
   container.appendChild(alertEl);
+
+  // Dispatch OS / Browser Notification
+  const title = type === 'sos' ? '🚨 EMERGENCY SOS DISTRESS' : type === 'deviation' ? '⚠️ ROUTE DEVIATION' : '⚠️ GROUP SEPARATION';
+  sendBrowserNotification(title, message);
 
   if (!persistent) {
     setTimeout(() => alertEl.remove(), 8000);
