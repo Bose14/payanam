@@ -1615,6 +1615,30 @@ body {
   box-shadow: 0 0 14px var(--primary-orange-glow);
 }
 
+.marker-me .marker-pin {
+  border-color: #00E5FF;
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.95);
+  background: #002233;
+}
+
+.user-location-pulse {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #00E5FF;
+  background: rgba(0, 229, 255, 0.2);
+  animation: radar-pulse 2s infinite ease-out;
+  pointer-events: none;
+}
+
+@keyframes radar-pulse {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
 .marker-emergency .marker-pin {
   border-color: var(--accent-red);
   background: var(--accent-red);

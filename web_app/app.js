@@ -67,18 +67,21 @@ async function requestPermissionsOnLaunch() {
         const speed = position.coords.speed !== null && position.coords.speed !== undefined ? Math.round(position.coords.speed * 3.6) : 0;
 
         console.log(`[Payanam GPS] Live Location Acquired: ${lat}, ${lng} (±${accuracy}m)`);
+        state.userGps = { lat, lng, accuracy, speed };
 
         // Update active user's location in state
-        if (state.riders && state.riders[0]) {
-          state.riders[0].lat = lat;
-          state.riders[0].lng = lng;
-          state.riders[0].speed = speed;
-          state.riders[0].lastSeen = 'Live GPS';
+        const activeUser = PayanamDB.getActiveUser();
+        const myRider = (state.riders || []).find(r => r.isMe || (activeUser && r.id === activeUser.id)) || (state.riders || [])[0];
+        if (myRider) {
+          myRider.lat = lat;
+          myRider.lng = lng;
+          myRider.speed = speed;
+          myRider.lastSeen = 'Live GPS';
         }
 
-        // Update map if already loaded
+        // Pinpoint map directly on user's GPS
         if (state.map) {
-          state.map.setView([lat, lng], 14);
+          state.map.setView([lat, lng], 16);
           renderRiderMarkers();
           renderRiderTelemetryCards();
         }
@@ -90,7 +93,7 @@ async function requestPermissionsOnLaunch() {
         const headerSignal = document.querySelector('.signal-icon');
         if (headerSignal) headerSignal.innerHTML = `📍 GPS Live (±${accuracy}m)`;
 
-        showToast(`📍 Live GPS Located (Accuracy ±${accuracy}m)`, 'success');
+        showToast(`📍 Live GPS Located: ${lat.toFixed(4)}, ${lng.toFixed(4)}`, 'success');
       },
       (err) => {
         console.warn('Geolocation initial prompt error/denied:', err.message);
@@ -765,29 +768,36 @@ function renderMapWaypoints(waypoints) {
 }
 
 function renderRiderMarkers() {
+  const activeUser = PayanamDB.getActiveUser();
   state.riders.forEach(rider => {
+    const isMe = rider.isMe || (activeUser && rider.id === activeUser.id);
     const isLead = rider.isLead;
     const isSeparated = rider.isSeparated;
-    const markerClass = isLead ? 'marker-lead' : isSeparated ? 'marker-emergency' : '';
+    const markerClass = isMe ? 'marker-me' : isLead ? 'marker-lead' : isSeparated ? 'marker-emergency' : '';
+
+    const labelText = isMe ? `⭐ You (${rider.name})` : rider.name;
+    const pulseRing = isMe ? `<div class="user-location-pulse"></div>` : '';
 
     const iconHtml = `
       <div class="rider-bike-marker ${markerClass}">
-        <div class="marker-pin" style="border-color:${rider.avatarColor}; box-shadow:0 0 12px ${rider.avatarColor}80">
-          <span>🏍️</span>
+        ${pulseRing}
+        <div class="marker-pin" style="border-color:${isMe ? '#00E5FF' : rider.avatarColor}; box-shadow:0 0 14px ${isMe ? 'rgba(0,229,255,0.95)' : rider.avatarColor + '80'}">
+          <span>${isMe ? '🏍️' : '🏍️'}</span>
         </div>
-        <div class="marker-label" style="border-left:3px solid ${rider.avatarColor}">${rider.name}</div>
+        <div class="marker-label" style="border-left:3px solid ${isMe ? '#00E5FF' : rider.avatarColor}; ${isMe ? 'background:#00E5FF; color:#000; font-weight:800;' : ''}">${labelText}</div>
       </div>
     `;
 
     const markerIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [40, 40], iconAnchor: [20, 20] });
 
     if (!state.riderMarkers[rider.id]) {
-      const marker = L.marker([rider.lat, rider.lng], { icon: markerIcon }).addTo(state.map);
-      marker.bindPopup(`<strong>${rider.name}</strong><br>${rider.bike}<br>Speed: ${rider.speed} km/h`);
+      const marker = L.marker([rider.lat, rider.lng], { icon: markerIcon, zIndexOffset: isMe ? 1000 : 0 }).addTo(state.map);
+      marker.bindPopup(`<strong>${isMe ? '⭐ You (' + rider.name + ')' : rider.name}</strong><br>${rider.bike}<br>Speed: ${rider.speed.toFixed(1)} km/h`);
       state.riderMarkers[rider.id] = marker;
     } else {
       state.riderMarkers[rider.id].setLatLng([rider.lat, rider.lng]);
       state.riderMarkers[rider.id].setIcon(markerIcon);
+      if (isMe) state.riderMarkers[rider.id].setZIndexOffset(1000);
     }
   });
 }
@@ -862,43 +872,81 @@ function toggleTelemetrySim() {
   showToast(state.isSimRunning ? '▶️ Telemetry Stream Active' : '⏸️ Telemetry Stream Paused', 'info');
 }
 
+let lastRecenterClickTime = 0;
+
+// Recenter Map directly on User's Location
 function recenterOnGroup() {
   if (!state.map) return;
   try { state.map.invalidateSize(); } catch(e) {}
 
-  const activeUser = PayanamDB.getActiveUser();
-  const myRider = (state.riders || []).find(r => r.id === activeUser.id) || (state.riders || [])[0];
+  const now = Date.now();
+  const isDoubleTap = (now - lastRecenterClickTime) < 2500;
+  lastRecenterClickTime = now;
 
-  // 1. If multiple active riders are riding together, fit group bounds
-  if (state.riders && state.riders.length > 1) {
+  const activeUser = PayanamDB.getActiveUser();
+  const myRider = (state.riders || []).find(r => r.isMe || (activeUser && r.id === activeUser.id)) || (state.riders || [])[0];
+
+  // If clicked consecutively, toggle to full group formation view
+  if (isDoubleTap && state.riders && state.riders.length > 1) {
     const latLngs = state.riders.map(r => [r.lat, r.lng]);
     const bounds = L.latLngBounds(latLngs);
     state.map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16, animate: true });
-    showToast(`🎯 Centered on Group Formation (${state.riders.length} Active Riders)`, 'info');
+    showToast(`👥 Formation View (${state.riders.length} Riders)`, 'info');
     return;
   }
 
-  // 2. If single rider or focused on my bike
-  if (myRider && typeof myRider.lat === 'number' && typeof myRider.lng === 'number') {
-    state.map.setView([myRider.lat, myRider.lng], 15, { animate: true });
-    showToast(`🎯 Centered on ${myRider.name} (${myRider.bike || 'Motorcycle'})`, 'info');
+  // 1. Prioritize User's Exact GPS / Bike Location
+  let targetLat = state.userGps?.lat;
+  let targetLng = state.userGps?.lng;
+
+  if (targetLat === undefined || targetLng === undefined) {
+    if (myRider && typeof myRider.lat === 'number' && typeof myRider.lng === 'number') {
+      targetLat = myRider.lat;
+      targetLng = myRider.lng;
+    }
+  }
+
+  if (typeof targetLat === 'number' && typeof targetLng === 'number') {
+    state.map.flyTo([targetLat, targetLng], 16, {
+      duration: 1.0,
+      easeLinearity: 0.25
+    });
+
+    const userName = myRider?.name || activeUser?.name || 'You';
+    const bikeModel = myRider?.bike || activeUser?.bikeModel || 'Motorcycle';
+    showToast(`🎯 Centered on ${userName} (${bikeModel})`, 'success');
+
+    // Query browser geolocation for fresh high-accuracy position
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const liveLat = pos.coords.latitude;
+        const liveLng = pos.coords.longitude;
+        state.userGps = { lat: liveLat, lng: liveLng, accuracy: pos.coords.accuracy };
+        if (myRider) {
+          myRider.lat = liveLat;
+          myRider.lng = liveLng;
+        }
+        renderRiderMarkers();
+        renderRiderTelemetryCards();
+      }, () => {}, { enableHighAccuracy: true, timeout: 4000 });
+    }
     return;
   }
 
-  // 3. Fallback to route bounds
+  // 2. Fallback to route bounds
   if (state.routePolylineLayer) {
     try {
       state.map.fitBounds(state.routePolylineLayer.getBounds(), { padding: [60, 60], maxZoom: 15, animate: true });
-      showToast('🎯 Map recentered on route formation', 'info');
+      showToast('🎯 Centered on Route Formation', 'info');
       return;
     } catch(e) {}
   }
 
-  // 4. Fallback to start waypoint
+  // 3. Fallback to start waypoint
   const ride = state.currentRide || PayanamDB.getRides()[0];
   if (ride && ride.waypoints && ride.waypoints[0]) {
-    state.map.setView([ride.waypoints[0].lat, ride.waypoints[0].lng], 14, { animate: true });
-    showToast('🎯 Map centered on route start', 'info');
+    state.map.flyTo([ride.waypoints[0].lat, ride.waypoints[0].lng], 14, { duration: 1.0 });
+    showToast('🎯 Centered on Route Start', 'info');
   }
 }
 
