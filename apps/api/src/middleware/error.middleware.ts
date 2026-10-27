@@ -40,7 +40,7 @@ export function errorHandler(
   const apiError: ApiError = {
     status: 'error',
     code: 'INTERNAL_ERROR',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred',
+    message: error.message || 'An unexpected error occurred',
     timestamp,
     requestId,
   };

@@ -21,10 +21,19 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
 
     const title = `${from_place} → ${to_place} (${days}d)`;
     const trip = await createTrip(userId, { title, from_place, to_place, days, bike_type, preferences });
+    console.log('[createTrip] trip created:', trip.id);
 
-    const itinerary = await generateItinerary(from_place, to_place, days, bike_type, preferences);
+    let itinerary;
+    try {
+      itinerary = await generateItinerary(from_place, to_place, days, bike_type, preferences);
+    } catch (aiErr: unknown) {
+      const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+      console.error('[createTrip] AI generation failed:', msg);
+      throw new Error(`AI service failed: ${msg}`);
+    }
+    console.log('[createTrip] itinerary generated, days:', itinerary.length);
+
     await saveItinerary(trip.id, itinerary);
-
     const room = await createRoom(trip.id, userId);
 
     return sendSuccess(res, { trip, itinerary, room }, 201);
