@@ -26,7 +26,7 @@ export async function generateItinerary(
 
   const prompt = `You are an expert biker tour planner. Generate a detailed day-wise itinerary for a ${bikeType} trip from ${from} to ${to} for ${days} days.${preferencesText}
 
-Return ONLY a valid JSON array (no markdown, no explanation) in this exact format:
+Return ONLY a valid JSON array (no markdown, no explanation, no code fences) in this exact format:
 [
   {
     "day": 1,
@@ -47,31 +47,31 @@ Return ONLY a valid JSON array (no markdown, no explanation) in this exact forma
 Types allowed: fuel_stop, stay, attraction, meal, rest
 Make sure the last stop of each day is a "stay" type. Include fuel stops every 150-200km. Add local attraction and meal stops. Be specific with real place names.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-haiku-5-5',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
     }),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Claude API error: ${response.status} ${errText}`);
+    throw new Error(`Gemini API error: ${response.status} ${errText}`);
   }
 
-  const result = await response.json() as { content: Array<{ type: string; text: string }> };
-  const text = result.content[0]?.text ?? '';
+  const result = await response.json() as {
+    candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+  };
+
+  const text = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
-    throw new Error('Claude returned invalid itinerary format');
+    throw new Error(`Gemini returned invalid format: ${text.slice(0, 200)}`);
   }
 
   return JSON.parse(jsonMatch[0]) as ItineraryDay[];
