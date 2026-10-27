@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const backendEnvSchema = z.object({
+export const backendEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3001),
   SUPABASE_URL: z.string().url().describe('Supabase project URL'),
@@ -16,7 +16,7 @@ const backendEnvSchema = z.object({
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
 });
 
-const frontendEnvSchema = z.object({
+export const frontendEnvSchema = z.object({
   VITE_API_URL: z.string().url().default('http://localhost:3001'),
   VITE_APP_NAME: z.string().default('Payanam'),
   VITE_ENV: z.enum(['development', 'production']).default('development'),
