@@ -59,4 +59,32 @@ export const authService = {
   },
 };
 
+export const tripService = {
+  createTrip: async (data: {
+    from_place: string;
+    to_place: string;
+    days: number;
+    bike_type: string;
+    preferences?: string;
+  }) => {
+    const response = await api.post('/api/trips', data);
+    return response.data.data;
+  },
+
+  getUserTrips: async () => {
+    const response = await api.get('/api/trips');
+    return response.data.data;
+  },
+
+  getTripById: async (id: string) => {
+    const response = await api.get(`/api/trips/${id}`);
+    return response.data.data;
+  },
+
+  joinRoom: async (invite_code: string) => {
+    const response = await api.post('/api/rooms/join', { invite_code });
+    return response.data.data;
+  },
+};
+
 export default api;
