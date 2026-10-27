@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { User, AuthResponse } from '@payanam/types';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { getDatabase } from '../config/database';
