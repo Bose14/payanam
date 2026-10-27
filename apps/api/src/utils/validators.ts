@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { validateEmail as validateEmailUtil, validatePassword as validatePasswordUtil } from '@payanam/utils';
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -7,17 +6,13 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  email: z
-    .string()
-    .email('Invalid email')
-    .refine((email) => validateEmailUtil(email), 'Invalid email format'),
+  email: z.string().email('Invalid email'),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters')
-    .refine((password) => {
-      const validation = validatePasswordUtil(password);
-      return validation.isValid;
-    }, 'Password does not meet requirements'),
+    .regex(/[A-Z]/, 'Must contain uppercase letter')
+    .regex(/[a-z]/, 'Must contain lowercase letter')
+    .regex(/[0-9]/, 'Must contain number'),
   fullName: z
     .string()
     .min(2, 'Full name must be at least 2 characters')

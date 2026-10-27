@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { v4 as uuidv4 } from 'crypto';
+import { randomUUID } from 'crypto';
 
 declare global {
   namespace Express {
@@ -10,7 +10,7 @@ declare global {
 }
 
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
-  req.id = uuidv4();
+  req.id = randomUUID();
   res.setHeader('X-Request-ID', req.id);
   next();
 }

@@ -1,14 +1,12 @@
 [build]
-command = "pnpm turbo run build --filter=web"
-publish = "apps/web/dist"
+  base = "apps/web"
+  command = "npm install && npm run build"
+  publish = "dist"
 
-[env.production]
-VITE_API_URL = "https://api.payanam.com"
-
-[env.development]
-VITE_API_URL = "http://localhost:3001"
+[build.environment]
+  NODE_VERSION = "20"
 
 [[redirects]]
-from = "/*"
-to = "/index.html"
-status = 200
+  from = "/*"
+  to = "/index.html"
+  status = 200
