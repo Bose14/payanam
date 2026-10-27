@@ -1,18 +1,33 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import env from './environment';
 
-let supabaseClient: SupabaseClient | null = null;
+let supabaseServiceClient: SupabaseClient | null = null;
+let supabaseAnonClient: SupabaseClient | null = null;
 
-export function initializeDatabase(): SupabaseClient {
-  if (!supabaseClient) {
-    supabaseClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+export function initializeDatabase(): void {
+  if (!supabaseServiceClient) {
+    supabaseServiceClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
   }
-  return supabaseClient;
+  if (!supabaseAnonClient) {
+    supabaseAnonClient = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+  }
 }
 
 export function getDatabase(): SupabaseClient {
-  if (!supabaseClient) {
+  if (!supabaseServiceClient) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
-  return supabaseClient;
+  return supabaseServiceClient;
+}
+
+export function getAnonDatabase(): SupabaseClient {
+  if (!supabaseAnonClient) {
+    throw new Error('Anon database not initialized. Call initializeDatabase() first.');
+  }
+  return supabaseAnonClient;
 }
