@@ -1,0 +1,8 @@
+[build]
+  command = "cd ../../packages/config && npm install && cd ../types && npm install && cd ../utils && npm install && cd ../../apps/web && npm install && npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
