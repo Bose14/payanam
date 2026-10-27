@@ -4,17 +4,14 @@ import env from './config/environment';
 import { initializeDatabase } from './config/database';
 import { requestIdMiddleware } from './middleware/request-id.middleware';
 import { errorHandler } from './middleware/error.middleware';
-import authRoutes from './routes/auth.routes';
-import healthRoutes from './routes/health.routes';
+import { registerRoutes } from './routes/index';
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-const allowedOrigins = [
-  env.CORS_ORIGIN,
-  env.FRONTEND_URL,
-].filter(Boolean);
+
+const allowedOrigins = [env.CORS_ORIGIN, env.FRONTEND_URL].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -26,6 +23,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 app.use(requestIdMiddleware);
 
 try {
@@ -36,8 +34,7 @@ try {
   process.exit(1);
 }
 
-app.use('/api/health', healthRoutes);
-app.use('/api/auth', authRoutes);
+registerRoutes(app);
 
 app.use(errorHandler);
 
