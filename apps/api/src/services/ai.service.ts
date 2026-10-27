@@ -54,7 +54,7 @@ Make sure the last stop of each day is a "stay" type. Include fuel stops every 1
     headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
     }),
   });
 
