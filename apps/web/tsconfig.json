@@ -17,7 +17,6 @@
       "@/*": ["src/*"],
       "@payanam/types": ["../../packages/types/src"],
       "@payanam/utils": ["../../packages/utils/src"],
-      "@payanam/config": ["../../packages/config/src"]
     }
   },
   "include": ["src"]
