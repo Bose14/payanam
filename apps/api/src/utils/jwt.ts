@@ -9,7 +9,7 @@ export function generateAccessToken(userId: string, email: string): string {
   };
 
   return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRY,
+    expiresIn: env.JWT_EXPIRY as unknown as number,
   });
 }
 
@@ -17,7 +17,7 @@ export function generateRefreshToken(userId: string): string {
   const payload = { userId };
 
   return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.REFRESH_TOKEN_EXPIRY,
+    expiresIn: env.REFRESH_TOKEN_EXPIRY as unknown as number,
   });
 }
 
