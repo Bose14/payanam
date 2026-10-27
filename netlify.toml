@@ -1,5 +1,5 @@
 [build]
-  command = "cd packages/config && npm install && cd ../types && npm install && cd ../utils && npm install && cd ../apps/web && npm install && npm run build"
+  command = "npm install --prefix packages/config && npm install --prefix packages/types && npm install --prefix packages/utils && npm install --prefix apps/web && npm run build --prefix apps/web"
   publish = "apps/web/dist"
 
 [build.environment]
