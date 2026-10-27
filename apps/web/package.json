@@ -12,8 +12,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
-    "@payanam/types": "workspace:*",
-    "@payanam/utils": "workspace:*",
+    "@payanam/types": "file:../../packages/types",
+    "@payanam/utils": "file:../../packages/utils",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
@@ -21,7 +21,7 @@
     "axios": "^1.6.0"
   },
   "devDependencies": {
-    "@payanam/config": "workspace:*",
+    "@payanam/config": "file:../../packages/config",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",

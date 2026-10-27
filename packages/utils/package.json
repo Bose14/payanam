@@ -9,7 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@payanam/types": "workspace:*"
+    "@payanam/types": "file:../types"
   },
   "devDependencies": {
     "typescript": "^5.3.2"

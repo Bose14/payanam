@@ -14,9 +14,9 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
-    "@payanam/config": "workspace:*",
-    "@payanam/types": "workspace:*",
-    "@payanam/utils": "workspace:*",
+    "@payanam/config": "file:../../packages/config",
+    "@payanam/types": "file:../../packages/types",
+    "@payanam/utils": "file:../../packages/utils",
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
