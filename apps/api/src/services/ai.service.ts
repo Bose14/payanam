@@ -47,7 +47,7 @@ Return ONLY a valid JSON array (no markdown, no explanation, no code fences) in 
 Types allowed: fuel_stop, stay, attraction, meal, rest
 Make sure the last stop of each day is a "stay" type. Include fuel stops every 150-200km. Add local attraction and meal stops. Be specific with real place names.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${env.GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-latest:generateContent?key=${env.GEMINI_API_KEY}`;
 
   const response = await fetch(url, {
     method: 'POST',
