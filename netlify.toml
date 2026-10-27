@@ -1,0 +1,14 @@
+[build]
+command = "pnpm turbo run build --filter=web"
+publish = "apps/web/dist"
+
+[env.production]
+VITE_API_URL = "https://api.payanam.com"
+
+[env.development]
+VITE_API_URL = "http://localhost:3001"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
