@@ -85,6 +85,11 @@ export const tripService = {
     const response = await api.post('/api/rooms/join', { invite_code });
     return response.data.data;
   },
+
+  updateItinerary: async (tripId: string, stops: unknown[]) => {
+    const response = await api.put(`/api/trips/${tripId}/itinerary`, { stops });
+    return response.data;
+  },
 };
 
 export default api;

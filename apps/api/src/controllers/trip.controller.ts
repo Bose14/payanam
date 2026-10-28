@@ -8,6 +8,7 @@ import {
   saveItinerary,
   createRoom,
   joinRoom,
+  updateItinerary,
 } from '../services/trip.service';
 
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
@@ -58,6 +59,15 @@ export async function getTripByIdHandler(req: Request, res: Response, next: Next
   } catch (err) {
     next(err);
   }
+}
+
+export async function updateItineraryHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { stops } = req.body;
+    if (!Array.isArray(stops)) return sendError(res, 'stops array required', 400, 'VALIDATION_ERROR');
+    await updateItinerary(req.params.id, req.userId!, stops);
+    return sendSuccess(res, { message: 'Itinerary updated' });
+  } catch (err) { next(err); }
 }
 
 export async function joinRoomHandler(req: Request, res: Response, next: NextFunction) {

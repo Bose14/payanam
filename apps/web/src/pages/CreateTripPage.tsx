@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
+import PlaceInput from '../components/PlaceInput';
 
 function CreateTripPage() {
   const navigate = useNavigate();
@@ -51,25 +52,19 @@ function CreateTripPage() {
           <div style={styles.row}>
             <div style={styles.field}>
               <label style={styles.label}>From</label>
-              <input
-                name="from_place"
+              <PlaceInput
                 value={form.from_place}
-                onChange={handleChange}
+                onChange={(v) => setForm((f) => ({ ...f, from_place: v }))}
                 placeholder="e.g. Mumbai"
-                required
-                style={styles.input}
               />
             </div>
             <div style={styles.fieldArrow}>→</div>
             <div style={styles.field}>
               <label style={styles.label}>To</label>
-              <input
-                name="to_place"
+              <PlaceInput
                 value={form.to_place}
-                onChange={handleChange}
+                onChange={(v) => setForm((f) => ({ ...f, to_place: v }))}
                 placeholder="e.g. Goa"
-                required
-                style={styles.input}
               />
             </div>
           </div>

@@ -1,4 +1,10 @@
 -- Run this in Supabase SQL Editor
+-- Drop existing tables first (in reverse dependency order)
+DROP TABLE IF EXISTS expenses CASCADE;
+DROP TABLE IF EXISTS room_members CASCADE;
+DROP TABLE IF EXISTS rooms CASCADE;
+DROP TABLE IF EXISTS itinerary_items CASCADE;
+DROP TABLE IF EXISTS trips CASCADE;
 
 CREATE TABLE IF NOT EXISTS trips (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -25,6 +31,8 @@ CREATE TABLE IF NOT EXISTS itinerary_items (
   estimated_km DECIMAL(8,2),
   duration_hours DECIMAL(4,2),
   tips TEXT,
+  lat DECIMAL(9,6),
+  lng DECIMAL(9,6),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -65,3 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_trips_user_id ON trips(user_id);
 CREATE INDEX IF NOT EXISTS idx_itinerary_trip_id ON itinerary_items(trip_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_invite_code ON rooms(invite_code);
 CREATE INDEX IF NOT EXISTS idx_expenses_room_id ON expenses(room_id);
+
+-- Run separately if tables already exist (lat/lng columns):
+-- ALTER TABLE itinerary_items ADD COLUMN IF NOT EXISTS lat DECIMAL(9,6);
+-- ALTER TABLE itinerary_items ADD COLUMN IF NOT EXISTS lng DECIMAL(9,6);

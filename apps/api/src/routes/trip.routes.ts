@@ -5,6 +5,7 @@ import {
   getUserTripsHandler,
   getTripByIdHandler,
   joinRoomHandler,
+  updateItineraryHandler,
 } from '../controllers/trip.controller';
 
 const router = Router();
@@ -14,6 +15,7 @@ router.use(authMiddleware);
 router.post('/', createTripHandler);
 router.get('/', getUserTripsHandler);
 router.get('/:id', getTripByIdHandler);
+router.put('/:id/itinerary', updateItineraryHandler);
 
 export default router;
 

@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
+import TripMap from '../components/TripMap';
+import PlaceInput from '../components/PlaceInput';
 
 const typeIcons: Record<string, string> = {
-  fuel_stop: '⛽',
-  stay: '🏨',
-  attraction: '📍',
-  meal: '🍽️',
-  rest: '☕',
-  stop: '📌',
+  fuel_stop: '⛽', stay: '🏨', attraction: '📍', meal: '🍽️', rest: '☕', stop: '📌',
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  fuel_stop: '#f59e0b', stay: '#3b82f6', attraction: '#10b981', meal: '#f97316', rest: '#8b5cf6', stop: '#6b7280',
 };
 
 interface Stop {
-  id: string;
+  id?: string;
   place: string;
   item_type: string;
   description: string;
@@ -21,6 +22,8 @@ interface Stop {
   tips: string;
   day_number: number;
   order_index: number;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 interface Trip {
@@ -35,21 +38,40 @@ interface Trip {
   rooms?: Array<{ id: string; invite_code: string }>;
 }
 
+interface AddStopForm {
+  place: string;
+  item_type: string;
+  description: string;
+}
+
 function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [stops, setStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
   const [copied, setCopied] = useState(false);
   const [openDay, setOpenDay] = useState<number>(1);
+  const [addingToDay, setAddingToDay] = useState<number | null>(null);
+  const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '' });
 
   useEffect(() => {
     if (!id) return;
     tripService.getTripById(id)
-      .then((data) => setTrip(data.trip))
+      .then((data) => {
+        setTrip(data.trip);
+        setStops(data.trip.itinerary ?? []);
+      })
       .catch((err) => setError(err.message ?? 'Failed to load trip'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
 
   const inviteCode = trip?.rooms?.[0]?.invite_code;
   const shareUrl = inviteCode ? `${window.location.origin}/join/${inviteCode}` : null;
@@ -62,17 +84,61 @@ function TripDetailPage() {
     });
   };
 
-  const groupedByDay = trip?.itinerary.reduce<Record<number, Stop[]>>((acc, stop) => {
+  const removeStop = (day: number, orderIndex: number) => {
+    setStops((prev) => {
+      const filtered = prev.filter((s) => !(s.day_number === day && s.order_index === orderIndex));
+      // reindex order within each day
+      const reindexed = filtered.map((s) => {
+        if (s.day_number !== day) return s;
+        const dayStops = filtered.filter((x) => x.day_number === day).sort((a, b) => a.order_index - b.order_index);
+        return { ...s, order_index: dayStops.indexOf(s) + 1 };
+      });
+      return reindexed;
+    });
+  };
+
+  const addStop = (day: number) => {
+    if (!addForm.place.trim()) return;
+    const dayStops = stops.filter((s) => s.day_number === day);
+    const newStop: Stop = {
+      place: addForm.place.trim(),
+      item_type: addForm.item_type,
+      description: addForm.description,
+      estimated_km: 0,
+      duration_hours: 1,
+      tips: '',
+      day_number: day,
+      order_index: dayStops.length + 1,
+    };
+    setStops((prev) => [...prev, newStop]);
+    setAddingToDay(null);
+    setAddForm({ place: '', item_type: 'attraction', description: '' });
+  };
+
+  const saveChanges = async () => {
+    if (!trip) return;
+    setSaving(true);
+    try {
+      await tripService.updateItinerary(trip.id, stops);
+      showToast('✅ Changes saved!');
+    } catch (err) {
+      showToast('❌ ' + (err instanceof Error ? err.message : 'Save failed'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const groupedByDay = stops.reduce<Record<number, Stop[]>>((acc, stop) => {
     if (!acc[stop.day_number]) acc[stop.day_number] = [];
     acc[stop.day_number].push(stop);
     return acc;
-  }, {}) ?? {};
+  }, {});
 
   if (loading) {
     return (
       <div style={styles.center}>
-        <div style={styles.spinner}>⏳</div>
-        <p style={styles.loadingText}>Loading trip details...</p>
+        <div style={{ fontSize: 40 }}>⏳</div>
+        <p style={{ color: '#6b7280', fontSize: 16 }}>Loading trip details...</p>
       </div>
     );
   }
@@ -87,235 +153,197 @@ function TripDetailPage() {
   }
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <div style={styles.brand}>
-          <span>🏍️</span>
-          <span style={styles.brandName}>Payanam</span>
+    <div style={{ minHeight: '100vh', background: '#f5f7fa', fontFamily: 'system-ui, sans-serif' }}>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          background: toast.startsWith('✅') ? '#166534' : '#991b1b',
+          color: 'white', padding: '10px 24px', borderRadius: 8, fontWeight: 600,
+          zIndex: 9999, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+        }}>
+          {toast}
         </div>
-        <Link to="/dashboard" style={styles.backLink}>← Dashboard</Link>
+      )}
+
+      <header style={{
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
+        padding: '0 24px', height: 60,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>🏍️</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>Payanam</span>
+        </div>
+        <Link to="/dashboard" style={{ color: '#cbd5e1', fontSize: 14, textDecoration: 'none' }}>← Dashboard</Link>
       </header>
 
-      <main style={styles.main}>
-        <div style={styles.tripHeader}>
+      <main style={{ maxWidth: 860, margin: '0 auto', padding: '32px 16px' }}>
+        {/* Trip header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <h1 style={styles.tripTitle}>{trip.title}</h1>
-            <p style={styles.tripMeta}>
+            <h1 style={{ fontSize: 26, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>{trip.title}</h1>
+            <p style={{ color: '#6b7280', fontSize: 15, margin: 0, textTransform: 'capitalize' }}>
               {trip.from_place} → {trip.to_place} · {trip.days} days · {trip.bike_type}
             </p>
           </div>
-          <div style={styles.tripActions}>
+          <div style={{ display: 'flex', gap: 10 }}>
             {shareUrl && (
-              <button onClick={handleCopy} style={styles.shareBtn}>
+              <button onClick={handleCopy} style={styles.btnSecondary}>
                 {copied ? '✅ Copied!' : '🔗 Share Trip'}
               </button>
             )}
+            <button onClick={saveChanges} disabled={saving} style={saving ? { ...styles.btnPrimary, opacity: 0.6 } : styles.btnPrimary}>
+              {saving ? 'Saving...' : '💾 Save Changes'}
+            </button>
           </div>
         </div>
 
         {inviteCode && (
-          <div style={styles.inviteBanner}>
+          <div style={{
+            background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10,
+            padding: '12px 16px', display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8,
+            fontSize: 14, color: '#1e40af',
+          }}>
             <span>📨 Invite code: <strong>{inviteCode}</strong></span>
-            <span style={styles.inviteHint}>Share this link with your fellow riders</span>
+            <span style={{ color: '#60a5fa', fontSize: 13 }}>Share this link with your fellow riders</span>
           </div>
         )}
 
-        <section style={styles.itinerarySection}>
-          <h2 style={styles.sectionTitle}>Itinerary</h2>
+        {/* Map */}
+        <div style={{ marginBottom: 28 }}>
+          <TripMap stops={stops} />
+        </div>
 
-          {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
-            const stops = groupedByDay[day] ?? [];
-            const isOpen = openDay === day;
-            return (
-              <div key={day} style={styles.dayCard}>
-                <button
-                  style={styles.dayHeader}
-                  onClick={() => setOpenDay(isOpen ? 0 : day)}
-                >
-                  <span style={styles.dayLabel}>Day {day}</span>
-                  {stops.length > 0 && (
-                    <span style={styles.dayStops}>{stops.length} stops</span>
-                  )}
-                  <span style={styles.chevron}>{isOpen ? '▲' : '▼'}</span>
-                </button>
+        {/* Itinerary */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>Itinerary</h2>
+          <span style={{ fontSize: 13, color: '#9ca3af' }}>Click × to remove a stop · Add Stop to insert new ones</span>
+        </div>
 
-                {isOpen && (
-                  <div style={styles.stopsContainer}>
-                    {stops.length === 0 ? (
-                      <p style={styles.noStops}>No stops for this day</p>
-                    ) : (
-                      stops.map((stop, idx) => (
-                        <div key={stop.id} style={styles.stopRow}>
-                          <div style={styles.stopConnector}>
-                            <div style={styles.stopDot}>{typeIcons[stop.item_type] ?? '📌'}</div>
-                            {idx < stops.length - 1 && <div style={styles.stopLine} />}
-                          </div>
-                          <div style={styles.stopContent}>
-                            <div style={styles.stopPlaceRow}>
-                              <span style={styles.stopPlace}>{stop.place}</span>
-                              <span style={styles.stopType}>{stop.item_type.replace('_', ' ')}</span>
-                            </div>
-                            {stop.description && (
-                              <p style={styles.stopDesc}>{stop.description}</p>
-                            )}
-                            <div style={styles.stopMeta}>
-                              {stop.estimated_km > 0 && <span>🛣️ {stop.estimated_km}km</span>}
-                              {stop.duration_hours > 0 && <span>⏱️ {stop.duration_hours}h</span>}
-                            </div>
-                            {stop.tips && (
-                              <div style={styles.tipBox}>💡 {stop.tips}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
+        {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
+          const dayStops = (groupedByDay[day] ?? []).sort((a, b) => a.order_index - b.order_index);
+          const isOpen = openDay === day;
+          return (
+            <div key={day} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 12, overflow: 'hidden' }}>
+              <button
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 15 }}
+                onClick={() => setOpenDay(isOpen ? 0 : day)}
+              >
+                <span style={{ fontWeight: 600, color: '#111827', flex: 1 }}>Day {day}</span>
+                {dayStops.length > 0 && (
+                  <span style={{ background: '#f3f4f6', color: '#6b7280', fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{dayStops.length} stops</span>
                 )}
-              </div>
-            );
-          })}
-        </section>
+                <span style={{ color: '#9ca3af', fontSize: 12 }}>{isOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {isOpen && (
+                <div style={{ padding: '0 20px 20px' }}>
+                  {dayStops.length === 0 && <p style={{ color: '#9ca3af', fontSize: 14 }}>No stops for this day</p>}
+
+                  {dayStops.map((stop, idx) => (
+                    <div key={`${stop.day_number}-${stop.order_index}-${idx}`} style={{ display: 'flex', gap: 12, marginBottom: 4 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 28, flexShrink: 0 }}>
+                        <div style={{ fontSize: 20, lineHeight: 1, marginTop: 2 }}>{typeIcons[stop.item_type] ?? '📌'}</div>
+                        {idx < dayStops.length - 1 && <div style={{ width: 2, flex: 1, background: '#e5e7eb', margin: '4px 0', minHeight: 16 }} />}
+                      </div>
+                      <div style={{ flex: 1, paddingBottom: 16, borderBottom: '1px solid #f3f4f6' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 600, color: '#111827', fontSize: 15, flex: 1 }}>{stop.place}</span>
+                          <span style={{
+                            fontSize: 11, padding: '2px 8px', borderRadius: 10, textTransform: 'capitalize',
+                            background: TYPE_COLORS[stop.item_type] + '20', color: TYPE_COLORS[stop.item_type],
+                          }}>
+                            {stop.item_type.replace('_', ' ')}
+                          </span>
+                          <button
+                            onClick={() => removeStop(stop.day_number, stop.order_index)}
+                            title="Remove stop"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
+                          >×</button>
+                        </div>
+                        {stop.description && <p style={{ color: '#374151', fontSize: 14, margin: '0 0 6px' }}>{stop.description}</p>}
+                        <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
+                          {stop.estimated_km > 0 && <span>🛣️ {stop.estimated_km}km</span>}
+                          {stop.duration_hours > 0 && <span>⏱️ {stop.duration_hours}h</span>}
+                        </div>
+                        {stop.tips && (
+                          <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#92400e' }}>
+                            💡 {stop.tips}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add stop form */}
+                  {addingToDay === day ? (
+                    <div style={{ marginTop: 12, padding: 16, background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
+                      <p style={{ fontWeight: 600, fontSize: 14, color: '#111827', margin: '0 0 12px' }}>Add a stop to Day {day}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <PlaceInput
+                          value={addForm.place}
+                          onChange={(v) => setAddForm((f) => ({ ...f, place: v }))}
+                          placeholder="Place name"
+                        />
+                        <select
+                          value={addForm.item_type}
+                          onChange={(e) => setAddForm((f) => ({ ...f, item_type: e.target.value }))}
+                          style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
+                        >
+                          <option value="attraction">Attraction</option>
+                          <option value="meal">Meal</option>
+                          <option value="fuel_stop">Fuel Stop</option>
+                          <option value="rest">Rest</option>
+                          <option value="stay">Stay</option>
+                        </select>
+                        <input
+                          value={addForm.description}
+                          onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
+                          placeholder="Description (optional)"
+                          style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
+                        />
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => addStop(day)} style={styles.btnPrimary}>Add Stop</button>
+                          <button onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }} style={styles.btnSecondary}>Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingToDay(day)}
+                      style={{ marginTop: 12, padding: '8px 16px', background: 'none', border: '1px dashed #d1d5db', borderRadius: 8, cursor: 'pointer', color: '#6b7280', fontSize: 13, width: '100%' }}
+                    >
+                      + Add Stop
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </main>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    background: '#f5f7fa',
-    fontFamily: 'system-ui, sans-serif',
-  },
   center: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
+    minHeight: '100vh', display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: 12,
   },
-  spinner: { fontSize: '40px' },
-  loadingText: { color: '#6b7280', fontSize: '16px' },
-  header: {
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
-    padding: '0 24px',
-    height: '60px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  brand: { display: 'flex', alignItems: 'center', gap: '8px' },
-  brandName: { color: '#fff', fontWeight: 700, fontSize: '20px' },
-  backLink: { color: '#cbd5e1', fontSize: '14px', textDecoration: 'none' },
-  main: { maxWidth: '800px', margin: '0 auto', padding: '32px 16px' },
-  tripHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '16px',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  tripTitle: { fontSize: '26px', fontWeight: 700, color: '#111827', margin: '0 0 6px' },
-  tripMeta: { color: '#6b7280', fontSize: '15px', margin: 0, textTransform: 'capitalize' },
-  tripActions: { display: 'flex', gap: '10px' },
-  shareBtn: {
+  btnPrimary: {
     padding: '10px 18px',
     background: 'linear-gradient(135deg, #0f3460, #533483)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: 600,
-    cursor: 'pointer',
+    color: '#fff', border: 'none', borderRadius: 8,
+    fontSize: 14, fontWeight: 600, cursor: 'pointer',
   },
-  inviteBanner: {
-    background: '#eff6ff',
-    border: '1px solid #bfdbfe',
-    borderRadius: '10px',
-    padding: '12px 16px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '24px',
-    flexWrap: 'wrap',
-    gap: '8px',
-    fontSize: '14px',
-    color: '#1e40af',
-  },
-  inviteHint: { color: '#60a5fa', fontSize: '13px' },
-  itinerarySection: {},
-  sectionTitle: { fontSize: '18px', fontWeight: 600, color: '#111827', margin: '0 0 16px' },
-  dayCard: {
-    background: '#fff',
-    borderRadius: '12px',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-    marginBottom: '12px',
-    overflow: 'hidden',
-  },
-  dayHeader: {
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '16px 20px',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    textAlign: 'left',
-    fontSize: '15px',
-  },
-  dayLabel: { fontWeight: 600, color: '#111827', flex: 1 },
-  dayStops: {
-    background: '#f3f4f6',
-    color: '#6b7280',
-    fontSize: '12px',
-    padding: '2px 8px',
-    borderRadius: '12px',
-  },
-  chevron: { color: '#9ca3af', fontSize: '12px' },
-  stopsContainer: { padding: '8px 20px 20px' },
-  noStops: { color: '#9ca3af', fontSize: '14px' },
-  stopRow: { display: 'flex', gap: '12px', marginBottom: '4px' },
-  stopConnector: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    width: '28px',
-    flexShrink: 0,
-  },
-  stopDot: { fontSize: '20px', lineHeight: 1, marginTop: '2px' },
-  stopLine: {
-    width: '2px',
-    flex: 1,
-    background: '#e5e7eb',
-    margin: '4px 0',
-    minHeight: '16px',
-  },
-  stopContent: {
-    flex: 1,
-    paddingBottom: '16px',
-    borderBottom: '1px solid #f3f4f6',
-  },
-  stopPlaceRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' },
-  stopPlace: { fontWeight: 600, color: '#111827', fontSize: '15px' },
-  stopType: {
-    fontSize: '11px',
-    color: '#6b7280',
-    background: '#f3f4f6',
-    padding: '2px 8px',
-    borderRadius: '10px',
-    textTransform: 'capitalize',
-  },
-  stopDesc: { color: '#374151', fontSize: '14px', margin: '0 0 6px' },
-  stopMeta: { display: 'flex', gap: '12px', fontSize: '13px', color: '#6b7280', marginBottom: '4px' },
-  tipBox: {
-    background: '#fefce8',
-    border: '1px solid #fde68a',
-    borderRadius: '6px',
-    padding: '8px 12px',
-    fontSize: '13px',
-    color: '#92400e',
+  btnSecondary: {
+    padding: '10px 18px',
+    background: '#f3f4f6', color: '#374151',
+    border: '1px solid #e5e7eb', borderRadius: 8,
+    fontSize: 14, fontWeight: 500, cursor: 'pointer',
   },
 };
 

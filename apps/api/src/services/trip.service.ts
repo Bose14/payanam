@@ -75,6 +75,8 @@ export async function saveItinerary(tripId: string, itineraryDays: Awaited<Retur
       estimated_km: stop.estimatedKm,
       duration_hours: stop.durationHours,
       tips: stop.tips,
+      lat: stop.lat ?? null,
+      lng: stop.lng ?? null,
     })),
   );
 
@@ -129,6 +131,21 @@ export async function joinRoom(inviteCode: string, userId: string) {
   }
 
   return room;
+}
+
+export async function updateItinerary(tripId: string, userId: string, stops: Array<{
+  day_number: number; order_index: number; place: string; description?: string;
+  item_type?: string; estimated_km?: number; duration_hours?: number; tips?: string;
+  lat?: number; lng?: number;
+}>) {
+  const db = getDatabase();
+  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', userId).single();
+  if (!trip) throw new Error('Trip not found');
+  await db.from('itinerary_items').delete().eq('trip_id', tripId);
+  if (stops.length > 0) {
+    const { error } = await db.from('itinerary_items').insert(stops.map(s => ({ ...s, trip_id: tripId })));
+    if (error) throw new Error(error.message);
+  }
 }
 
 export async function getRoomByTripId(tripId: string) {
