@@ -53,7 +53,7 @@ function TripDetailPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [copied, setCopied] = useState(false);
-  const [openDay, setOpenDay] = useState<number>(1);
+  const [openDays, setOpenDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
   const [addingToDay, setAddingToDay] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '' });
 
@@ -213,7 +213,7 @@ function TripDetailPage() {
 
         {/* Map */}
         <div style={{ marginBottom: 28 }}>
-          <TripMap stops={stops} />
+          <TripMap stops={stops} fromPlace={trip.from_place} toPlace={trip.to_place} />
         </div>
 
         {/* Itinerary */}
@@ -224,18 +224,23 @@ function TripDetailPage() {
 
         {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
           const dayStops = (groupedByDay[day] ?? []).sort((a, b) => a.order_index - b.order_index);
-          const isOpen = openDay === day;
+          const isOpen = openDays.has(day);
+          const toggleDay = () => setOpenDays(prev => {
+            const next = new Set(prev);
+            if (next.has(day)) next.delete(day); else next.add(day);
+            return next;
+          });
           return (
             <div key={day} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 12, overflow: 'hidden' }}>
               <button
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 15 }}
-                onClick={() => setOpenDay(isOpen ? 0 : day)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', background: isOpen ? '#f8faff' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 15 }}
+                onClick={toggleDay}
               >
-                <span style={{ fontWeight: 600, color: '#111827', flex: 1 }}>Day {day}</span>
+                <span style={{ fontWeight: 700, color: '#1e40af', fontSize: 16, flex: 1 }}>Day {day}</span>
                 {dayStops.length > 0 && (
-                  <span style={{ background: '#f3f4f6', color: '#6b7280', fontSize: 12, padding: '2px 8px', borderRadius: 12 }}>{dayStops.length} stops</span>
+                  <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 500 }}>{dayStops.length} stops</span>
                 )}
-                <span style={{ color: '#9ca3af', fontSize: 12 }}>{isOpen ? '▲' : '▼'}</span>
+                <span style={{ color: '#9ca3af', fontSize: 14 }}>{isOpen ? '▲' : '▼'}</span>
               </button>
 
               {isOpen && (
@@ -260,8 +265,8 @@ function TripDetailPage() {
                           <button
                             onClick={() => removeStop(stop.day_number, stop.order_index)}
                             title="Remove stop"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
-                          >×</button>
+                            style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 13, padding: '3px 8px', borderRadius: 6, fontWeight: 600, lineHeight: 1 }}
+                          >✕ Remove</button>
                         </div>
                         {stop.description && <p style={{ color: '#374151', fontSize: 14, margin: '0 0 6px' }}>{stop.description}</p>}
                         <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
@@ -313,9 +318,9 @@ function TripDetailPage() {
                   ) : (
                     <button
                       onClick={() => setAddingToDay(day)}
-                      style={{ marginTop: 12, padding: '8px 16px', background: 'none', border: '1px dashed #d1d5db', borderRadius: 8, cursor: 'pointer', color: '#6b7280', fontSize: 13, width: '100%' }}
+                      style={{ marginTop: 12, padding: '10px 16px', background: '#eff6ff', border: '2px dashed #93c5fd', borderRadius: 8, cursor: 'pointer', color: '#1d4ed8', fontSize: 14, fontWeight: 600, width: '100%' }}
                     >
-                      + Add Stop
+                      + Add Stop to Day {day}
                     </button>
                   )}
                 </div>
