@@ -26,15 +26,34 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function makeRiderIcon(initial: string, color: string, isMe: boolean, status: string) {
-  const size = isMe ? 44 : 36;
-  const ring = isMe ? `box-shadow:0 0 0 3px ${color},0 0 0 6px ${color}44;` : '';
+// Navigation arrow for the current user — rotates with heading
+function makeMyNavIcon(color: string, heading: number, status: string) {
+  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
+  return L.divIcon({
+    className: '',
+    iconAnchor: [24, 24],
+    iconSize: [48, 48 + (status ? 24 : 0)],
+    html: `<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+      <div style="transform:rotate(${heading}deg);width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+        <svg width="44" height="44" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="20" fill="${color}" stroke="white" stroke-width="2.5" opacity="0.25"/>
+          <polygon points="22,4 34,38 22,30 10,38" fill="${color}" stroke="white" stroke-width="2"/>
+          <circle cx="22" cy="22" r="5" fill="white"/>
+        </svg>
+      </div>
+      ${badge}
+    </div>`,
+  });
+}
+
+// Circle icon for other riders
+function makeRiderIcon(initial: string, color: string, status: string) {
   const badge = status ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
   return L.divIcon({
     className: '',
-    iconAnchor: [size / 2, size / 2],
-    iconSize: [size, size + (status ? 22 : 0)],
-    html: `<div style="position:relative;width:${size}px;height:${size}px;background:${color};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${isMe ? 18 : 15}px;border:2px solid #fff;${ring}">${initial}${badge}</div>`,
+    iconAnchor: [18, 18],
+    iconSize: [36, 36 + (status ? 22 : 0)],
+    html: `<div style="position:relative;width:36px;height:36px;background:${color};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;border:2px solid #fff;">${initial}${badge}</div>`,
   });
 }
 
@@ -76,7 +95,7 @@ function MapFollow({ lat, lng, following, onDrag }: { lat: number; lng: number; 
 
   useEffect(() => {
     if (following) {
-      map.setView([lat, lng], Math.max(map.getZoom(), 16), { animate: true, duration: 0.6, easeLinearity: 0.4 });
+      map.setView([lat, lng], Math.max(map.getZoom(), 17), { animate: true, duration: 0.6, easeLinearity: 0.4 });
     }
   }, [lat, lng, following, map]);
 
@@ -112,6 +131,7 @@ export default function RidePage() {
   const [sosActive, setSosActive] = useState(false);
   const [newMsgCount, setNewMsgCount] = useState(0);
   const [following, setFollowing] = useState(true);
+  const [myHeading, setMyHeading] = useState(0);
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [backgroundWarning, setBackgroundWarning] = useState(false);
@@ -189,6 +209,7 @@ export default function RidePage() {
         myPosRef.current = { lat, lng };
         const speedKmh = speed != null ? speed * 3.6 : 0;
         const hdg = heading ?? 0;
+        if (heading != null) setMyHeading(heading);
         // Instant broadcast — zero DB write, real-time for all riders
         channelRef.current?.send({
           type: 'broadcast', event: 'location',
@@ -417,7 +438,7 @@ export default function RidePage() {
             🔆 Screen on
           </div>
         )}
-        <MapContainer center={defaultCenter} zoom={16} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+        <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
@@ -431,17 +452,20 @@ export default function RidePage() {
           {itineraryStops.map((stop) => (
             <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
           ))}
-          {/* Rider markers */}
-          {riders.map((r) => (
+          {/* My navigation arrow — rotates with heading */}
+          {riders.filter((r) => r.user_id === user?.id).map((r) => (
             <Marker
               key={r.user_id}
               position={[Number(r.lat), Number(r.lng)]}
-              icon={makeRiderIcon(
-                (r.user_name || '?')[0].toUpperCase(),
-                colorForUser(r.user_id),
-                r.user_id === user?.id,
-                r.quick_status ?? '',
-              )}
+              icon={makeMyNavIcon(colorForUser(r.user_id), myHeading, myStatus)}
+            />
+          ))}
+          {/* Other riders — circle with initial */}
+          {riders.filter((r) => r.user_id !== user?.id).map((r) => (
+            <Marker
+              key={r.user_id}
+              position={[Number(r.lat), Number(r.lng)]}
+              icon={makeRiderIcon((r.user_name || '?')[0].toUpperCase(), colorForUser(r.user_id), r.quick_status ?? '')}
             />
           ))}
         </MapContainer>
