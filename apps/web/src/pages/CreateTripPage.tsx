@@ -10,11 +10,14 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
       { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
     );
     const data = await res.json();
-    // Prefer city/town/village name for a clean label
     const a = data.address ?? {};
-    return a.city ?? a.town ?? a.village ?? a.suburb ?? a.county ?? data.display_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    // Build specific name: suburb/neighbourhood + city so we get "Koramangala, Bangalore" not just "Bangalore"
+    const area = a.suburb ?? a.neighbourhood ?? a.quarter ?? a.residential ?? a.road;
+    const city = a.city ?? a.town ?? a.village ?? a.county;
+    if (area && city && area !== city) return `${area}, ${city}`;
+    return city ?? a.state ?? data.display_name ?? `${lat.toFixed(5)},${lng.toFixed(5)}`;
   } catch {
-    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    return `${lat.toFixed(5)},${lng.toFixed(5)}`;
   }
 }
 

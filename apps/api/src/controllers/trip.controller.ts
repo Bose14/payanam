@@ -20,7 +20,11 @@ import {
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.userId!;
-    const { from_place, to_place, days, bike_type = 'motorcycle', trip_type = 'one_way', preferences = '' } = req.body;
+    const {
+      from_place, to_place, days,
+      bike_type = 'motorcycle', trip_type = 'one_way', preferences = '',
+      from_lat = null, from_lng = null, to_lat = null, to_lng = null,
+    } = req.body;
 
     if (!from_place || !to_place || !days) {
       return sendError(res, 'from_place, to_place, and days are required', 400, 'VALIDATION_ERROR');
@@ -28,7 +32,7 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
 
     const typeLabel = trip_type === 'round_trip' ? '↺' : trip_type === 'loop' ? '⟳' : '→';
     const title = `${from_place} ${typeLabel} ${to_place} (${days}d)`;
-    const trip = await createTrip(userId, { title, from_place, to_place, days, bike_type, trip_type, preferences });
+    const trip = await createTrip(userId, { title, from_place, to_place, from_lat, from_lng, to_lat, to_lng, days, bike_type, trip_type, preferences });
     console.log('[createTrip] trip created:', trip.id);
 
     let itinerary;
@@ -41,7 +45,7 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
     }
     console.log('[createTrip] itinerary generated, days:', itinerary.length);
 
-    await saveItinerary(trip.id, itinerary);
+    await saveItinerary(trip.id, itinerary, { from_place, from_lat, from_lng, to_place, to_lat, to_lng });
     const room = await createRoom(trip.id, userId);
 
     return sendSuccess(res, { trip, itinerary, room }, 201);

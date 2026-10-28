@@ -1,6 +1,18 @@
 import { getDatabase } from '../config/database';
 import { generateItinerary } from './ai.service';
 
+async function geocodePlace(name: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=in`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
+    );
+    const data = await res.json() as Array<{ lat: string; lon: string }>;
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch { /* silent */ }
+  return null;
+}
+
 interface CreateTripData {
   title: string;
   from_place: string;
@@ -135,13 +147,39 @@ export async function getTripById(tripId: string, userId: string) {
   return { ...trip, itinerary: items ?? [], isOwner: false };
 }
 
-export async function saveItinerary(tripId: string, itineraryDays: Awaited<ReturnType<typeof generateItinerary>>) {
+export async function saveItinerary(
+  tripId: string,
+  itineraryDays: Awaited<ReturnType<typeof generateItinerary>>,
+  tripEnds?: {
+    from_place: string; from_lat?: number | null; from_lng?: number | null;
+    to_place: string; to_lat?: number | null; to_lng?: number | null;
+  }
+) {
   const db = getDatabase();
-  const rows = itineraryDays.flatMap((day) =>
+
+  // Resolve start/end coords: use stored GPS coords, else geocode the place name
+  let startCoords: { lat: number; lng: number } | null = null;
+  let endCoords: { lat: number; lng: number } | null = null;
+  if (tripEnds) {
+    startCoords = (tripEnds.from_lat && tripEnds.from_lng)
+      ? { lat: tripEnds.from_lat, lng: tripEnds.from_lng }
+      : await geocodePlace(tripEnds.from_place);
+    endCoords = (tripEnds.to_lat && tripEnds.to_lng)
+      ? { lat: tripEnds.to_lat, lng: tripEnds.to_lng }
+      : await geocodePlace(tripEnds.to_place);
+  }
+
+  const lastDay = Math.max(...itineraryDays.map((d) => d.day), 1);
+  const lastDayMaxOrder = Math.max(
+    ...(itineraryDays.find((d) => d.day === lastDay)?.stops.map((s) => s.order) ?? [0])
+  );
+
+  const midRows = itineraryDays.flatMap((day) =>
     day.stops.map((stop) => ({
       trip_id: tripId,
       day_number: day.day,
-      order_index: stop.order,
+      // Shift day-1 order_index by 1 to make room for the start point at index 0
+      order_index: day.day === 1 && startCoords ? stop.order + 1 : stop.order,
       place: stop.place,
       description: stop.description,
       item_type: stop.type,
@@ -153,6 +191,19 @@ export async function saveItinerary(tripId: string, itineraryDays: Awaited<Retur
     })),
   );
 
+  const startRow = startCoords && tripEnds ? [{
+    trip_id: tripId, day_number: 1, order_index: 0,
+    place: tripEnds.from_place, item_type: 'stop', lat: startCoords.lat, lng: startCoords.lng,
+    description: 'Starting point', tips: '',
+  }] : [];
+
+  const endRow = endCoords && tripEnds ? [{
+    trip_id: tripId, day_number: lastDay, order_index: lastDayMaxOrder + 2,
+    place: tripEnds.to_place, item_type: 'stop', lat: endCoords.lat, lng: endCoords.lng,
+    description: 'Destination', tips: '',
+  }] : [];
+
+  const rows = [...startRow, ...midRows, ...endRow];
   const { error } = await db.from('itinerary_items').insert(rows);
   if (error) throw new Error(error.message);
 }
