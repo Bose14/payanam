@@ -19,7 +19,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   API_URL: z.string().default('http://localhost:3001'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
-  GEMINI_API_KEY: z.string(),
+  GROQ_API_KEY: z.string(),
 });
 
 const env = envSchema.parse(process.env);

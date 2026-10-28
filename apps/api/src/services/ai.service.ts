@@ -47,31 +47,34 @@ Return ONLY a valid JSON array (no markdown, no explanation, no code fences) in 
 Types allowed: fuel_stop, stay, attraction, meal, rest
 Make sure the last stop of each day is a "stay" type. Include fuel stops every 150-200km. Add local attraction and meal stops. Be specific with real place names.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent`;
-
-  const response = await fetch(url, {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+    headers: {
+      'content-type': 'application/json',
+      'authorization': `Bearer ${env.GROQ_API_KEY}`,
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 8192,
     }),
   });
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} ${errText}`);
+    throw new Error(`Groq API error: ${response.status} ${errText}`);
   }
 
   const result = await response.json() as {
-    candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+    choices: Array<{ message: { content: string } }>;
   };
 
-  const text = result.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const text = result.choices?.[0]?.message?.content ?? '';
 
   const jsonMatch = text.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
-    throw new Error(`Gemini returned invalid format: ${text.slice(0, 200)}`);
+    throw new Error(`Groq returned invalid format: ${text.slice(0, 200)}`);
   }
 
   return JSON.parse(jsonMatch[0]) as ItineraryDay[];
