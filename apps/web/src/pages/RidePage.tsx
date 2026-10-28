@@ -9,6 +9,19 @@ import { rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+
+async function fetchOsrmRoute(waypoints: [number, number][]): Promise<[number, number][]> {
+  if (waypoints.length < 2) return waypoints;
+  const coords = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
+  try {
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes?.[0]) {
+      return (data.routes[0].geometry.coordinates as [number, number][]).map(([lng, lat]) => [lat, lng]);
+    }
+  } catch { /* fallback to straight lines */ }
+  return waypoints;
+}
 const QUICK_STATUS_OPTIONS = [
   { label: '✅ All Good', value: '✅ All Good' },
   { label: '⛽ Need Fuel', value: '⛽ Need Fuel' },
@@ -132,6 +145,7 @@ export default function RidePage() {
   const [newMsgCount, setNewMsgCount] = useState(0);
   const [following, setFollowing] = useState(true);
   const [myHeading, setMyHeading] = useState(0);
+  const [osrmRoute, setOsrmRoute] = useState<[number, number][]>([]);
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [backgroundWarning, setBackgroundWarning] = useState(false);
@@ -156,6 +170,15 @@ export default function RidePage() {
       .catch(() => setEnded(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Fetch road-following route from OSRM once session itinerary is known
+  useEffect(() => {
+    if (!session) return;
+    const stops = (session.itinerary ?? []).filter((s) => s.lat && s.lng);
+    if (stops.length < 2) return;
+    const waypoints: [number, number][] = stops.map((s) => [s.lat as number, s.lng as number]);
+    fetchOsrmRoute(waypoints).then(setOsrmRoute);
+  }, [session]);
 
   // Wake Lock + background visibility tracking
   useEffect(() => {
@@ -446,8 +469,10 @@ export default function RidePage() {
           {myLat && myLng && (
             <MapFollow lat={myLat} lng={myLng} following={following} onDrag={() => setFollowing(false)} />
           )}
-          {/* Route polyline */}
-          {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#3b82f6" weight={3} opacity={0.6} />}
+          {/* Road-following route (OSRM), fallback to straight lines */}
+          {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
+            <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#3b82f6" weight={5} opacity={0.85} />
+          )}
           {/* Itinerary stop markers */}
           {itineraryStops.map((stop) => (
             <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />

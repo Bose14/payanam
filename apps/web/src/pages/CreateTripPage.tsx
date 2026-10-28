@@ -3,6 +3,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
 import PlaceInput from '../components/PlaceInput';
 
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
+    );
+    const data = await res.json();
+    // Prefer city/town/village name for a clean label
+    const a = data.address ?? {};
+    return a.city ?? a.town ?? a.village ?? a.suburb ?? a.county ?? data.display_name ?? `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch {
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
+}
+
 const TRIP_TYPES = [
   { value: 'one_way', label: '→ One-way', desc: 'Start to finish, no return' },
   { value: 'round_trip', label: '↺ Round trip', desc: 'Return to starting point' },
@@ -21,6 +36,25 @@ function CreateTripPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [gettingFrom, setGettingFrom] = useState(false);
+  const [gettingTo, setGettingTo] = useState(false);
+
+  const useCurrentLocation = (field: 'from_place' | 'to_place') => {
+    const setSpin = field === 'from_place' ? setGettingFrom : setGettingTo;
+    setSpin(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const name = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+        setForm(f => ({ ...f, [field]: name }));
+        setSpin(false);
+      },
+      () => {
+        setSpin(false);
+        setError('Location permission denied. Please enable GPS and try again.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -86,6 +120,14 @@ function CreateTripPage() {
                 onChange={(v) => setForm(f => ({ ...f, from_place: v }))}
                 placeholder="e.g. Salem"
               />
+              <button
+                type="button"
+                onClick={() => useCurrentLocation('from_place')}
+                disabled={gettingFrom}
+                style={styles.locationBtn}
+              >
+                {gettingFrom ? '⏳ Getting location...' : '📍 Use my location'}
+              </button>
             </div>
             <div style={styles.fieldArrow}>
               {form.trip_type === 'round_trip' ? '⇄' : form.trip_type === 'loop' ? '⟳' : '→'}
@@ -97,6 +139,14 @@ function CreateTripPage() {
                 onChange={(v) => setForm(f => ({ ...f, to_place: v }))}
                 placeholder={form.trip_type === 'round_trip' ? 'Furthest destination' : 'e.g. Bangalore'}
               />
+              <button
+                type="button"
+                onClick={() => useCurrentLocation('to_place')}
+                disabled={gettingTo}
+                style={styles.locationBtn}
+              >
+                {gettingTo ? '⏳ Getting location...' : '📍 Use my location'}
+              </button>
             </div>
           </div>
 
@@ -155,6 +205,7 @@ const styles: Record<string, React.CSSProperties> = {
   input: { padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '15px', outline: 'none', width: '100%', boxSizing: 'border-box', fontFamily: 'system-ui, sans-serif' },
   btn: { marginTop: '4px', padding: '13px', background: 'linear-gradient(135deg, #0f3460, #533483)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' },
   btnDisabled: { opacity: 0.6, cursor: 'not-allowed' },
+  locationBtn: { marginTop: '6px', padding: '6px 12px', background: 'none', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', color: '#0f3460', cursor: 'pointer', fontWeight: 500, width: '100%' },
 };
 
 export default CreateTripPage;
