@@ -8,6 +8,9 @@ import {
   saveItinerary,
   createRoom,
   joinRoom,
+  getRoomPreview,
+  getPendingRequests,
+  respondToRequest,
   updateItinerary,
   deleteTrip,
 } from '../services/trip.service';
@@ -84,8 +87,39 @@ export async function joinRoomHandler(req: Request, res: Response, next: NextFun
     const { invite_code } = req.body;
     if (!invite_code) return sendError(res, 'invite_code is required', 400, 'VALIDATION_ERROR');
 
-    const room = await joinRoom(invite_code, req.userId!);
-    return sendSuccess(res, { room });
+    const result = await joinRoom(invite_code, req.userId!);
+    return sendSuccess(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getRoomPreviewHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const preview = await getRoomPreview(req.params.inviteCode);
+    return sendSuccess(res, { preview });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPendingRequestsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const requests = await getPendingRequests(req.params.id, req.userId!);
+    return sendSuccess(res, { requests });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function respondToRequestHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { action } = req.body;
+    if (action !== 'approved' && action !== 'rejected') {
+      return sendError(res, 'action must be approved or rejected', 400, 'VALIDATION_ERROR');
+    }
+    await respondToRequest(req.params.memberId, action, req.userId!);
+    return sendSuccess(res, { message: `Request ${action}` });
   } catch (err) {
     next(err);
   }

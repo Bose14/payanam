@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
 import PlaceInput, { PlaceLocation } from '../components/PlaceInput';
 
@@ -27,9 +28,16 @@ interface Stop {
 
 interface Trip {
   id: string; title: string; from_place: string; to_place: string;
-  days: number; bike_type: string; status: string;
+  days: number; bike_type: string; status: string; user_id: string;
   itinerary: Stop[];
   rooms?: Array<{ id: string; invite_code: string }>;
+  isOwner?: boolean;
+}
+
+interface PendingMember {
+  id: string;
+  user_id: string;
+  users: { full_name: string; email: string } | null;
 }
 
 interface AddStopForm {
@@ -72,6 +80,7 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
 
 function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [trip, setTrip] = useState<Trip | null>(null);
   const [stops, setStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +93,8 @@ function TripDetailPage() {
   const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '' });
   const [addingStop, setAddingStop] = useState(false);
   const [mapRevision, setMapRevision] = useState(0);
+  const [pendingRequests, setPendingRequests] = useState<PendingMember[]>([]);
+  const [respondingId, setRespondingId] = useState<string | null>(null);
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -96,10 +107,17 @@ function TripDetailPage() {
       setTrip(data.trip);
       setStops(data.trip.itinerary ?? []);
       tripIdRef.current = data.trip.id;
-      // mark as loaded AFTER state is queued so the stops effect sees this flag
       setTimeout(() => { userEditedRef.current = false; }, 0);
-    }).catch((err) => setError(err.message ?? 'Failed to load trip'))
-      .finally(() => setLoading(false));
+
+      if (data.trip.isOwner) {
+        tripService.getPendingRequests(id).then((d) => setPendingRequests(d.requests ?? [])).catch(() => {});
+      }
+    }).catch((err) => {
+      const msg = err?.response?.data?.message ?? err.message ?? 'Failed to load trip';
+      if (msg === 'PENDING') setError('Your request to join this trip is pending approval from the leader.');
+      else if (msg === 'REJECTED') setError('Your request to join this trip was declined.');
+      else setError(msg);
+    }).finally(() => setLoading(false));
   }, [id]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
@@ -132,6 +150,20 @@ function TripDetailPage() {
   const handleCopy = () => {
     if (!shareUrl) return;
     navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  const handleRespond = async (memberId: string, action: 'approved' | 'rejected') => {
+    if (!id) return;
+    setRespondingId(memberId);
+    try {
+      await tripService.respondToRequest(id, memberId, action);
+      setPendingRequests(prev => prev.filter(m => m.id !== memberId));
+      showToast(action === 'approved' ? '✅ Member approved' : '✅ Request declined');
+    } catch {
+      showToast('❌ Failed to update request');
+    } finally {
+      setRespondingId(null);
+    }
   };
 
   const removeStop = (day: number, orderIndex: number) => {
@@ -241,6 +273,41 @@ function TripDetailPage() {
           </div>
         )}
 
+        {/* Pending join requests — only visible to owner */}
+        {trip?.isOwner && pendingRequests.length > 0 && (
+          <div style={{ background: '#fff', border: '1px solid #fde68a', borderRadius: 12, padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#92400e', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              🔔 Join Requests <span style={{ background: '#fef3c7', color: '#b45309', fontSize: 12, padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>{pendingRequests.length}</span>
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {pendingRequests.map((m) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', flexWrap: 'wrap' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.users?.full_name ?? 'Unknown'}</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{m.users?.email}</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      onClick={() => handleRespond(m.id, 'approved')}
+                      disabled={respondingId === m.id}
+                      style={{ padding: '7px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}
+                    >
+                      ✓ Approve
+                    </button>
+                    <button
+                      onClick={() => handleRespond(m.id, 'rejected')}
+                      disabled={respondingId === m.id}
+                      style={{ padding: '7px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}
+                    >
+                      ✕ Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Map — re-keyed when valid stops count changes so it re-mounts */}
         <div style={{ marginBottom: 28 }}>
           <TripMap
@@ -333,7 +400,7 @@ function TripDetailPage() {
                           <button onClick={() => addStop(day)} disabled={addingStop} style={{ ...styles.btnPrimary, opacity: addingStop ? 0.6 : 1 }}>
                             {addingStop ? '📍 Adding...' : '+ Add Stop'}
                           </button>
-                          <button onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '', insertAfterIndex: -1 }); }} style={styles.btnSecondary}>
+                          <button onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }} style={styles.btnSecondary}>
                             Cancel
                           </button>
                         </div>

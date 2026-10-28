@@ -44,23 +44,35 @@ export async function getUserTrips(userId: string) {
 
 export async function getTripById(tripId: string, userId: string) {
   const db = getDatabase();
-  const { data: trip, error } = await db
+
+  // Try as owner first
+  const { data: ownerTrip } = await db
     .from('trips')
     .select('*, rooms(id, invite_code)')
     .eq('id', tripId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (ownerTrip) {
+    const { data: items } = await db.from('itinerary_items').select('*').eq('trip_id', tripId).order('day_number').order('order_index');
+    return { ...ownerTrip, itinerary: items ?? [], isOwner: true };
+  }
 
-  const { data: items } = await db
-    .from('itinerary_items')
-    .select('*')
-    .eq('trip_id', tripId)
-    .order('day_number')
-    .order('order_index');
+  // Try as approved room member
+  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
+  if (!room) throw new Error('Trip not found');
 
-  return { ...trip, itinerary: items ?? [] };
+  const { data: membership } = await db.from('room_members').select('status').eq('room_id', room.id).eq('user_id', userId).maybeSingle();
+
+  if (!membership) throw new Error('Trip not found');
+  if (membership.status === 'pending') throw new Error('PENDING');
+  if (membership.status === 'rejected') throw new Error('REJECTED');
+
+  const { data: trip, error } = await db.from('trips').select('*, rooms(id, invite_code)').eq('id', tripId).single();
+  if (error || !trip) throw new Error('Trip not found');
+
+  const { data: items } = await db.from('itinerary_items').select('*').eq('trip_id', tripId).order('day_number').order('order_index');
+  return { ...trip, itinerary: items ?? [], isOwner: false };
 }
 
 export async function saveItinerary(tripId: string, itineraryDays: Awaited<ReturnType<typeof generateItinerary>>) {
@@ -122,20 +134,73 @@ export async function joinRoom(inviteCode: string, userId: string) {
 
   const { data: existing } = await db
     .from('room_members')
-    .select('id')
+    .select('id, status, role')
     .eq('room_id', room.id)
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (!existing) {
-    await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'member' });
+  if (existing) {
+    return { room, memberStatus: existing.status ?? 'approved', isNew: false };
   }
 
+  await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'member', status: 'pending' });
+  return { room, memberStatus: 'pending', isNew: true };
+}
+
+export async function getRoomPreview(inviteCode: string) {
+  const db = getDatabase();
+  const { data: room, error } = await db
+    .from('rooms')
+    .select('id, invite_code, trips(id, title, from_place, to_place, days, bike_type)')
+    .eq('invite_code', inviteCode.toUpperCase())
+    .single();
+
+  if (error || !room) throw new Error('Room not found');
   return room;
 }
 
+export async function getPendingRequests(tripId: string, ownerId: string) {
+  const db = getDatabase();
+
+  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
+  if (!trip) throw new Error('Not authorized');
+
+  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).single();
+  if (!room) throw new Error('Room not found');
+
+  const { data: members, error } = await db
+    .from('room_members')
+    .select('id, user_id, role, status, joined_at, users(full_name, email)')
+    .eq('room_id', room.id)
+    .eq('status', 'pending');
+
+  if (error) throw new Error(error.message);
+  return members ?? [];
+}
+
+export async function respondToRequest(roomMemberId: string, action: 'approved' | 'rejected', ownerId: string) {
+  const db = getDatabase();
+
+  const { data: member } = await db
+    .from('room_members')
+    .select('id, rooms(trip_id)')
+    .eq('id', roomMemberId)
+    .single();
+
+  if (!member) throw new Error('Request not found');
+
+  const tripId = (member.rooms as unknown as { trip_id: string } | null)?.trip_id;
+  if (!tripId) throw new Error('Request not found');
+
+  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
+  if (!trip) throw new Error('Not authorized');
+
+  const { error } = await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
+  if (error) throw new Error(error.message);
+}
+
 export async function updateItinerary(tripId: string, userId: string, stops: Array<{
-  day_number: number; order_index: number; place: string; description?: string;
+  id?: string; day_number: number; order_index: number; place: string; description?: string;
   item_type?: string; estimated_km?: number; duration_hours?: number; tips?: string;
   lat?: number; lng?: number;
 }>) {

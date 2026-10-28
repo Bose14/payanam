@@ -5,6 +5,9 @@ import {
   getUserTripsHandler,
   getTripByIdHandler,
   joinRoomHandler,
+  getRoomPreviewHandler,
+  getPendingRequestsHandler,
+  respondToRequestHandler,
   updateItineraryHandler,
   deleteTripHandler,
 } from '../controllers/trip.controller';
@@ -18,9 +21,15 @@ router.get('/', getUserTripsHandler);
 router.get('/:id', getTripByIdHandler);
 router.put('/:id/itinerary', updateItineraryHandler);
 router.delete('/:id', deleteTripHandler);
+router.get('/:id/requests', getPendingRequestsHandler);
+router.put('/:id/requests/:memberId', respondToRequestHandler);
 
 export default router;
 
 export const roomRoutes = Router();
 roomRoutes.use(authMiddleware);
 roomRoutes.post('/join', joinRoomHandler);
+
+// Public — no auth middleware
+export const publicRoomRoutes = Router();
+publicRoomRoutes.get('/preview/:inviteCode', getRoomPreviewHandler);

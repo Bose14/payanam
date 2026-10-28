@@ -86,6 +86,21 @@ export const tripService = {
     return response.data.data;
   },
 
+  getRoomPreview: async (inviteCode: string) => {
+    const response = await api.get(`/api/rooms/preview/${inviteCode}`);
+    return response.data.data;
+  },
+
+  getPendingRequests: async (tripId: string) => {
+    const response = await api.get(`/api/trips/${tripId}/requests`);
+    return response.data.data;
+  },
+
+  respondToRequest: async (tripId: string, memberId: string, action: 'approved' | 'rejected') => {
+    const response = await api.put(`/api/trips/${tripId}/requests/${memberId}`, { action });
+    return response.data.data;
+  },
+
   updateItinerary: async (tripId: string, stops: unknown[]) => {
     const response = await api.put(`/api/trips/${tripId}/itinerary`, { stops });
     return response.data;
