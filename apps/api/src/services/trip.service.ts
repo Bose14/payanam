@@ -7,6 +7,7 @@ interface CreateTripData {
   to_place: string;
   days: number;
   bike_type: string;
+  trip_type?: string;
   preferences?: string;
 }
 

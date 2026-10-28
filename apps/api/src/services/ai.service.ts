@@ -22,23 +22,28 @@ export async function generateItinerary(
   to: string,
   days: number,
   bikeType: string,
+  tripType: string,
   preferences: string,
 ): Promise<ItineraryDay[]> {
-  const preferencesText = preferences ? `\nRider preferences: ${preferences}` : '';
+  const tripTypeInstructions: Record<string, string> = {
+    one_way: `This is a ONE-WAY trip from ${from} to ${to}. Plan a direct forward route — stops must progress toward ${to} every day.`,
+    round_trip: `This is a ROUND TRIP. Start from ${from}, travel to ${to} (or nearby), then return to ${from} by the last day. Ideally use a different return route for variety.`,
+    loop: `This is a LOOP trip starting and ending at ${from}. Plan a scenic circuit that passes through ${to} and returns to ${from} via a different route.`,
+  };
+  const tripInstruction = tripTypeInstructions[tripType] ?? tripTypeInstructions['one_way'];
+  const preferencesText = preferences ? `\n\nRIDER PREFERENCES (follow these exactly):\n${preferences}` : '';
 
-  const prompt = `You are an expert biker tour planner with deep knowledge of Indian highways. Generate a day-wise itinerary for a ${bikeType} trip from ${from} to ${to} for ${days} days.${preferencesText}
+  const prompt = `You are an expert biker tour planner with deep knowledge of Indian roads and highways. Generate a day-wise itinerary for a ${bikeType} trip from ${from} to ${to} for ${days} days.
 
-STRICT RULES (must follow every rule):
-- This is a ONE-WAY trip from ${from} to ${to} — not a round trip
-- Always take the most direct highway route — NO detours, no side trips off the highway
-- Each stop must be ON or very close to the direct route, progressing forward toward ${to}
-- Stops within a day must be in correct geographical order along the route (never go backwards)
-- Fuel stops every 150-200km along the main highway
-- End each day at a town/city with accommodation ON the route
-- NEVER repeat the same place, attraction, fort, temple, or town across any day
-- NEVER list the same stop twice anywhere in the entire itinerary
-- Every place name must be unique across all days combined
-- Each attraction should only be visited ONCE — if you mention a place on day 1, do NOT mention it again on day 2 or later
+TRIP TYPE: ${tripInstruction}${preferencesText}
+
+STRICT RULES:
+- Follow rider preferences above all else — they override default routing
+- Stops within a day must be in correct geographical order (never backtrack)
+- Fuel stops every 150-200km
+- End each day at a town/city with accommodation
+- NEVER repeat the same place across any day — every stop must be unique in the entire itinerary
+- Be specific with real place names
 
 Return ONLY a valid JSON array (no markdown, no explanation, no code fences):
 [

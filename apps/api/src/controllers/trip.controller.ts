@@ -14,19 +14,20 @@ import {
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
   try {
     const userId = req.userId!;
-    const { from_place, to_place, days, bike_type = 'motorcycle', preferences = '' } = req.body;
+    const { from_place, to_place, days, bike_type = 'motorcycle', trip_type = 'one_way', preferences = '' } = req.body;
 
     if (!from_place || !to_place || !days) {
       return sendError(res, 'from_place, to_place, and days are required', 400, 'VALIDATION_ERROR');
     }
 
-    const title = `${from_place} → ${to_place} (${days}d)`;
-    const trip = await createTrip(userId, { title, from_place, to_place, days, bike_type, preferences });
+    const typeLabel = trip_type === 'round_trip' ? '↺' : trip_type === 'loop' ? '⟳' : '→';
+    const title = `${from_place} ${typeLabel} ${to_place} (${days}d)`;
+    const trip = await createTrip(userId, { title, from_place, to_place, days, bike_type, trip_type, preferences });
     console.log('[createTrip] trip created:', trip.id);
 
     let itinerary;
     try {
-      itinerary = await generateItinerary(from_place, to_place, days, bike_type, preferences);
+      itinerary = await generateItinerary(from_place, to_place, days, bike_type, trip_type, preferences);
     } catch (aiErr: unknown) {
       const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
       console.error('[createTrip] AI generation failed:', msg);
