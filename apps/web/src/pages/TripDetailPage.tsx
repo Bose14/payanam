@@ -94,6 +94,7 @@ function TripDetailPage() {
   const [addingStop, setAddingStop] = useState(false);
   const [mapRevision, setMapRevision] = useState(0);
   const [pendingRequests, setPendingRequests] = useState<PendingMember[]>([]);
+  const [approvedMembers, setApprovedMembers] = useState<PendingMember[]>([]);
   const [respondingId, setRespondingId] = useState<string | null>(null);
 
   const tripIdRef = useRef<string | null>(null);
@@ -111,6 +112,7 @@ function TripDetailPage() {
 
       if (data.trip.isOwner) {
         tripService.getPendingRequests(id).then((d) => setPendingRequests(d.requests ?? [])).catch(() => {});
+        tripService.getApprovedMembers(id).then((d) => setApprovedMembers(d.members ?? [])).catch(() => {});
       }
     }).catch((err) => {
       const msg = err?.response?.data?.message ?? err.message ?? 'Failed to load trip';
@@ -156,8 +158,12 @@ function TripDetailPage() {
     if (!id) return;
     setRespondingId(memberId);
     try {
+      const approvedMember = pendingRequests.find(m => m.id === memberId);
       await tripService.respondToRequest(id, memberId, action);
       setPendingRequests(prev => prev.filter(m => m.id !== memberId));
+      if (action === 'approved' && approvedMember) {
+        setApprovedMembers(prev => [...prev, approvedMember]);
+      }
       showToast(action === 'approved' ? '✅ Member approved' : '✅ Request declined');
     } catch {
       showToast('❌ Failed to update request');
@@ -256,55 +262,86 @@ function TripDetailPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {/* Save status indicator */}
-            <span style={{ fontSize: 13, color: saveStatus === 'saved' ? '#16a34a' : saveStatus === 'saving' ? '#d97706' : '#dc2626', fontWeight: 500 }}>
-              {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved'}
-            </span>
-            {shareUrl && (
+            {trip?.isOwner && (
+              <span style={{ fontSize: 13, color: saveStatus === 'saved' ? '#16a34a' : saveStatus === 'saving' ? '#d97706' : '#dc2626', fontWeight: 500 }}>
+                {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved'}
+              </span>
+            )}
+            {shareUrl && trip?.isOwner && (
               <button onClick={handleCopy} style={styles.btnSecondary}>{copied ? '✅ Copied!' : '🔗 Share Trip'}</button>
             )}
           </div>
         </div>
 
-        {inviteCode && (
+        {inviteCode && trip?.isOwner && (
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8, fontSize: 14, color: '#1e40af' }}>
             <span>📨 Invite code: <strong>{inviteCode}</strong></span>
             <span style={{ color: '#60a5fa', fontSize: 13 }}>Share with fellow riders</span>
           </div>
         )}
 
-        {/* Pending join requests — only visible to owner */}
-        {trip?.isOwner && pendingRequests.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #fde68a', borderRadius: 12, padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#92400e', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              🔔 Join Requests <span style={{ background: '#fef3c7', color: '#b45309', fontSize: 12, padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>{pendingRequests.length}</span>
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {pendingRequests.map((m) => (
-                <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', flexWrap: 'wrap' }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.users?.full_name ?? 'Unknown'}</p>
-                    <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{m.users?.email}</p>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button
-                      onClick={() => handleRespond(m.id, 'approved')}
-                      disabled={respondingId === m.id}
-                      style={{ padding: '7px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}
-                    >
-                      ✓ Approve
-                    </button>
-                    <button
-                      onClick={() => handleRespond(m.id, 'rejected')}
-                      disabled={respondingId === m.id}
-                      style={{ padding: '7px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}
-                    >
-                      ✕ Decline
-                    </button>
-                  </div>
+        {/* Riders panel — owner sees pending requests + current members */}
+        {trip?.isOwner && (pendingRequests.length > 0 || approvedMembers.length > 0) && (
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: '0 0 14px' }}>👥 Riders</h3>
+
+            {/* Pending requests */}
+            {pendingRequests.length > 0 && (
+              <div style={{ marginBottom: approvedMembers.length > 0 ? 16 : 0 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>
+                  🔔 Pending Requests ({pendingRequests.length})
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pendingRequests.map((m) => (
+                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', flexWrap: 'wrap' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.users?.full_name ?? 'Unknown'}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{m.users?.email}</p>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => handleRespond(m.id, 'approved')} disabled={respondingId === m.id}
+                          style={{ padding: '7px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}>
+                          ✓ Approve
+                        </button>
+                        <button onClick={() => handleRespond(m.id, 'rejected')} disabled={respondingId === m.id}
+                          style={{ padding: '7px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}>
+                          ✕ Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* Approved co-riders */}
+            {approvedMembers.length > 0 && (
+              <div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>
+                  ✅ Co-Riders ({approvedMembers.length})
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {approvedMembers.map((m) => (
+                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                      <div style={{ width: 36, height: 36, background: '#16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                        {(m.users?.full_name ?? '?')[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.users?.full_name ?? 'Unknown'}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{m.users?.email}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Co-rider view — show who the trip leader is */}
+        {!trip?.isOwner && (
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 14, color: '#1e40af' }}>
+            👀 You're viewing this trip as a co-rider. Only the trip leader can edit the itinerary.
           </div>
         )}
 
@@ -321,7 +358,7 @@ function TripDetailPage() {
         {/* Itinerary */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>Itinerary</h2>
-          <span style={{ fontSize: 13, color: '#9ca3af' }}>Changes auto-save after 1.5s</span>
+          {trip?.isOwner && <span style={{ fontSize: 13, color: '#9ca3af' }}>Changes auto-save after 1.5s</span>}
         </div>
 
         {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
@@ -353,9 +390,11 @@ function TripDetailPage() {
                           <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, textTransform: 'capitalize', background: (TYPE_COLORS[stop.item_type] ?? '#6b7280') + '20', color: TYPE_COLORS[stop.item_type] ?? '#6b7280' }}>
                             {stop.item_type.replace('_', ' ')}
                           </span>
-                          <button onClick={() => removeStop(stop.day_number, stop.order_index)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12, padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>
-                            ✕ Remove
-                          </button>
+                          {trip?.isOwner && (
+                            <button onClick={() => removeStop(stop.day_number, stop.order_index)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12, padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>
+                              ✕ Remove
+                            </button>
+                          )}
                         </div>
                         {stop.description && <p style={{ color: '#374151', fontSize: 14, margin: '0 0 6px' }}>{stop.description}</p>}
                         <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
@@ -367,8 +406,8 @@ function TripDetailPage() {
                     </div>
                   ))}
 
-                  {/* Add stop form */}
-                  {addingToDay === day ? (
+                  {/* Add stop form — owner only */}
+                  {trip?.isOwner && addingToDay === day ? (
                     <div style={{ marginTop: 12, padding: 16, background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
                       <p style={{ fontWeight: 600, fontSize: 14, color: '#111827', margin: '0 0 12px' }}>Add a stop to Day {day}</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -406,14 +445,14 @@ function TripDetailPage() {
                         </div>
                       </div>
                     </div>
-                  ) : (
+                  ) : trip?.isOwner ? (
                     <button
                       onClick={() => setAddingToDay(day)}
                       style={{ marginTop: 12, padding: '10px 16px', background: '#eff6ff', border: '2px dashed #93c5fd', borderRadius: 8, cursor: 'pointer', color: '#1d4ed8', fontSize: 14, fontWeight: 600, width: '100%' }}
                     >
                       + Add Stop to Day {day}
                     </button>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>

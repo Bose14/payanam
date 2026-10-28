@@ -11,6 +11,7 @@ import {
   getRoomPreview,
   getPendingRequests,
   respondToRequest,
+  getApprovedMembers,
   updateItinerary,
   deleteTrip,
 } from '../services/trip.service';
@@ -120,6 +121,15 @@ export async function respondToRequestHandler(req: Request, res: Response, next:
     }
     await respondToRequest(req.params.memberId, action, req.userId!);
     return sendSuccess(res, { message: `Request ${action}` });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getApprovedMembersHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const members = await getApprovedMembers(req.params.id, req.userId!);
+    return sendSuccess(res, { members });
   } catch (err) {
     next(err);
   }

@@ -12,6 +12,8 @@ interface Trip {
   bike_type: string;
   status: string;
   created_at: string;
+  isOwner?: boolean;
+  isJoined?: boolean;
 }
 
 function DashboardPage() {
@@ -118,7 +120,9 @@ function DashboardPage() {
                   <Link to={`/trips/${trip.id}`} style={styles.tripCard}>
                     <div style={styles.tripCardHeader}>
                       <span style={styles.tripIcon}>🏍️</span>
-                      <span style={styles.statusBadge}>{trip.status}</span>
+                      <span style={{ ...styles.statusBadge, background: trip.isJoined ? '#d1fae5' : '#dbeafe', color: trip.isJoined ? '#065f46' : '#1d4ed8' }}>
+                    {trip.isJoined ? 'Co-rider' : (trip.status ?? 'active')}
+                  </span>
                     </div>
                     <h3 style={styles.tripTitle}>{trip.title}</h3>
                     <p style={styles.tripRoute}>{trip.from_place} → {trip.to_place}</p>
@@ -127,14 +131,16 @@ function DashboardPage() {
                       <span style={styles.tripMeta}>{trip.bike_type}</span>
                     </div>
                   </Link>
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmTrip({ id: trip.id, title: trip.title }); }}
-                    disabled={deletingId === trip.id}
-                    title="Delete trip"
-                    style={{ position: 'absolute', bottom: 12, right: 12, background: '#fee2e2', border: 'none', color: '#dc2626', borderRadius: 6, padding: '5px 8px', fontSize: 16, cursor: 'pointer', opacity: deletingId === trip.id ? 0.4 : 1, lineHeight: 1 }}
-                  >
-                    {deletingId === trip.id ? '⏳' : '🗑️'}
-                  </button>
+                  {!trip.isJoined && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmTrip({ id: trip.id, title: trip.title }); }}
+                      disabled={deletingId === trip.id}
+                      title="Delete trip"
+                      style={{ position: 'absolute', bottom: 12, right: 12, background: '#fee2e2', border: 'none', color: '#dc2626', borderRadius: 6, padding: '5px 8px', fontSize: 16, cursor: 'pointer', opacity: deletingId === trip.id ? 0.4 : 1, lineHeight: 1 }}
+                    >
+                      {deletingId === trip.id ? '⏳' : '🗑️'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

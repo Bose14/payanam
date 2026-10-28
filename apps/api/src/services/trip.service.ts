@@ -32,14 +32,35 @@ export async function createTrip(userId: string, data: CreateTripData) {
 
 export async function getUserTrips(userId: string) {
   const db = getDatabase();
-  const { data, error } = await db
+
+  // Trips the user owns
+  const { data: ownedTrips, error } = await db
     .from('trips')
     .select('*, rooms(id, invite_code)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
-
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  // Trips the user joined as an approved member (not as owner)
+  const { data: memberships } = await db
+    .from('room_members')
+    .select('role, rooms(id, invite_code, trips(id, title, from_place, to_place, days, bike_type, status, user_id, trip_type, created_at))')
+    .eq('user_id', userId)
+    .eq('status', 'approved')
+    .neq('role', 'owner');
+
+  const joinedTrips = (memberships ?? [])
+    .map((m) => {
+      const room = m.rooms as { id: string; invite_code: string; trips: Record<string, unknown> } | null;
+      if (!room?.trips) return null;
+      return { ...room.trips, rooms: [{ id: room.id, invite_code: room.invite_code }], isOwner: false, isJoined: true };
+    })
+    .filter(Boolean);
+
+  return [
+    ...(ownedTrips ?? []).map((t) => ({ ...t, isOwner: true })),
+    ...joinedTrips,
+  ];
 }
 
 export async function getTripById(tripId: string, userId: string) {
@@ -157,6 +178,25 @@ export async function getRoomPreview(inviteCode: string) {
 
   if (error || !room) throw new Error('Room not found');
   return room;
+}
+
+export async function getApprovedMembers(tripId: string, ownerId: string) {
+  const db = getDatabase();
+  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
+  if (!trip) throw new Error('Not authorized');
+
+  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).single();
+  if (!room) return [];
+
+  const { data: members, error } = await db
+    .from('room_members')
+    .select('id, user_id, role, status, joined_at, users(full_name, email)')
+    .eq('room_id', room.id)
+    .eq('status', 'approved')
+    .neq('role', 'owner');
+
+  if (error) throw new Error(error.message);
+  return members ?? [];
 }
 
 export async function getPendingRequests(tripId: string, ownerId: string) {

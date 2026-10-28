@@ -101,6 +101,11 @@ export const tripService = {
     return response.data.data;
   },
 
+  getApprovedMembers: async (tripId: string) => {
+    const response = await api.get(`/api/trips/${tripId}/members`);
+    return response.data.data;
+  },
+
   updateItinerary: async (tripId: string, stops: unknown[]) => {
     const response = await api.put(`/api/trips/${tripId}/itinerary`, { stops });
     return response.data;

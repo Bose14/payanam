@@ -8,6 +8,7 @@ import {
   getRoomPreviewHandler,
   getPendingRequestsHandler,
   respondToRequestHandler,
+  getApprovedMembersHandler,
   updateItineraryHandler,
   deleteTripHandler,
 } from '../controllers/trip.controller';
@@ -23,6 +24,7 @@ router.put('/:id/itinerary', updateItineraryHandler);
 router.delete('/:id', deleteTripHandler);
 router.get('/:id/requests', getPendingRequestsHandler);
 router.put('/:id/requests/:memberId', respondToRequestHandler);
+router.get('/:id/members', getApprovedMembersHandler);
 
 export default router;
 
