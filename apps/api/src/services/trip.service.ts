@@ -144,7 +144,9 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   if (!trip) throw new Error('Trip not found');
   await db.from('itinerary_items').delete().eq('trip_id', tripId);
   if (stops.length > 0) {
-    const { error } = await db.from('itinerary_items').insert(stops.map(s => ({ ...s, trip_id: tripId })));
+    const { error } = await db.from('itinerary_items').insert(
+      stops.map(({ id: _id, ...s }) => ({ ...s, trip_id: tripId }))
+    );
     if (error) throw new Error(error.message);
   }
 }

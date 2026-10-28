@@ -35,7 +35,26 @@ interface Trip {
 interface AddStopForm {
   place: string; item_type: string; description: string;
   lat?: number; lng?: number;
-  insertAfterIndex: number; // -1 = start, N = after stop with order_index N
+}
+
+// Project new stop onto route axis to find correct insert position
+function getInsertPosition(dayStops: Stop[], newLat: number, newLng: number): number {
+  const withCoords = dayStops.filter(s => s.lat && s.lng);
+  if (withCoords.length < 2) return dayStops.length;
+  const first = withCoords[0];
+  const last = withCoords[withCoords.length - 1];
+  const dx = last.lng! - first.lng!;
+  const dy = last.lat! - first.lat!;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return dayStops.length;
+  const newProj = ((newLng - first.lng!) * dx + (newLat - first.lat!) * dy) / len2;
+  for (let i = 0; i < dayStops.length; i++) {
+    const s = dayStops[i];
+    if (!s.lat || !s.lng) continue;
+    const proj = ((s.lng - first.lng!) * dx + (s.lat - first.lat!) * dy) / len2;
+    if (newProj < proj) return i;
+  }
+  return dayStops.length;
 }
 
 // Geocode a place name via Nominatim when no suggestion was selected
@@ -62,7 +81,7 @@ function TripDetailPage() {
   const [copied, setCopied] = useState(false);
   const [openDays, setOpenDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
   const [addingToDay, setAddingToDay] = useState<number | null>(null);
-  const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '', insertAfterIndex: -1 });
+  const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '' });
   const [addingStop, setAddingStop] = useState(false);
   const [mapRevision, setMapRevision] = useState(0);
 
@@ -139,10 +158,9 @@ function TripDetailPage() {
     }
 
     const dayStops = stops.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
-    const insertAfter = addForm.insertAfterIndex; // -1 = start, N = after stop at position N (0-based)
 
-    // Calculate the actual insert position
-    const insertPosition = insertAfter === -1 ? 0 : insertAfter + 1;
+    // Auto-calculate insert position from coordinates, fallback to end
+    const insertPosition = (lat && lng) ? getInsertPosition(dayStops, lat, lng) : dayStops.length;
 
     const newStop: Stop = {
       place: addForm.place.trim(), item_type: addForm.item_type,
@@ -164,7 +182,7 @@ function TripDetailPage() {
 
     setAddingStop(false);
     setAddingToDay(null);
-    setAddForm({ place: '', item_type: 'attraction', description: '', insertAfterIndex: dayStops.length - 1 });
+    setAddForm({ place: '', item_type: 'attraction', description: '' });
   };
 
   const groupedByDay = stops.reduce<Record<number, Stop[]>>((acc, stop) => {
@@ -310,20 +328,7 @@ function TripDetailPage() {
                           placeholder="Description (optional)"
                           style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
                         />
-                        {/* Position selector */}
-                        <div>
-                          <label style={{ fontSize: 13, color: '#6b7280', fontWeight: 500, display: 'block', marginBottom: 6 }}>Insert position:</label>
-                          <select
-                            value={addForm.insertAfterIndex}
-                            onChange={(e) => setAddForm(f => ({ ...f, insertAfterIndex: parseInt(e.target.value) }))}
-                            style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, width: '100%' }}
-                          >
-                            <option value={-1}>↑ Before all stops (start of day)</option>
-                            {dayStops.map((s, i) => (
-                              <option key={i} value={i}>↓ After: {s.place}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>📍 Position will be auto-detected from the place's location on the route</p>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button onClick={() => addStop(day)} disabled={addingStop} style={{ ...styles.btnPrimary, opacity: addingStop ? 0.6 : 1 }}>
                             {addingStop ? '📍 Adding...' : '+ Add Stop'}
@@ -336,7 +341,7 @@ function TripDetailPage() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => { setAddingToDay(day); setAddForm(f => ({ ...f, insertAfterIndex: dayStops.length - 1 })); }}
+                      onClick={() => setAddingToDay(day)}
                       style={{ marginTop: 12, padding: '10px 16px', background: '#eff6ff', border: '2px dashed #93c5fd', borderRadius: 8, cursor: 'pointer', color: '#1d4ed8', fontSize: 14, fontWeight: 600, width: '100%' }}
                     >
                       + Add Stop to Day {day}
