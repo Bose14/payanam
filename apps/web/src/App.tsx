@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import CreateTripPage from './pages/CreateTripPage';
 import TripDetailPage from './pages/TripDetailPage';
 import JoinRoomPage from './pages/JoinRoomPage';
+import RidePage from './pages/RidePage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -42,6 +43,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <TripDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ride/:sessionId"
+            element={
+              <ProtectedRoute>
+                <RidePage />
               </ProtectedRoute>
             }
           />

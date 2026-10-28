@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { tripService } from '../services/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
 import PlaceInput, { PlaceLocation } from '../components/PlaceInput';
@@ -81,7 +81,10 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
 function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [trip, setTrip] = useState<Trip | null>(null);
+  const [activeSession, setActiveSession] = useState<{ id: string } | null>(null);
+  const [startingRide, setStartingRide] = useState(false);
   const [stops, setStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -114,6 +117,10 @@ function TripDetailPage() {
         tripService.getPendingRequests(id).then((d) => setPendingRequests(d.requests ?? [])).catch(() => {});
         tripService.getApprovedMembers(id).then((d) => setApprovedMembers(d.members ?? [])).catch(() => {});
       }
+      // Check for active ride session (anyone in the trip can join)
+      rideService.getActiveSession(data.trip.id)
+        .then((d) => setActiveSession(d.session ?? null))
+        .catch(() => {});
     }).catch((err) => {
       const msg = err?.response?.data?.message ?? err.message ?? 'Failed to load trip';
       if (msg === 'PENDING') setError('Your request to join this trip is pending approval from the leader.');
@@ -261,7 +268,7 @@ function TripDetailPage() {
               {trip.from_place} → {trip.to_place} · {trip.days} days · {trip.bike_type}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             {trip?.isOwner && (
               <span style={{ fontSize: 13, color: saveStatus === 'saved' ? '#16a34a' : saveStatus === 'saving' ? '#d97706' : '#dc2626', fontWeight: 500 }}>
                 {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved'}
@@ -270,6 +277,29 @@ function TripDetailPage() {
             {shareUrl && trip?.isOwner && (
               <button onClick={handleCopy} style={styles.btnSecondary}>{copied ? '✅ Copied!' : '🔗 Share Trip'}</button>
             )}
+            {activeSession ? (
+              <button
+                onClick={() => navigate(`/ride/${activeSession.id}`)}
+                style={{ padding: '10px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                🟢 Join Ride
+              </button>
+            ) : trip?.isOwner ? (
+              <button
+                onClick={async () => {
+                  if (!id) return;
+                  setStartingRide(true);
+                  try {
+                    const d = await rideService.startRide(id);
+                    navigate(`/ride/${d.session.id}`);
+                  } catch { setStartingRide(false); }
+                }}
+                disabled={startingRide}
+                style={{ padding: '10px 18px', background: 'linear-gradient(135deg, #1a1a2e, #0f3460)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: startingRide ? 0.7 : 1 }}
+              >
+                {startingRide ? '⏳ Starting...' : '🏍️ Start Ride'}
+              </button>
+            ) : null}
           </div>
         </div>
 

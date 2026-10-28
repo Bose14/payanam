@@ -115,6 +115,70 @@ export const tripService = {
     const response = await api.delete(`/api/trips/${tripId}`);
     return response.data;
   },
+
+  getTripParticipants: async (tripId: string) => {
+    const response = await api.get(`/api/trips/${tripId}/participants`);
+    return response.data.data.participants;
+  },
+
+  getExpenses: async (tripId: string) => {
+    const response = await api.get(`/api/trips/${tripId}/expenses`);
+    return response.data.data.expenses;
+  },
+
+  addExpense: async (tripId: string, data: {
+    title: string; amount: number; category: string; paid_by: string;
+    split_type: 'equal' | 'custom'; split_among?: string[];
+    custom_splits?: Array<{ user_id: string; amount: number }>;
+  }) => {
+    const response = await api.post(`/api/trips/${tripId}/expenses`, data);
+    return response.data.data;
+  },
+
+  deleteExpense: async (tripId: string, expenseId: string) => {
+    const response = await api.delete(`/api/trips/${tripId}/expenses/${expenseId}`);
+    return response.data;
+  },
+};
+
+export const rideService = {
+  startRide: async (tripId: string) => {
+    const response = await api.post('/api/rides/start', { tripId });
+    return response.data.data;
+  },
+  endRide: async (sessionId: string) => {
+    const response = await api.post(`/api/rides/${sessionId}/end`);
+    return response.data.data;
+  },
+  getActiveSession: async (tripId: string) => {
+    const response = await api.get(`/api/rides/active/${tripId}`);
+    return response.data.data;
+  },
+  getSessionById: async (sessionId: string) => {
+    const response = await api.get(`/api/rides/${sessionId}`);
+    return response.data.data;
+  },
+  updateLocation: async (sessionId: string, data: { lat: number; lng: number; speedKmh?: number; heading?: number; userName?: string }) => {
+    const response = await api.put(`/api/rides/${sessionId}/location`, data);
+    return response.data.data;
+  },
+  updateQuickStatus: async (sessionId: string, quickStatus: string) => {
+    const response = await api.put(`/api/rides/${sessionId}/status`, { quickStatus });
+    return response.data.data;
+  },
+  getAllLocations: async (sessionId: string) => {
+    const response = await api.get(`/api/rides/${sessionId}/locations`);
+    return response.data.data;
+  },
+  sendMessage: async (sessionId: string, data: { message: string; messageType?: string; userName?: string }) => {
+    const response = await api.post(`/api/rides/${sessionId}/messages`, data);
+    return response.data.data;
+  },
+  getMessages: async (sessionId: string, since?: string) => {
+    const params = since ? `?since=${encodeURIComponent(since)}` : '';
+    const response = await api.get(`/api/rides/${sessionId}/messages${params}`);
+    return response.data.data;
+  },
 };
 
 export default api;
