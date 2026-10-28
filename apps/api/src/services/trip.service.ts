@@ -5,6 +5,10 @@ interface CreateTripData {
   title: string;
   from_place: string;
   to_place: string;
+  from_lat?: number | null;
+  from_lng?: number | null;
+  to_lat?: number | null;
+  to_lng?: number | null;
   days: number;
   bike_type: string;
   trip_type?: string;

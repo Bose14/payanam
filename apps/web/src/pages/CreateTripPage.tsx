@@ -29,6 +29,10 @@ function CreateTripPage() {
   const [form, setForm] = useState({
     from_place: '',
     to_place: '',
+    from_lat: null as number | null,
+    from_lng: null as number | null,
+    to_lat: null as number | null,
+    to_lng: null as number | null,
     days: 3,
     bike_type: 'motorcycle',
     trip_type: 'one_way',
@@ -41,11 +45,15 @@ function CreateTripPage() {
 
   const useCurrentLocation = (field: 'from_place' | 'to_place') => {
     const setSpin = field === 'from_place' ? setGettingFrom : setGettingTo;
+    const latField = field === 'from_place' ? 'from_lat' : 'to_lat';
+    const lngField = field === 'from_place' ? 'from_lng' : 'to_lng';
     setSpin(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const name = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-        setForm(f => ({ ...f, [field]: name }));
+        const { latitude: lat, longitude: lng } = pos.coords;
+        // Store exact coordinates alongside a human-readable area name
+        const name = await reverseGeocode(lat, lng);
+        setForm(f => ({ ...f, [field]: name, [latField]: lat, [lngField]: lng }));
         setSpin(false);
       },
       () => {
@@ -58,7 +66,11 @@ function CreateTripPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: name === 'days' ? Number(value) : value }));
+    const updates: Record<string, unknown> = { [name]: name === 'days' ? Number(value) : value };
+    // Clear stored GPS coords if user manually edits the place field
+    if (name === 'from_place') { updates.from_lat = null; updates.from_lng = null; }
+    if (name === 'to_place') { updates.to_lat = null; updates.to_lng = null; }
+    setForm(f => ({ ...f, ...updates }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

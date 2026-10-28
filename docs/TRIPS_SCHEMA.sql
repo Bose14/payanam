@@ -12,6 +12,10 @@ CREATE TABLE IF NOT EXISTS trips (
   title VARCHAR(255) NOT NULL,
   from_place VARCHAR(255) NOT NULL,
   to_place VARCHAR(255) NOT NULL,
+  from_lat DECIMAL(10,7),
+  from_lng DECIMAL(10,7),
+  to_lat DECIMAL(10,7),
+  to_lng DECIMAL(10,7),
   days INTEGER NOT NULL,
   bike_type VARCHAR(100) DEFAULT 'motorcycle',
   preferences TEXT,
@@ -77,3 +81,9 @@ CREATE INDEX IF NOT EXISTS idx_expenses_room_id ON expenses(room_id);
 -- Run separately if tables already exist (lat/lng columns):
 -- ALTER TABLE itinerary_items ADD COLUMN IF NOT EXISTS lat DECIMAL(9,6);
 -- ALTER TABLE itinerary_items ADD COLUMN IF NOT EXISTS lng DECIMAL(9,6);
+
+-- Run this to add exact start/end coordinates to existing trips table:
+-- ALTER TABLE trips ADD COLUMN IF NOT EXISTS from_lat DECIMAL(10,7);
+-- ALTER TABLE trips ADD COLUMN IF NOT EXISTS from_lng DECIMAL(10,7);
+-- ALTER TABLE trips ADD COLUMN IF NOT EXISTS to_lat DECIMAL(10,7);
+-- ALTER TABLE trips ADD COLUMN IF NOT EXISTS to_lng DECIMAL(10,7);

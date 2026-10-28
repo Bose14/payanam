@@ -33,7 +33,7 @@ export async function getActiveSession(tripId: string) {
 export async function getSessionById(sessionId: string) {
   const db = getDatabase();
   const { data, error } = await db.from('ride_sessions')
-    .select('*, trips(id, title, from_place, to_place, days)')
+    .select('*, trips(id, title, from_place, to_place, from_lat, from_lng, to_lat, to_lng, days)')
     .eq('id', sessionId).single();
   if (error) throw new Error(error.message);
   if (!data) throw new Error('Session not found');

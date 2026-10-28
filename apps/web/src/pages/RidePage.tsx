@@ -147,7 +147,11 @@ interface ItineraryStop {
 
 interface Session {
   id: string; trip_id: string; started_by: string; status: string;
-  trips: { id: string; title: string; from_place: string; to_place: string };
+  trips: {
+    id: string; title: string; from_place: string; to_place: string;
+    from_lat?: number | null; from_lng?: number | null;
+    to_lat?: number | null; to_lng?: number | null;
+  };
   itinerary: ItineraryStop[];
 }
 
@@ -223,33 +227,46 @@ export default function RidePage() {
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  // Fetch road-following route from OSRM once session itinerary is known
+  // Fetch road-following route: GPS position → itinerary stops → destination
+  // Runs once when session + first GPS fix are both ready; refreshes every 2 min
+  const routeFetchedRef = useRef(false);
   useEffect(() => {
     if (!session) return;
-    const stops = (session.itinerary ?? []).filter((s) => s.lat && s.lng);
 
-    const run = async () => {
-      let waypoints: [number, number][];
+    const buildRoute = async () => {
+      const pos = myPosRef.current;
+      if (!pos) return; // GPS not ready yet
+      const { trips } = session;
+      const stopCoords: [number, number][] = (session.itinerary ?? [])
+        .filter((s) => s.lat && s.lng)
+        .map((s) => [s.lat as number, s.lng as number]);
 
-      if (stops.length >= 2) {
-        waypoints = stops.map((s) => [s.lat as number, s.lng as number]);
+      let destination: [number, number] | null = null;
+      if (trips.to_lat && trips.to_lng) {
+        destination = [trips.to_lat, trips.to_lng];
       } else {
-        // Stops have no coordinates — geocode the trip's from/to as fallback
-        const [from, to] = await Promise.all([
-          geocodePlaceName(session.trips.from_place),
-          geocodePlaceName(session.trips.to_place),
-        ]);
-        if (!from || !to) return;
-        waypoints = [from, to];
+        destination = await geocodePlaceName(trips.to_place);
       }
+
+      const waypoints: [number, number][] = [
+        [pos.lat, pos.lng],
+        ...stopCoords,
+        ...(destination ? [destination] : []),
+      ];
+      if (waypoints.length < 2) return;
 
       const { route, steps } = await fetchOsrmRoute(waypoints);
       setOsrmRoute(route);
       setNavSteps(steps);
+      routeFetchedRef.current = true;
     };
 
-    run();
-  }, [session]);
+    // Initial fetch — wait up to 10s for GPS
+    const timer = setTimeout(buildRoute, 2000);
+    // Refresh every 2 min so route updates as you progress
+    const interval = setInterval(buildRoute, 120_000);
+    return () => { clearTimeout(timer); clearInterval(interval); };
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wake Lock + background visibility tracking
   useEffect(() => {
