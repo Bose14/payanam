@@ -68,12 +68,24 @@ interface Session {
   itinerary: ItineraryStop[];
 }
 
-function FlyToMe({ lat, lng, done }: { lat: number; lng: number; done: () => void }) {
+// Continuously follows user position; stops following when user drags map
+function MapFollow({ lat, lng, following, onDrag }: { lat: number; lng: number; following: boolean; onDrag: () => void }) {
   const map = useMap();
+  const onDragRef = useRef(onDrag);
+  onDragRef.current = onDrag;
+
   useEffect(() => {
-    map.setView([lat, lng], 14);
-    done();
-  }, []);
+    if (following) {
+      map.setView([lat, lng], Math.max(map.getZoom(), 16), { animate: true, duration: 0.6, easeLinearity: 0.4 });
+    }
+  }, [lat, lng, following, map]);
+
+  useEffect(() => {
+    const handler = () => onDragRef.current();
+    map.on('dragstart', handler);
+    return () => { map.off('dragstart', handler); };
+  }, [map]);
+
   return null;
 }
 
@@ -99,12 +111,15 @@ export default function RidePage() {
   const [myStatus, setMyStatus] = useState('');
   const [sosActive, setSosActive] = useState(false);
   const [newMsgCount, setNewMsgCount] = useState(0);
-  const [shouldFly, setShouldFly] = useState(true);
+  const [following, setFollowing] = useState(true);
   const [endingRide, setEndingRide] = useState(false);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [backgroundWarning, setBackgroundWarning] = useState(false);
 
   const watchIdRef = useRef<number | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const dbSyncRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const myPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -121,6 +136,46 @@ export default function RidePage() {
       .catch(() => setEnded(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Wake Lock + background visibility tracking
+  useEffect(() => {
+    if (!session || ended) return;
+
+    const acquireWakeLock = async () => {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLockRef.current = await (navigator as Navigator & { wakeLock: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock.request('screen');
+          setWakeLockActive(true);
+          wakeLockRef.current.addEventListener('release', () => setWakeLockActive(false));
+        } catch { /* denied or unsupported */ }
+      }
+    };
+
+    acquireWakeLock();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        // Re-acquire wake lock (it auto-releases when screen locks)
+        acquireWakeLock();
+        setBackgroundWarning(false);
+        // Re-broadcast current position immediately after coming back
+        if (myPosRef.current && channelRef.current) {
+          channelRef.current.send({
+            type: 'broadcast', event: 'location',
+            payload: { userId: user?.id, userName, lat: myPosRef.current.lat, lng: myPosRef.current.lng, speedKmh: 0, heading: 0, updatedAt: new Date().toISOString() },
+          });
+        }
+      } else {
+        setBackgroundWarning(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      wakeLockRef.current?.release().catch(() => {});
+    };
+  }, [session, ended, userName, user?.id]);
 
   // Start GPS watch — broadcast on every fix, DB upsert every 15s
   useEffect(() => {
@@ -315,7 +370,10 @@ export default function RidePage() {
             <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               🏍️ {session?.trips?.title ?? 'Live Ride'}
             </p>
-            <p style={{ color: '#10b981', fontSize: 12, margin: 0, fontWeight: 600 }}>● LIVE · {riders.length} rider{riders.length !== 1 ? 's' : ''}</p>
+            <p style={{ color: '#10b981', fontSize: 12, margin: 0, fontWeight: 600 }}>
+              ● LIVE · {riders.length} rider{riders.length !== 1 ? 's' : ''}
+              {!wakeLockActive && <span style={{ color: '#f59e0b', marginLeft: 8 }}>· Keep screen on</span>}
+            </p>
           </div>
         </div>
         {isLead ? (
@@ -329,20 +387,43 @@ export default function RidePage() {
         )}
       </div>
 
+      {/* Background warning banner */}
+      {backgroundWarning && (
+        <div style={{ background: '#92400e', color: '#fef3c7', padding: '8px 16px', fontSize: 13, fontWeight: 600, textAlign: 'center', flexShrink: 0 }}>
+          ⚠️ App was in background — location may have paused. Keep this screen open while riding.
+          <button onClick={() => setBackgroundWarning(false)} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#fef3c7', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
+
       {/* Map — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
-      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', minHeight: tab === 'map' ? 0 : 0, display: tab === 'map' ? 'block' : 'none', position: 'relative' }}>
+      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'block' : 'none', position: 'relative' }}>
         {gpsError && (
           <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 999, background: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
             📍 {gpsError}
           </div>
         )}
-        <MapContainer center={defaultCenter} zoom={13} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+        {/* Re-center button — appears when user pans away */}
+        {!following && myLat && myLng && (
+          <button
+            onClick={() => setFollowing(true)}
+            style={{ position: 'absolute', bottom: 80, right: 16, zIndex: 1000, background: '#1f2937', border: '2px solid #3b82f6', color: '#3b82f6', borderRadius: '50%', width: 48, height: 48, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+          >
+            📍
+          </button>
+        )}
+        {/* Wake lock indicator */}
+        {wakeLockActive && (
+          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 999, background: 'rgba(16,185,129,0.9)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 8 }}>
+            🔆 Screen on
+          </div>
+        )}
+        <MapContainer center={defaultCenter} zoom={16} style={{ height: '100%', width: '100%' }} zoomControl={false}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="© OpenStreetMap"
           />
-          {shouldFly && myLat && myLng && (
-            <FlyToMe lat={myLat} lng={myLng} done={() => setShouldFly(false)} />
+          {myLat && myLng && (
+            <MapFollow lat={myLat} lng={myLng} following={following} onDrag={() => setFollowing(false)} />
           )}
           {/* Route polyline */}
           {routeCoords.length > 1 && <Polyline positions={routeCoords} color="#3b82f6" weight={3} opacity={0.6} />}
