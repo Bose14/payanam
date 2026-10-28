@@ -54,7 +54,7 @@ Make sure the last stop of each day is a "stay" type. Include fuel stops every 1
       'authorization': `Bearer ${env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.1-70b-versatile',
+      model: 'llama3-70b-8192',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
       max_tokens: 8192,
