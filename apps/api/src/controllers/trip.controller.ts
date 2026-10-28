@@ -9,6 +9,7 @@ import {
   createRoom,
   joinRoom,
   updateItinerary,
+  deleteTrip,
 } from '../services/trip.service';
 
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
@@ -68,6 +69,13 @@ export async function updateItineraryHandler(req: Request, res: Response, next: 
     if (!Array.isArray(stops)) return sendError(res, 'stops array required', 400, 'VALIDATION_ERROR');
     await updateItinerary(req.params.id, req.userId!, stops);
     return sendSuccess(res, { message: 'Itinerary updated' });
+  } catch (err) { next(err); }
+}
+
+export async function deleteTripHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    await deleteTrip(req.params.id, req.userId!);
+    return sendSuccess(res, { message: 'Trip deleted' });
   } catch (err) { next(err); }
 }
 

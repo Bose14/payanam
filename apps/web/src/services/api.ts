@@ -90,6 +90,11 @@ export const tripService = {
     const response = await api.put(`/api/trips/${tripId}/itinerary`, { stops });
     return response.data;
   },
+
+  deleteTrip: async (tripId: string) => {
+    const response = await api.delete(`/api/trips/${tripId}`);
+    return response.data;
+  },
 };
 
 export default api;

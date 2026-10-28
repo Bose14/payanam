@@ -19,6 +19,7 @@ function DashboardPage() {
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     tripService.getUserTrips()
@@ -26,6 +27,21 @@ function DashboardPage() {
       .catch(() => setTrips([]))
       .finally(() => setTripsLoading(false));
   }, []);
+
+  const handleDelete = async (e: React.MouseEvent, tripId: string, tripTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${tripTitle}"? This cannot be undone.`)) return;
+    setDeletingId(tripId);
+    try {
+      await tripService.deleteTrip(tripId);
+      setTrips(prev => prev.filter(t => t.id !== tripId));
+    } catch {
+      alert('Failed to delete trip. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -78,18 +94,28 @@ function DashboardPage() {
           ) : (
             <div style={styles.tripGrid}>
               {trips.map((trip) => (
-                <Link key={trip.id} to={`/trips/${trip.id}`} style={styles.tripCard}>
-                  <div style={styles.tripCardHeader}>
-                    <span style={styles.tripIcon}>🏍️</span>
-                    <span style={styles.statusBadge}>{trip.status}</span>
-                  </div>
-                  <h3 style={styles.tripTitle}>{trip.title}</h3>
-                  <p style={styles.tripRoute}>{trip.from_place} → {trip.to_place}</p>
-                  <div style={styles.tripFooter}>
-                    <span style={styles.tripMeta}>{trip.days} days</span>
-                    <span style={styles.tripMeta}>{trip.bike_type}</span>
-                  </div>
-                </Link>
+                <div key={trip.id} style={{ position: 'relative' }}>
+                  <Link to={`/trips/${trip.id}`} style={styles.tripCard}>
+                    <div style={styles.tripCardHeader}>
+                      <span style={styles.tripIcon}>🏍️</span>
+                      <span style={styles.statusBadge}>{trip.status}</span>
+                    </div>
+                    <h3 style={styles.tripTitle}>{trip.title}</h3>
+                    <p style={styles.tripRoute}>{trip.from_place} → {trip.to_place}</p>
+                    <div style={styles.tripFooter}>
+                      <span style={styles.tripMeta}>{trip.days} days</span>
+                      <span style={styles.tripMeta}>{trip.bike_type}</span>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={(e) => handleDelete(e, trip.id, trip.title)}
+                    disabled={deletingId === trip.id}
+                    title="Delete trip"
+                    style={{ position: 'absolute', top: 10, right: 10, background: '#fee2e2', border: 'none', color: '#dc2626', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: deletingId === trip.id ? 0.5 : 1 }}
+                  >
+                    {deletingId === trip.id ? '...' : '✕'}
+                  </button>
+                </div>
               ))}
             </div>
           )}

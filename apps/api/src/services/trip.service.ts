@@ -149,6 +149,12 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   }
 }
 
+export async function deleteTrip(tripId: string, userId: string) {
+  const db = getDatabase();
+  const { error } = await db.from('trips').delete().eq('id', tripId).eq('user_id', userId);
+  if (error) throw new Error(error.message);
+}
+
 export async function getRoomByTripId(tripId: string) {
   const db = getDatabase();
   const { data, error } = await db.from('rooms').select('*').eq('trip_id', tripId).maybeSingle();
