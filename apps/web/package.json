@@ -14,6 +14,7 @@
   "dependencies": {
     "@payanam/types": "file:../../packages/types",
     "@payanam/utils": "file:../../packages/utils",
+    "@supabase/supabase-js": "^2.45.4",
     "@types/leaflet": "^1.9.22",
     "axios": "^1.6.0",
     "leaflet": "^1.9.4",

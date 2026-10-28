@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -47,7 +49,7 @@ function makeStopIcon() {
 
 interface RiderLocation {
   user_id: string; user_name: string; lat: number; lng: number;
-  speed_kmh: number; quick_status: string; updated_at: string;
+  speed_kmh: number; heading?: number; quick_status: string; updated_at: string;
 }
 
 interface RideMessage {
@@ -101,9 +103,8 @@ export default function RidePage() {
   const [endingRide, setEndingRide] = useState(false);
 
   const watchIdRef = useRef<number | null>(null);
-  const locPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastMsgTimeRef = useRef<string | undefined>(undefined);
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const dbSyncRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const myPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -121,75 +122,91 @@ export default function RidePage() {
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  // Start GPS watch
+  // Start GPS watch — broadcast on every fix, DB upsert every 15s
   useEffect(() => {
     if (!sessionId || !session || ended) return;
     if (!navigator.geolocation) { setGpsError('GPS not supported on this device'); return; }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude: lat, longitude: lng, speed } = pos.coords;
+        const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
         setMyLat(lat); setMyLng(lng);
         myPosRef.current = { lat, lng };
         const speedKmh = speed != null ? speed * 3.6 : 0;
-        rideService.updateLocation(sessionId, { lat, lng, speedKmh, userName }).catch(() => {});
+        const hdg = heading ?? 0;
+        // Instant broadcast — zero DB write, real-time for all riders
+        channelRef.current?.send({
+          type: 'broadcast', event: 'location',
+          payload: { userId: user?.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: new Date().toISOString() },
+        });
       },
       (err) => {
         if (err.code === 1) setGpsError('Location permission denied. Please enable GPS.');
         else setGpsError('Unable to get your location.');
       },
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
     );
 
-    return () => { if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current); };
-  }, [session, ended, sessionId, userName]);
+    // DB upsert every 15s — so late joiners see your last position
+    dbSyncRef.current = setInterval(() => {
+      if (myPosRef.current) {
+        rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => {});
+      }
+    }, 15000);
 
-  // Poll locations every 3s
-  useEffect(() => {
-    if (!sessionId || !session || ended) return;
-    const poll = () => {
-      rideService.getAllLocations(sessionId)
-        .then((d) => {
-          setRiders(d.locations ?? []);
-          // check for SOS
-          const hasSos = (d.locations ?? []).some((r: RiderLocation) => r.quick_status?.includes('🆘'));
-          setSosActive(hasSos);
-        })
-        .catch(() => {});
+    return () => {
+      if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
+      if (dbSyncRef.current) clearInterval(dbSyncRef.current);
     };
-    poll();
-    locPollRef.current = setInterval(poll, 3000);
-    return () => { if (locPollRef.current) clearInterval(locPollRef.current); };
-  }, [session, ended, sessionId]);
+  }, [session, ended, sessionId, userName, user?.id]);
 
-  // Poll messages every 2s
+  // Load initial state + subscribe to Broadcast channel
   useEffect(() => {
-    if (!sessionId || !session || ended) return;
-    const poll = () => {
-      rideService.getMessages(sessionId, lastMsgTimeRef.current)
-        .then((d) => {
-          const newMsgs: RideMessage[] = d.messages ?? [];
-          if (newMsgs.length > 0) {
-            lastMsgTimeRef.current = newMsgs[newMsgs.length - 1].created_at;
-            setMessages((prev) => [...prev, ...newMsgs]);
-            // SOS check
-            const sosMsg = newMsgs.find((m) => m.message_type === 'sos');
-            if (sosMsg) setSosActive(true);
-            // Badge count if not on chat tab
-            setNewMsgCount((c) => c + newMsgs.filter((m) => m.message_type !== 'sos').length);
-          }
-        })
-        .catch(() => {});
-    };
-    // Load all first
-    rideService.getMessages(sessionId).then((d) => {
-      const msgs: RideMessage[] = d.messages ?? [];
-      setMessages(msgs);
-      if (msgs.length > 0) lastMsgTimeRef.current = msgs[msgs.length - 1].created_at;
-    }).catch(() => {});
-    msgPollRef.current = setInterval(poll, 2000);
-    return () => { if (msgPollRef.current) clearInterval(msgPollRef.current); };
-  }, [session, ended, sessionId]);
+    if (!sessionId || !session || ended || !user) return;
+
+    // One-time REST fetch: current rider positions + message history
+    rideService.getAllLocations(sessionId).then((d) => setRiders(d.locations ?? [])).catch(() => {});
+    rideService.getMessages(sessionId).then((d) => setMessages(d.messages ?? [])).catch(() => {});
+
+    // Supabase Broadcast channel — real-time, no DB writes for locations
+    const channel = supabase.channel(`ride:${sessionId}`, {
+      config: { broadcast: { self: true } },
+    });
+
+    channel
+      .on('broadcast', { event: 'location' }, ({ payload }) => {
+        setRiders((prev) => {
+          const idx = prev.findIndex((r) => r.user_id === payload.userId);
+          const entry: RiderLocation = {
+            user_id: payload.userId, user_name: payload.userName,
+            lat: payload.lat, lng: payload.lng,
+            speed_kmh: payload.speedKmh ?? 0, heading: payload.heading ?? 0,
+            quick_status: payload.quickStatus ?? (idx >= 0 ? prev[idx].quick_status : ''),
+            updated_at: payload.updatedAt,
+          };
+          if (idx >= 0) { const u = [...prev]; u[idx] = entry; return u; }
+          return [...prev, entry];
+        });
+        if (payload.quickStatus?.includes('🆘')) setSosActive(true);
+      })
+      .on('broadcast', { event: 'message' }, ({ payload }) => {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === payload.id)) return prev; // dedup
+          return [...prev, payload as RideMessage];
+        });
+        if (payload.message_type === 'sos') setSosActive(true);
+        if (payload.message_type === 'chat') setNewMsgCount((c) => c + 1);
+      })
+      .on('broadcast', { event: 'status' }, ({ payload }) => {
+        setRiders((prev) => prev.map((r) =>
+          r.user_id === payload.userId ? { ...r, quick_status: payload.quickStatus } : r
+        ));
+      })
+      .subscribe();
+
+    channelRef.current = channel;
+    return () => { supabase.removeChannel(channel); channelRef.current = null; };
+  }, [session, ended, sessionId, user]);
 
   // Auto-scroll chat
   useEffect(() => {
@@ -205,28 +222,38 @@ export default function RidePage() {
     if (!chatInput.trim() || !sessionId) return;
     setSending(true);
     try {
-      await rideService.sendMessage(sessionId, { message: chatInput.trim(), messageType: 'chat', userName });
+      const result = await rideService.sendMessage(sessionId, { message: chatInput.trim(), messageType: 'chat', userName });
+      const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: chatInput.trim(), message_type: 'chat', created_at: new Date().toISOString() };
+      // Broadcast so others see it instantly
+      channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
       setChatInput('');
     } finally { setSending(false); }
-  }, [chatInput, sessionId, userName]);
+  }, [chatInput, sessionId, userName, user?.id]);
 
   const sendSOS = useCallback(async () => {
     if (!sessionId) return;
     if (!window.confirm('🚨 Send SOS alert to all riders?')) return;
-    await rideService.sendMessage(sessionId, { message: '🆘 SOS! I need help! Check on me immediately.', messageType: 'sos', userName });
+    const result = await rideService.sendMessage(sessionId, { message: '🆘 SOS! I need help! Check on me immediately.', messageType: 'sos', userName });
+    const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: '🆘 SOS! I need help!', message_type: 'sos', created_at: new Date().toISOString() };
+    channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
     await rideService.updateQuickStatus(sessionId, '🆘 SOS');
+    channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: '🆘 SOS' } });
     setMyStatus('🆘 SOS');
-  }, [sessionId, userName]);
+  }, [sessionId, userName, user?.id]);
 
   const pickStatus = useCallback(async (value: string) => {
     if (!sessionId) return;
     setMyStatus(value);
     setShowStatusPicker(false);
     await rideService.updateQuickStatus(sessionId, value).catch(() => {});
+    // Broadcast status change so others see rider dot badge update instantly
+    channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: value } });
     if (value) {
-      await rideService.sendMessage(sessionId, { message: `Status update: ${value}`, messageType: 'status', userName }).catch(() => {});
+      const result = await rideService.sendMessage(sessionId, { message: `Status update: ${value}`, messageType: 'status', userName }).catch(() => null);
+      const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: `Status update: ${value}`, message_type: 'status', created_at: new Date().toISOString() };
+      channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
     }
-  }, [sessionId, userName]);
+  }, [sessionId, userName, user?.id]);
 
   const handleEndRide = useCallback(async () => {
     if (!sessionId || !window.confirm('End the ride for everyone?')) return;
