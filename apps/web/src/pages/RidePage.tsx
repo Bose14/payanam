@@ -10,17 +10,68 @@ import { useAuth } from '../context/AuthContext';
 
 const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 
-async function fetchOsrmRoute(waypoints: [number, number][]): Promise<[number, number][]> {
-  if (waypoints.length < 2) return waypoints;
+interface NavStep { instruction: string; distance: number; duration: number; }
+
+function formatManeuver(maneuver: { type: string; modifier?: string }, name: string): string {
+  const road = name ? ` on ${name}` : '';
+  const { type, modifier: mod } = maneuver;
+  if (type === 'depart') return `Depart${road}`;
+  if (type === 'arrive') return 'Arrive at destination';
+  if (type === 'turn') return `Turn ${mod ?? ''}${road}`;
+  if (type === 'new name') return `Continue${road}`;
+  if (type === 'merge') return `Merge${mod ? ' ' + mod : ''}${road}`;
+  if (type === 'on ramp') return `Take ramp${road}`;
+  if (type === 'off ramp') return `Take exit${road}`;
+  if (type === 'fork') return `Keep ${mod ?? 'straight'}${road}`;
+  if (type === 'roundabout') return `Enter roundabout${road}`;
+  return `Continue${road}`;
+}
+
+function stepIcon(instr: string): string {
+  const l = instr.toLowerCase();
+  if (l.includes('arrive')) return '🏁';
+  if (l.includes('depart')) return '🚦';
+  if (l.includes('left')) return '↰';
+  if (l.includes('right')) return '↱';
+  if (l.includes('roundabout')) return '⟳';
+  return '↑';
+}
+
+function fmtDist(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+}
+
+async function geocodePlaceName(place: string): Promise<[number, number] | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(place)}&format=json&limit=1&countrycodes=in`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
+    );
+    const data = await res.json();
+    if (data?.[0]) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+  } catch { /* silent */ }
+  return null;
+}
+
+async function fetchOsrmRoute(waypoints: [number, number][]): Promise<{ route: [number, number][]; steps: NavStep[] }> {
+  if (waypoints.length < 2) return { route: waypoints, steps: [] };
   const coords = waypoints.map(([lat, lng]) => `${lng},${lat}`).join(';');
   try {
-    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&steps=true`);
     const data = await res.json();
     if (data.code === 'Ok' && data.routes?.[0]) {
-      return (data.routes[0].geometry.coordinates as [number, number][]).map(([lng, lat]) => [lat, lng]);
+      const r = data.routes[0];
+      const route = (r.geometry.coordinates as [number, number][]).map(([lng, lat]) => [lat, lng] as [number, number]);
+      const steps: NavStep[] = (r.legs as Array<{ steps: Array<{ maneuver: { type: string; modifier?: string }; name: string; distance: number; duration: number }> }>)
+        .flatMap((leg) => leg.steps.map((s) => ({
+          instruction: formatManeuver(s.maneuver, s.name),
+          distance: s.distance,
+          duration: s.duration,
+        })));
+      return { route, steps };
     }
-  } catch { /* fallback to straight lines */ }
-  return waypoints;
+  } catch { /* fallback */ }
+  return { route: waypoints, steps: [] };
 }
 const QUICK_STATUS_OPTIONS = [
   { label: '✅ All Good', value: '✅ All Good' },
@@ -121,7 +172,7 @@ function MapFollow({ lat, lng, following, onDrag }: { lat: number; lng: number; 
   return null;
 }
 
-type TabType = 'map' | 'chat' | 'riders';
+type TabType = 'map' | 'chat' | 'riders' | 'nav';
 
 export default function RidePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -146,6 +197,7 @@ export default function RidePage() {
   const [following, setFollowing] = useState(true);
   const [myHeading, setMyHeading] = useState(0);
   const [osrmRoute, setOsrmRoute] = useState<[number, number][]>([]);
+  const [navSteps, setNavSteps] = useState<NavStep[]>([]);
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [backgroundWarning, setBackgroundWarning] = useState(false);
@@ -175,9 +227,28 @@ export default function RidePage() {
   useEffect(() => {
     if (!session) return;
     const stops = (session.itinerary ?? []).filter((s) => s.lat && s.lng);
-    if (stops.length < 2) return;
-    const waypoints: [number, number][] = stops.map((s) => [s.lat as number, s.lng as number]);
-    fetchOsrmRoute(waypoints).then(setOsrmRoute);
+
+    const run = async () => {
+      let waypoints: [number, number][];
+
+      if (stops.length >= 2) {
+        waypoints = stops.map((s) => [s.lat as number, s.lng as number]);
+      } else {
+        // Stops have no coordinates — geocode the trip's from/to as fallback
+        const [from, to] = await Promise.all([
+          geocodePlaceName(session.trips.from_place),
+          geocodePlaceName(session.trips.to_place),
+        ]);
+        if (!from || !to) return;
+        waypoints = [from, to];
+      }
+
+      const { route, steps } = await fetchOsrmRoute(waypoints);
+      setOsrmRoute(route);
+      setNavSteps(steps);
+    };
+
+    run();
   }, [session]);
 
   // Wake Lock + background visibility tracking
@@ -584,6 +655,52 @@ export default function RidePage() {
         </div>
       )}
 
+      {/* Nav / Directions panel */}
+      {tab === 'nav' && (
+        <div style={{ flex: 1, overflowY: 'auto', background: '#111827' }}>
+          {/* Route summary bar */}
+          {navSteps.length > 0 && (() => {
+            const totalDist = navSteps.reduce((a, s) => a + s.distance, 0);
+            const totalSecs = navSteps.reduce((a, s) => a + s.duration, 0);
+            const hrs = Math.floor(totalSecs / 3600);
+            const mins = Math.round((totalSecs % 3600) / 60);
+            return (
+              <div style={{ background: '#1f2937', padding: '12px 16px', borderBottom: '1px solid #374151', display: 'flex', gap: 24 }}>
+                <div>
+                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
+                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>total distance</p>
+                </div>
+                <div>
+                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
+                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>est. riding time</p>
+                </div>
+                <div>
+                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
+                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>turns</p>
+                </div>
+              </div>
+            );
+          })()}
+          {navSteps.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 16px' }}>
+              <p style={{ fontSize: 32 }}>🗺️</p>
+              <p style={{ color: '#9ca3af', fontSize: 14 }}>Fetching route directions…</p>
+            </div>
+          )}
+          {navSteps.map((step, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #1f2937', background: i === 0 ? '#1e3a5f' : 'transparent' }}>
+              <div style={{ width: 36, height: 36, background: '#1f2937', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                {stepIcon(step.instruction)}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: '#fff', fontSize: 14, fontWeight: i === 0 ? 700 : 400, margin: 0 }}>{step.instruction}</p>
+                <p style={{ color: '#6b7280', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Quick status picker overlay */}
       {showStatusPicker && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 500, display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowStatusPicker(false)}>
@@ -618,6 +735,13 @@ export default function RidePage() {
         <button onClick={() => setTab(tab === 'riders' ? 'map' : 'riders')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'riders' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ fontSize: 22 }}>👥</span>
           Riders
+        </button>
+        <button onClick={() => setTab(tab === 'nav' ? 'map' : 'nav')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'nav' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
+          <span style={{ fontSize: 22 }}>🧭</span>
+          Nav
+          {navSteps.length > 0 && tab !== 'nav' && (
+            <span style={{ position: 'absolute', top: 8, right: '18%', width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
+          )}
         </button>
         <button onClick={() => setTab('map')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'map' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ fontSize: 22 }}>🗺️</span>
