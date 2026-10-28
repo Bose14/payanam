@@ -64,25 +64,27 @@ function TripDetailPage() {
   const [addingToDay, setAddingToDay] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '', insertAfterIndex: -1 });
   const [addingStop, setAddingStop] = useState(false);
+  const [mapRevision, setMapRevision] = useState(0);
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstLoad = useRef(true);
+  // true while initial data is being set — prevents auto-save on first render
+  const userEditedRef = useRef(false);
 
   useEffect(() => {
     if (!id) return;
     tripService.getTripById(id).then((data) => {
       setTrip(data.trip);
-      const itinerary = data.trip.itinerary ?? [];
-      setStops(itinerary);
+      setStops(data.trip.itinerary ?? []);
       tripIdRef.current = data.trip.id;
+      // mark as loaded AFTER state is queued so the stops effect sees this flag
+      setTimeout(() => { userEditedRef.current = false; }, 0);
     }).catch((err) => setError(err.message ?? 'Failed to load trip'))
-      .finally(() => { setLoading(false); isFirstLoad.current = false; });
+      .finally(() => setLoading(false));
   }, [id]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  // Auto-save 1.5s after any stops change
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
     setSaveStatus('saving');
     try {
@@ -94,13 +96,14 @@ function TripDetailPage() {
     }
   }, []);
 
+  // Auto-save 1.5s after a user-initiated change
   useEffect(() => {
-    if (isFirstLoad.current || !tripIdRef.current) return;
+    if (!userEditedRef.current || !tripIdRef.current) return;
     setSaveStatus('unsaved');
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
-    autoSaveRef.current = setTimeout(() => {
-      if (tripIdRef.current) doSave(stops, tripIdRef.current);
-    }, 1500);
+    const tid = tripIdRef.current;
+    const snapshot = stops;
+    autoSaveRef.current = setTimeout(() => doSave(snapshot, tid), 1500);
     return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
   }, [stops, doSave]);
 
@@ -113,9 +116,10 @@ function TripDetailPage() {
   };
 
   const removeStop = (day: number, orderIndex: number) => {
+    userEditedRef.current = true;
+    setMapRevision(r => r + 1);
     setStops(prev => {
       const filtered = prev.filter(s => !(s.day_number === day && s.order_index === orderIndex));
-      // re-index order within day
       const dayItems = filtered.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
       return filtered.map(s => s.day_number !== day ? s : { ...s, order_index: dayItems.indexOf(s) + 1 });
     });
@@ -148,14 +152,12 @@ function TripDetailPage() {
       lat, lng,
     };
 
+    userEditedRef.current = true;
+    setMapRevision(r => r + 1);
     setStops(prev => {
       const otherDays = prev.filter(s => s.day_number !== day);
       const thisDayStops = prev.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
-
-      // Insert at the right position
       thisDayStops.splice(insertPosition, 0, newStop);
-
-      // Re-index all stops in this day
       const reindexed = thisDayStops.map((s, i) => ({ ...s, order_index: i + 1 }));
       return [...otherDays, ...reindexed];
     });
@@ -224,7 +226,7 @@ function TripDetailPage() {
         {/* Map — re-keyed when valid stops count changes so it re-mounts */}
         <div style={{ marginBottom: 28 }}>
           <TripMap
-            key={stops.filter(s => s.lat && s.lng).length}
+            key={mapRevision}
             stops={stops}
             fromPlace={trip.from_place}
             toPlace={trip.to_place}
