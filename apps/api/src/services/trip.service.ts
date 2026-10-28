@@ -41,22 +41,47 @@ export async function getUserTrips(userId: string) {
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
-  // Trips the user joined as an approved member (not as owner)
+  // Step 1: get room_ids where user is an approved member (not owner)
   const { data: memberships } = await db
     .from('room_members')
-    .select('role, rooms(id, invite_code, trips(id, title, from_place, to_place, days, bike_type, status, user_id, trip_type, created_at))')
+    .select('room_id')
     .eq('user_id', userId)
     .eq('status', 'approved')
     .neq('role', 'owner');
 
-  const joinedTrips = (memberships ?? [])
-    .map((m) => {
-      const room = m.rooms as { id: string; invite_code: string; trips: Record<string, unknown> } | null;
-      if (!room?.trips) return null;
-      return { ...room.trips, rooms: [{ id: room.id, invite_code: room.invite_code }], isOwner: false, isJoined: true };
-    })
-    .filter(Boolean);
+  const joinedTrips: unknown[] = [];
 
+  if (memberships && memberships.length > 0) {
+    const roomIds = memberships.map((m) => m.room_id);
+
+    // Step 2: get rooms to find trip_ids
+    const { data: rooms } = await db
+      .from('rooms')
+      .select('id, invite_code, trip_id')
+      .in('id', roomIds);
+
+    if (rooms && rooms.length > 0) {
+      const tripIds = rooms.map((r) => r.trip_id);
+
+      // Step 3: get the actual trips
+      const { data: tripData } = await db
+        .from('trips')
+        .select('*')
+        .in('id', tripIds);
+
+      (tripData ?? []).forEach((t) => {
+        const room = rooms.find((r) => r.trip_id === t.id);
+        joinedTrips.push({
+          ...t,
+          rooms: room ? [{ id: room.id, invite_code: room.invite_code }] : [],
+          isOwner: false,
+          isJoined: true,
+        });
+      });
+    }
+  }
+
+  console.log(`[getUserTrips] userId=${userId} owned=${ownedTrips?.length ?? 0} joined=${joinedTrips.length}`);
   return [
     ...(ownedTrips ?? []).map((t) => ({ ...t, isOwner: true })),
     ...joinedTrips,
@@ -138,7 +163,7 @@ export async function createRoom(tripId: string, userId: string) {
 
   if (error) throw new Error(error.message);
 
-  await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'owner' });
+  await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'owner', status: 'approved' });
 
   return room;
 }
