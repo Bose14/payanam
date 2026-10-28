@@ -4,6 +4,7 @@ import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
 import PlaceInput, { PlaceLocation } from '../components/PlaceInput';
+import ExpenseTracker from '../components/ExpenseTracker';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: '⛽', stay: '🏨', attraction: '📍', meal: '🍽️', rest: '☕', stop: '📌',
@@ -488,6 +489,10 @@ function TripDetailPage() {
             </div>
           );
         })}
+        {/* Expense Tracker */}
+        <div style={{ marginTop: 24 }}>
+          <ExpenseTracker tripId={trip.id} currentUserId={user!.id} />
+        </div>
       </main>
     </div>
   );

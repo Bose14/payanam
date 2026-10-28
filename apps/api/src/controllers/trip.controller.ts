@@ -14,6 +14,7 @@ import {
   getApprovedMembers,
   updateItinerary,
   deleteTrip,
+  getAllTripParticipants,
 } from '../services/trip.service';
 
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
@@ -133,4 +134,11 @@ export async function getApprovedMembersHandler(req: Request, res: Response, nex
   } catch (err) {
     next(err);
   }
+}
+
+export async function getAllTripParticipantsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const participants = await getAllTripParticipants(req.params.id, req.userId!);
+    return sendSuccess(res, { participants });
+  } catch (err) { next(err); }
 }

@@ -281,6 +281,43 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   }
 }
 
+export async function getAllTripParticipants(tripId: string, userId: string) {
+  const db = getDatabase();
+
+  const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
+  if (!trip) throw new Error('Trip not found');
+
+  if (trip.user_id !== userId) {
+    const { data: roomCheck } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
+    if (!roomCheck) throw new Error('Not authorized');
+    const { data: memberCheck } = await db.from('room_members').select('status').eq('room_id', roomCheck.id).eq('user_id', userId).maybeSingle();
+    if (!memberCheck || memberCheck.status !== 'approved') throw new Error('Not authorized');
+  }
+
+  const { data: owner } = await db.from('users').select('id, full_name, email').eq('id', trip.user_id).single();
+  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
+  const coRiders: Array<{ id: string; full_name: string; email: string }> = [];
+
+  if (room) {
+    const { data: members } = await db
+      .from('room_members')
+      .select('user_id, users(id, full_name, email)')
+      .eq('room_id', room.id)
+      .eq('status', 'approved')
+      .neq('role', 'owner');
+
+    (members ?? []).forEach((m: unknown) => {
+      const member = m as { users: { id: string; full_name: string; email: string } | null };
+      if (member.users) coRiders.push(member.users);
+    });
+  }
+
+  return [
+    { id: owner!.id, full_name: owner!.full_name ?? 'Lead Rider', email: owner!.email, role: 'owner' as const },
+    ...coRiders.map(r => ({ ...r, role: 'member' as const })),
+  ];
+}
+
 export async function deleteTrip(tripId: string, userId: string) {
   const db = getDatabase();
   const { error } = await db.from('trips').delete().eq('id', tripId).eq('user_id', userId);
