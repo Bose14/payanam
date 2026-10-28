@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
 import TripMap from '../components/TripMap';
-import PlaceInput from '../components/PlaceInput';
+import PlaceInput, { PlaceLocation } from '../components/PlaceInput';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: '⛽', stay: '🏨', attraction: '📍', meal: '🍽️', rest: '☕', stop: '📌',
 };
-
 const TYPE_COLORS: Record<string, string> = {
   fuel_stop: '#f59e0b', stay: '#3b82f6', attraction: '#10b981', meal: '#f97316', rest: '#8b5cf6', stop: '#6b7280',
 };
@@ -27,21 +26,29 @@ interface Stop {
 }
 
 interface Trip {
-  id: string;
-  title: string;
-  from_place: string;
-  to_place: string;
-  days: number;
-  bike_type: string;
-  status: string;
+  id: string; title: string; from_place: string; to_place: string;
+  days: number; bike_type: string; status: string;
   itinerary: Stop[];
   rooms?: Array<{ id: string; invite_code: string }>;
 }
 
 interface AddStopForm {
-  place: string;
-  item_type: string;
-  description: string;
+  place: string; item_type: string; description: string;
+  lat?: number; lng?: number;
+  insertAfterIndex: number; // -1 = start, N = after stop with order_index N
+}
+
+// Geocode a place name via Nominatim when no suggestion was selected
+async function geocodePlace(name: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=in`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
+    );
+    const data = await res.json();
+    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch { /* silent */ }
+  return null;
 }
 
 function TripDetailPage() {
@@ -49,83 +56,113 @@ function TripDetailPage() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [stops, setStops] = useState<Stop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [copied, setCopied] = useState(false);
   const [openDays, setOpenDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
   const [addingToDay, setAddingToDay] = useState<number | null>(null);
-  const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '' });
+  const [addForm, setAddForm] = useState<AddStopForm>({ place: '', item_type: 'attraction', description: '', insertAfterIndex: -1 });
+  const [addingStop, setAddingStop] = useState(false);
+
+  const tripIdRef = useRef<string | null>(null);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     if (!id) return;
-    tripService.getTripById(id)
-      .then((data) => {
-        setTrip(data.trip);
-        setStops(data.trip.itinerary ?? []);
-      })
-      .catch((err) => setError(err.message ?? 'Failed to load trip'))
-      .finally(() => setLoading(false));
+    tripService.getTripById(id).then((data) => {
+      setTrip(data.trip);
+      const itinerary = data.trip.itinerary ?? [];
+      setStops(itinerary);
+      tripIdRef.current = data.trip.id;
+    }).catch((err) => setError(err.message ?? 'Failed to load trip'))
+      .finally(() => { setLoading(false); isFirstLoad.current = false; });
   }, [id]);
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+
+  // Auto-save 1.5s after any stops change
+  const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
+    setSaveStatus('saving');
+    try {
+      await tripService.updateItinerary(tid, currentStops);
+      setSaveStatus('saved');
+    } catch {
+      setSaveStatus('unsaved');
+      showToast('❌ Auto-save failed');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isFirstLoad.current || !tripIdRef.current) return;
+    setSaveStatus('unsaved');
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      if (tripIdRef.current) doSave(stops, tripIdRef.current);
+    }, 1500);
+    return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+  }, [stops, doSave]);
 
   const inviteCode = trip?.rooms?.[0]?.invite_code;
   const shareUrl = inviteCode ? `${window.location.origin}/join/${inviteCode}` : null;
 
   const handleCopy = () => {
     if (!shareUrl) return;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
   const removeStop = (day: number, orderIndex: number) => {
-    setStops((prev) => {
-      const filtered = prev.filter((s) => !(s.day_number === day && s.order_index === orderIndex));
-      // reindex order within each day
-      const reindexed = filtered.map((s) => {
-        if (s.day_number !== day) return s;
-        const dayStops = filtered.filter((x) => x.day_number === day).sort((a, b) => a.order_index - b.order_index);
-        return { ...s, order_index: dayStops.indexOf(s) + 1 };
-      });
-      return reindexed;
+    setStops(prev => {
+      const filtered = prev.filter(s => !(s.day_number === day && s.order_index === orderIndex));
+      // re-index order within day
+      const dayItems = filtered.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
+      return filtered.map(s => s.day_number !== day ? s : { ...s, order_index: dayItems.indexOf(s) + 1 });
     });
   };
 
-  const addStop = (day: number) => {
+  const addStop = async (day: number) => {
     if (!addForm.place.trim()) return;
-    const dayStops = stops.filter((s) => s.day_number === day);
-    const newStop: Stop = {
-      place: addForm.place.trim(),
-      item_type: addForm.item_type,
-      description: addForm.description,
-      estimated_km: 0,
-      duration_hours: 1,
-      tips: '',
-      day_number: day,
-      order_index: dayStops.length + 1,
-    };
-    setStops((prev) => [...prev, newStop]);
-    setAddingToDay(null);
-    setAddForm({ place: '', item_type: 'attraction', description: '' });
-  };
+    setAddingStop(true);
 
-  const saveChanges = async () => {
-    if (!trip) return;
-    setSaving(true);
-    try {
-      await tripService.updateItinerary(trip.id, stops);
-      showToast('✅ Changes saved!');
-    } catch (err) {
-      showToast('❌ ' + (err instanceof Error ? err.message : 'Save failed'));
-    } finally {
-      setSaving(false);
+    let lat = addForm.lat;
+    let lng = addForm.lng;
+
+    // Geocode if no coordinates (manual type without picking suggestion)
+    if (!lat || !lng) {
+      const geo = await geocodePlace(addForm.place.trim());
+      if (geo) { lat = geo.lat; lng = geo.lng; }
     }
+
+    const dayStops = stops.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
+    const insertAfter = addForm.insertAfterIndex; // -1 = start, N = after stop at position N (0-based)
+
+    // Calculate the actual insert position
+    const insertPosition = insertAfter === -1 ? 0 : insertAfter + 1;
+
+    const newStop: Stop = {
+      place: addForm.place.trim(), item_type: addForm.item_type,
+      description: addForm.description, estimated_km: 0,
+      duration_hours: 1, tips: '', day_number: day,
+      order_index: insertPosition + 1, // temp, will be reindexed below
+      lat, lng,
+    };
+
+    setStops(prev => {
+      const otherDays = prev.filter(s => s.day_number !== day);
+      const thisDayStops = prev.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
+
+      // Insert at the right position
+      thisDayStops.splice(insertPosition, 0, newStop);
+
+      // Re-index all stops in this day
+      const reindexed = thisDayStops.map((s, i) => ({ ...s, order_index: i + 1 }));
+      return [...otherDays, ...reindexed];
+    });
+
+    setAddingStop(false);
+    setAddingToDay(null);
+    setAddForm({ place: '', item_type: 'attraction', description: '', insertAfterIndex: dayStops.length - 1 });
   };
 
   const groupedByDay = stops.reduce<Record<number, Stop[]>>((acc, stop) => {
@@ -134,43 +171,22 @@ function TripDetailPage() {
     return acc;
   }, {});
 
-  if (loading) {
-    return (
-      <div style={styles.center}>
-        <div style={{ fontSize: 40 }}>⏳</div>
-        <p style={{ color: '#6b7280', fontSize: 16 }}>Loading trip details...</p>
-      </div>
-    );
-  }
-
-  if (error || !trip) {
-    return (
-      <div style={styles.center}>
-        <p style={{ color: '#dc2626' }}>{error || 'Trip not found'}</p>
-        <Link to="/dashboard">← Back to dashboard</Link>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={styles.center}><div style={{ fontSize: 40 }}>⏳</div><p style={{ color: '#6b7280' }}>Loading trip...</p></div>
+  );
+  if (error || !trip) return (
+    <div style={styles.center}><p style={{ color: '#dc2626' }}>{error || 'Trip not found'}</p><Link to="/dashboard">← Back</Link></div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f7fa', fontFamily: 'system-ui, sans-serif' }}>
-      {/* Toast */}
       {toast && (
-        <div style={{
-          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
-          background: toast.startsWith('✅') ? '#166534' : '#991b1b',
-          color: 'white', padding: '10px 24px', borderRadius: 8, fontWeight: 600,
-          zIndex: 9999, boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-        }}>
+        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: toast.startsWith('✅') ? '#166534' : '#991b1b', color: 'white', padding: '10px 24px', borderRadius: 8, fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
           {toast}
         </div>
       )}
 
-      <header style={{
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
-        padding: '0 24px', height: 60,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <header style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>🏍️</span>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>Payanam</span>
@@ -187,59 +203,50 @@ function TripDetailPage() {
               {trip.from_place} → {trip.to_place} · {trip.days} days · {trip.bike_type}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            {/* Save status indicator */}
+            <span style={{ fontSize: 13, color: saveStatus === 'saved' ? '#16a34a' : saveStatus === 'saving' ? '#d97706' : '#dc2626', fontWeight: 500 }}>
+              {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved'}
+            </span>
             {shareUrl && (
-              <button onClick={handleCopy} style={styles.btnSecondary}>
-                {copied ? '✅ Copied!' : '🔗 Share Trip'}
-              </button>
+              <button onClick={handleCopy} style={styles.btnSecondary}>{copied ? '✅ Copied!' : '🔗 Share Trip'}</button>
             )}
-            <button onClick={saveChanges} disabled={saving} style={saving ? { ...styles.btnPrimary, opacity: 0.6 } : styles.btnPrimary}>
-              {saving ? 'Saving...' : '💾 Save Changes'}
-            </button>
           </div>
         </div>
 
         {inviteCode && (
-          <div style={{
-            background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10,
-            padding: '12px 16px', display: 'flex', justifyContent: 'space-between',
-            alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8,
-            fontSize: 14, color: '#1e40af',
-          }}>
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8, fontSize: 14, color: '#1e40af' }}>
             <span>📨 Invite code: <strong>{inviteCode}</strong></span>
-            <span style={{ color: '#60a5fa', fontSize: 13 }}>Share this link with your fellow riders</span>
+            <span style={{ color: '#60a5fa', fontSize: 13 }}>Share with fellow riders</span>
           </div>
         )}
 
-        {/* Map */}
+        {/* Map — re-keyed when valid stops count changes so it re-mounts */}
         <div style={{ marginBottom: 28 }}>
-          <TripMap stops={stops} fromPlace={trip.from_place} toPlace={trip.to_place} />
+          <TripMap
+            key={stops.filter(s => s.lat && s.lng).length}
+            stops={stops}
+            fromPlace={trip.from_place}
+            toPlace={trip.to_place}
+          />
         </div>
 
         {/* Itinerary */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>Itinerary</h2>
-          <span style={{ fontSize: 13, color: '#9ca3af' }}>Click × to remove a stop · Add Stop to insert new ones</span>
+          <span style={{ fontSize: 13, color: '#9ca3af' }}>Changes auto-save after 1.5s</span>
         </div>
 
         {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
           const dayStops = (groupedByDay[day] ?? []).sort((a, b) => a.order_index - b.order_index);
           const isOpen = openDays.has(day);
-          const toggleDay = () => setOpenDays(prev => {
-            const next = new Set(prev);
-            if (next.has(day)) next.delete(day); else next.add(day);
-            return next;
-          });
+          const toggleDay = () => setOpenDays(prev => { const n = new Set(prev); if (n.has(day)) n.delete(day); else n.add(day); return n; });
+
           return (
             <div key={day} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 12, overflow: 'hidden' }}>
-              <button
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', background: isOpen ? '#f8faff' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 15 }}
-                onClick={toggleDay}
-              >
+              <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', background: isOpen ? '#f8faff' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 15 }} onClick={toggleDay}>
                 <span style={{ fontWeight: 700, color: '#1e40af', fontSize: 16, flex: 1 }}>Day {day}</span>
-                {dayStops.length > 0 && (
-                  <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 500 }}>{dayStops.length} stops</span>
-                )}
+                {dayStops.length > 0 && <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 500 }}>{dayStops.length} stops</span>}
                 <span style={{ color: '#9ca3af', fontSize: 14 }}>{isOpen ? '▲' : '▼'}</span>
               </button>
 
@@ -254,30 +261,21 @@ function TripDetailPage() {
                         {idx < dayStops.length - 1 && <div style={{ width: 2, flex: 1, background: '#e5e7eb', margin: '4px 0', minHeight: 16 }} />}
                       </div>
                       <div style={{ flex: 1, paddingBottom: 16, borderBottom: '1px solid #f3f4f6' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 600, color: '#111827', fontSize: 15, flex: 1 }}>{stop.place}</span>
-                          <span style={{
-                            fontSize: 11, padding: '2px 8px', borderRadius: 10, textTransform: 'capitalize',
-                            background: TYPE_COLORS[stop.item_type] + '20', color: TYPE_COLORS[stop.item_type],
-                          }}>
+                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, textTransform: 'capitalize', background: (TYPE_COLORS[stop.item_type] ?? '#6b7280') + '20', color: TYPE_COLORS[stop.item_type] ?? '#6b7280' }}>
                             {stop.item_type.replace('_', ' ')}
                           </span>
-                          <button
-                            onClick={() => removeStop(stop.day_number, stop.order_index)}
-                            title="Remove stop"
-                            style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 13, padding: '3px 8px', borderRadius: 6, fontWeight: 600, lineHeight: 1 }}
-                          >✕ Remove</button>
+                          <button onClick={() => removeStop(stop.day_number, stop.order_index)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12, padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>
+                            ✕ Remove
+                          </button>
                         </div>
                         {stop.description && <p style={{ color: '#374151', fontSize: 14, margin: '0 0 6px' }}>{stop.description}</p>}
                         <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
                           {stop.estimated_km > 0 && <span>🛣️ {stop.estimated_km}km</span>}
                           {stop.duration_hours > 0 && <span>⏱️ {stop.duration_hours}h</span>}
                         </div>
-                        {stop.tips && (
-                          <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#92400e' }}>
-                            💡 {stop.tips}
-                          </div>
-                        )}
+                        {stop.tips && <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#92400e' }}>💡 {stop.tips}</div>}
                       </div>
                     </div>
                   ))}
@@ -289,35 +287,54 @@ function TripDetailPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <PlaceInput
                           value={addForm.place}
-                          onChange={(v) => setAddForm((f) => ({ ...f, place: v }))}
-                          placeholder="Place name"
+                          onChange={(v) => setAddForm(f => ({ ...f, place: v, lat: undefined, lng: undefined }))}
+                          onLocationSelect={(loc) => setAddForm(f => ({ ...f, place: loc.name, lat: loc.lat, lng: loc.lng }))}
+                          placeholder="Place name (type to search or enter manually)"
                         />
                         <select
                           value={addForm.item_type}
-                          onChange={(e) => setAddForm((f) => ({ ...f, item_type: e.target.value }))}
+                          onChange={(e) => setAddForm(f => ({ ...f, item_type: e.target.value }))}
                           style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
                         >
-                          <option value="attraction">Attraction</option>
-                          <option value="meal">Meal</option>
-                          <option value="fuel_stop">Fuel Stop</option>
-                          <option value="rest">Rest</option>
-                          <option value="stay">Stay</option>
+                          <option value="attraction">📍 Attraction</option>
+                          <option value="meal">🍽️ Meal</option>
+                          <option value="fuel_stop">⛽ Fuel Stop</option>
+                          <option value="rest">☕ Rest</option>
+                          <option value="stay">🏨 Stay</option>
                         </select>
                         <input
                           value={addForm.description}
-                          onChange={(e) => setAddForm((f) => ({ ...f, description: e.target.value }))}
+                          onChange={(e) => setAddForm(f => ({ ...f, description: e.target.value }))}
                           placeholder="Description (optional)"
                           style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
                         />
+                        {/* Position selector */}
+                        <div>
+                          <label style={{ fontSize: 13, color: '#6b7280', fontWeight: 500, display: 'block', marginBottom: 6 }}>Insert position:</label>
+                          <select
+                            value={addForm.insertAfterIndex}
+                            onChange={(e) => setAddForm(f => ({ ...f, insertAfterIndex: parseInt(e.target.value) }))}
+                            style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, width: '100%' }}
+                          >
+                            <option value={-1}>↑ Before all stops (start of day)</option>
+                            {dayStops.map((s, i) => (
+                              <option key={i} value={i}>↓ After: {s.place}</option>
+                            ))}
+                          </select>
+                        </div>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => addStop(day)} style={styles.btnPrimary}>Add Stop</button>
-                          <button onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }} style={styles.btnSecondary}>Cancel</button>
+                          <button onClick={() => addStop(day)} disabled={addingStop} style={{ ...styles.btnPrimary, opacity: addingStop ? 0.6 : 1 }}>
+                            {addingStop ? '📍 Adding...' : '+ Add Stop'}
+                          </button>
+                          <button onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '', insertAfterIndex: -1 }); }} style={styles.btnSecondary}>
+                            Cancel
+                          </button>
                         </div>
                       </div>
                     </div>
                   ) : (
                     <button
-                      onClick={() => setAddingToDay(day)}
+                      onClick={() => { setAddingToDay(day); setAddForm(f => ({ ...f, insertAfterIndex: dayStops.length - 1 })); }}
                       style={{ marginTop: 12, padding: '10px 16px', background: '#eff6ff', border: '2px dashed #93c5fd', borderRadius: 8, cursor: 'pointer', color: '#1d4ed8', fontSize: 14, fontWeight: 600, width: '100%' }}
                     >
                       + Add Stop to Day {day}
@@ -334,22 +351,9 @@ function TripDetailPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  center: {
-    minHeight: '100vh', display: 'flex', flexDirection: 'column',
-    alignItems: 'center', justifyContent: 'center', gap: 12,
-  },
-  btnPrimary: {
-    padding: '10px 18px',
-    background: 'linear-gradient(135deg, #0f3460, #533483)',
-    color: '#fff', border: 'none', borderRadius: 8,
-    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-  },
-  btnSecondary: {
-    padding: '10px 18px',
-    background: '#f3f4f6', color: '#374151',
-    border: '1px solid #e5e7eb', borderRadius: 8,
-    fontSize: 14, fontWeight: 500, cursor: 'pointer',
-  },
+  center: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  btnPrimary: { padding: '10px 18px', background: 'linear-gradient(135deg, #0f3460, #533483)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  btnSecondary: { padding: '10px 18px', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
 };
 
 export default TripDetailPage;
