@@ -24,12 +24,22 @@ export async function createTrip(userId: string, data: CreateTripData) {
   const db = getDatabase();
   const title = data.title || `${data.from_place} to ${data.to_place}`;
 
-  const { data: trip, error } = await db
-    .from('trips')
-    .insert({ ...data, title, user_id: userId })
-    .select()
-    .single();
+  // Explicitly list columns — trip_type is only used for AI generation, never stored
+  const row: Record<string, unknown> = {
+    title,
+    user_id: userId,
+    from_place: data.from_place,
+    to_place: data.to_place,
+    days: data.days,
+    bike_type: data.bike_type,
+    preferences: data.preferences ?? null,
+  };
+  if (data.from_lat != null) row.from_lat = data.from_lat;
+  if (data.from_lng != null) row.from_lng = data.from_lng;
+  if (data.to_lat != null) row.to_lat = data.to_lat;
+  if (data.to_lng != null) row.to_lng = data.to_lng;
 
+  const { data: trip, error } = await db.from('trips').insert(row).select().single();
   if (error) throw new Error(error.message);
   return trip;
 }
