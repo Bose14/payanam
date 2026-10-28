@@ -32,18 +32,25 @@ export async function getActiveSession(tripId: string) {
 
 export async function getSessionById(sessionId: string) {
   const db = getDatabase();
-  const { data, error } = await db.from('ride_sessions')
-    .select('*, trips(id, title, from_place, to_place, from_lat, from_lng, to_lat, to_lng, days)')
-    .eq('id', sessionId).single();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error('Session not found');
 
+  // Step 1: get the session row
+  const { data: session, error } = await db.from('ride_sessions')
+    .select('*').eq('id', sessionId).single();
+  if (error) throw new Error(error.message);
+  if (!session) throw new Error('Session not found');
+
+  // Step 2: get the trip (explicit query — FK joins unreliable in PostgREST)
+  const { data: trip } = await db.from('trips')
+    .select('id, title, from_place, to_place, from_lat, from_lng, to_lat, to_lng, days')
+    .eq('id', session.trip_id).single();
+
+  // Step 3: get itinerary items
   const { data: items } = await db.from('itinerary_items')
     .select('id, place, lat, lng, day_number, order_index, item_type')
-    .eq('trip_id', (data.trips as { id: string }).id)
+    .eq('trip_id', session.trip_id)
     .order('day_number').order('order_index');
 
-  return { ...data, itinerary: items ?? [] };
+  return { ...session, trips: trip ?? null, itinerary: items ?? [] };
 }
 
 export async function updateLocation(
