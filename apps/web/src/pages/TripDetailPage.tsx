@@ -79,6 +79,17 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   return null;
 }
 
+function requestLocationPermission(): Promise<boolean> {
+  if (!navigator.geolocation) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      () => resolve(true),
+      () => resolve(false),
+      { timeout: 8000, maximumAge: 60000 },
+    );
+  });
+}
+
 function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -280,7 +291,11 @@ function TripDetailPage() {
             )}
             {activeSession ? (
               <button
-                onClick={() => navigate(`/ride/${activeSession.id}`)}
+                onClick={async () => {
+                  const ok = await requestLocationPermission();
+                  if (!ok) { showToast('📍 Enable location permission to join the ride.'); return; }
+                  navigate(`/ride/${activeSession.id}`);
+                }}
                 style={{ padding: '10px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 🟢 Join Ride
@@ -289,6 +304,8 @@ function TripDetailPage() {
               <button
                 onClick={async () => {
                   if (!id) return;
+                  const ok = await requestLocationPermission();
+                  if (!ok) { showToast('📍 Enable location permission to start the ride.'); return; }
                   setStartingRide(true);
                   try {
                     const d = await rideService.startRide(id);
