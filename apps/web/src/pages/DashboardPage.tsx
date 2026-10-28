@@ -20,6 +20,7 @@ function DashboardPage() {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmTrip, setConfirmTrip] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     tripService.getUserTrips()
@@ -28,16 +29,15 @@ function DashboardPage() {
       .finally(() => setTripsLoading(false));
   }, []);
 
-  const handleDelete = async (e: React.MouseEvent, tripId: string, tripTitle: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!window.confirm(`Delete "${tripTitle}"? This cannot be undone.`)) return;
-    setDeletingId(tripId);
+  const handleDeleteConfirm = async () => {
+    if (!confirmTrip) return;
+    setDeletingId(confirmTrip.id);
+    setConfirmTrip(null);
     try {
-      await tripService.deleteTrip(tripId);
-      setTrips(prev => prev.filter(t => t.id !== tripId));
+      await tripService.deleteTrip(confirmTrip.id);
+      setTrips(prev => prev.filter(t => t.id !== confirmTrip.id));
     } catch {
-      alert('Failed to delete trip. Please try again.');
+      // silent — could add a toast here
     } finally {
       setDeletingId(null);
     }
@@ -52,6 +52,26 @@ function DashboardPage() {
 
   return (
     <div style={styles.page}>
+      {/* Delete confirmation modal */}
+      {confirmTrip && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '32px 28px', maxWidth: 380, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>🗑️</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Delete Trip?</h3>
+            <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 24px', lineHeight: 1.5 }}>
+              "<strong>{confirmTrip.title}</strong>" will be permanently deleted along with its itinerary and room.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmTrip(null)} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#374151' }}>
+                Cancel
+              </button>
+              <button onClick={handleDeleteConfirm} style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#fff' }}>
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header style={styles.header}>
         <div style={styles.brand}>
           <span style={styles.brandIcon}>🏍️</span>
@@ -108,12 +128,12 @@ function DashboardPage() {
                     </div>
                   </Link>
                   <button
-                    onClick={(e) => handleDelete(e, trip.id, trip.title)}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmTrip({ id: trip.id, title: trip.title }); }}
                     disabled={deletingId === trip.id}
                     title="Delete trip"
-                    style={{ position: 'absolute', top: 10, right: 10, background: '#fee2e2', border: 'none', color: '#dc2626', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: deletingId === trip.id ? 0.5 : 1 }}
+                    style={{ position: 'absolute', bottom: 12, right: 12, background: '#fee2e2', border: 'none', color: '#dc2626', borderRadius: 6, padding: '5px 8px', fontSize: 16, cursor: 'pointer', opacity: deletingId === trip.id ? 0.4 : 1, lineHeight: 1 }}
                   >
-                    {deletingId === trip.id ? '...' : '✕'}
+                    {deletingId === trip.id ? '⏳' : '🗑️'}
                   </button>
                 </div>
               ))}
