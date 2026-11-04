@@ -15,6 +15,7 @@ import {
   updateItinerary,
   deleteTrip,
   getAllTripParticipants,
+  removeMember,
 } from '../services/trip.service';
 
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
@@ -30,14 +31,27 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       return sendError(res, 'from_place, to_place, and days are required', 400, 'VALIDATION_ERROR');
     }
 
+    const parsedDays = Math.max(1, Math.min(Number(days) || 1, 14));
     const typeLabel = trip_type === 'round_trip' ? '↺' : trip_type === 'loop' ? '⟳' : '→';
-    const title = `${from_place} ${typeLabel} ${to_place} (${days}d)`;
-    const trip = await createTrip(userId, { title, from_place, to_place, from_lat, from_lng, to_lat, to_lng, days, bike_type, trip_type, preferences });
+    const title = `${from_place} ${typeLabel} ${to_place} (${parsedDays}d)`;
+    const trip = await createTrip(userId, {
+      title,
+      from_place,
+      to_place,
+      from_lat,
+      from_lng,
+      to_lat,
+      to_lng,
+      days: parsedDays,
+      bike_type,
+      trip_type,
+      preferences,
+    });
     console.log('[createTrip] trip created:', trip.id);
 
     let itinerary;
     try {
-      itinerary = await generateItinerary(from_place, to_place, days, bike_type, trip_type, preferences);
+      itinerary = await generateItinerary(from_place, to_place, parsedDays, bike_type, trip_type, preferences);
     } catch (aiErr: unknown) {
       const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
       console.error('[createTrip] AI generation failed:', msg);
@@ -145,4 +159,13 @@ export async function getAllTripParticipantsHandler(req: Request, res: Response,
     const participants = await getAllTripParticipants(req.params.id, req.userId!);
     return sendSuccess(res, { participants });
   } catch (err) { next(err); }
+}
+
+export async function removeMemberHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    await removeMember(req.params.id, req.params.memberId, req.userId!);
+    return sendSuccess(res, { message: 'Member removed successfully' });
+  } catch (err) {
+    next(err);
+  }
 }

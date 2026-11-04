@@ -5,8 +5,12 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=in`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
+      {
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App/1.0' },
+        signal: AbortSignal.timeout(3500),
+      }
     );
+    if (!res.ok) return null;
     const data = await res.json() as Array<{ lat: string; lon: string }>;
     if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch { /* silent */ }
@@ -42,17 +46,30 @@ export async function createTrip(userId: string, data: CreateTripData) {
     user_id: userId,
     from_place: data.from_place,
     to_place: data.to_place,
-    days: data.days,
-    bike_type: data.bike_type,
-    preferences: data.preferences ?? null,
+    days: Number(data.days) || 1,
+    bike_type: data.bike_type || 'motorcycle',
   };
+  if (data.preferences) row.preferences = data.preferences;
   if (data.from_lat != null) row.from_lat = data.from_lat;
   if (data.from_lng != null) row.from_lng = data.from_lng;
   if (data.to_lat != null) row.to_lat = data.to_lat;
   if (data.to_lng != null) row.to_lng = data.to_lng;
 
-  const { data: trip, error } = await db.from('trips').insert(row).select().single();
-  if (error) throw new Error(error.message);
+  let { data: trip, error } = await db.from('trips').insert(row).select().single();
+  if (error) {
+    console.warn('[createTrip] Insert with extended columns failed, falling back to base columns:', error.message);
+    const baseRow = {
+      title,
+      user_id: userId,
+      from_place: data.from_place,
+      to_place: data.to_place,
+      days: Number(data.days) || 1,
+      bike_type: data.bike_type || 'motorcycle',
+    };
+    const retry = await db.from('trips').insert(baseRow).select().single();
+    if (retry.error) throw new Error(retry.error.message);
+    trip = retry.data;
+  }
   return trip;
 }
 
@@ -204,8 +221,15 @@ export async function saveItinerary(
   }] : [];
 
   const rows = [...startRow, ...midRows, ...endRow];
-  const { error } = await db.from('itinerary_items').insert(rows);
-  if (error) throw new Error(error.message);
+  let { error } = await db.from('itinerary_items').insert(rows);
+  if (error) {
+    console.warn('[saveItinerary] insert failed, retrying without lat/lng columns:', error.message);
+    const strippedRows = rows.map(({ lat, lng, ...rest }) => rest);
+    const retry = await db.from('itinerary_items').insert(strippedRows);
+    if (retry.error) {
+      console.error('[saveItinerary] insert without lat/lng also failed:', retry.error.message);
+    }
+  }
 }
 
 export async function createRoom(tripId: string, userId: string) {
@@ -228,7 +252,14 @@ export async function createRoom(tripId: string, userId: string) {
 
   if (error) throw new Error(error.message);
 
-  await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'owner', status: 'approved' });
+  const { error: memberErr } = await db
+    .from('room_members')
+    .insert({ room_id: room.id, user_id: userId, role: 'owner', status: 'approved' });
+
+  if (memberErr) {
+    console.warn('[createRoom] failed with status, retrying with base columns:', memberErr.message);
+    await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'owner' });
+  }
 
   return room;
 }
@@ -262,31 +293,116 @@ export async function getRoomPreview(inviteCode: string) {
   const db = getDatabase();
   const { data: room, error } = await db
     .from('rooms')
-    .select('id, invite_code, trips(id, title, from_place, to_place, days, bike_type)')
+    .select('id, invite_code, created_by, created_at, trips(id, title, from_place, to_place, days, bike_type, preferences)')
     .eq('invite_code', inviteCode.toUpperCase())
     .single();
 
   if (error || !room) throw new Error('Room not found');
-  return room;
+
+  // Fetch organizer info
+  const { data: leader } = await db
+    .from('users')
+    .select('id, full_name, avatar_url')
+    .eq('id', room.created_by)
+    .maybeSingle();
+
+  // Try fetching leader's rider profile (bike, style, city)
+  let leaderProfile: Record<string, unknown> | null = null;
+  try {
+    const { data: lp } = await db
+      .from('rider_profiles')
+      .select('bike_model, riding_style, city')
+      .eq('user_id', room.created_by)
+      .maybeSingle();
+    leaderProfile = lp;
+  } catch { /* silent fallback */ }
+
+  // Count approved members
+  let memberCount = 1; // starts with the leader
+  try {
+    const { count } = await db
+      .from('room_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', room.id)
+      .eq('status', 'approved')
+      .neq('role', 'owner');
+    if (typeof count === 'number') memberCount += count;
+  } catch { /* silent */ }
+
+  // Get first 5 stops preview
+  const trip = room.trips as unknown as { id: string };
+  let stopsPreview: Array<{ place: string; item_type: string; day_number: number }> = [];
+  if (trip?.id) {
+    try {
+      const { data: stops } = await db
+        .from('itinerary_items')
+        .select('place, item_type, day_number')
+        .eq('trip_id', trip.id)
+        .order('day_number')
+        .order('order_index')
+        .limit(5);
+      stopsPreview = stops ?? [];
+    } catch { /* silent */ }
+  }
+
+  return {
+    ...room,
+    leader: leader ? {
+      fullName: leader.full_name || 'Convoy Leader',
+      avatarUrl: leader.avatar_url,
+      bikeModel: (leaderProfile?.bike_model as string) || null,
+      ridingStyle: (leaderProfile?.riding_style as string) || null,
+      city: (leaderProfile?.city as string) || null,
+    } : null,
+    memberCount,
+    stopsPreview,
+  };
 }
 
-export async function getApprovedMembers(tripId: string, ownerId: string) {
+export async function getApprovedMembers(tripId: string, currentUserId: string) {
   const db = getDatabase();
-  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
-  if (!trip) throw new Error('Not authorized');
+  const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
+  if (!trip) throw new Error('Trip not found');
+
+  if (trip.user_id !== currentUserId) {
+    const { data: roomCheck } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
+    if (!roomCheck) throw new Error('Not authorized');
+    const { data: memberCheck } = await db.from('room_members').select('status').eq('room_id', roomCheck.id).eq('user_id', currentUserId).maybeSingle();
+    if (!memberCheck || memberCheck.status !== 'approved') throw new Error('Not authorized');
+  }
 
   const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).single();
   if (!room) return [];
 
   const { data: members, error } = await db
     .from('room_members')
-    .select('id, user_id, role, status, joined_at, users(full_name, email)')
+    .select('id, user_id, role, status, joined_at, users(full_name, email, avatar_url)')
     .eq('room_id', room.id)
     .eq('status', 'approved')
     .neq('role', 'owner');
 
   if (error) throw new Error(error.message);
-  return members ?? [];
+
+  // Enrich with rider profiles if available
+  const userIds = (members ?? []).map((m) => m.user_id);
+  let profilesMap: Record<string, Record<string, unknown>> = {};
+  if (userIds.length > 0) {
+    try {
+      const { data: profiles } = await db
+        .from('rider_profiles')
+        .select('user_id, phone, blood_group, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, bike_model, bike_reg_no, city')
+        .in('user_id', userIds);
+
+      if (profiles) {
+        profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
+      }
+    } catch { /* silent */ }
+  }
+
+  return (members ?? []).map((m) => ({
+    ...m,
+    profile: profilesMap[m.user_id] ?? null,
+  }));
 }
 
 export async function getPendingRequests(tripId: string, ownerId: string) {
@@ -300,12 +416,32 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
 
   const { data: members, error } = await db
     .from('room_members')
-    .select('id, user_id, role, status, joined_at, users(full_name, email)')
+    .select('id, user_id, role, status, joined_at, users(full_name, email, avatar_url)')
     .eq('room_id', room.id)
     .eq('status', 'pending');
 
   if (error) throw new Error(error.message);
-  return members ?? [];
+
+  // Enrich with rider profiles
+  const userIds = (members ?? []).map((m) => m.user_id);
+  let profilesMap: Record<string, Record<string, unknown>> = {};
+  if (userIds.length > 0) {
+    try {
+      const { data: profiles } = await db
+        .from('rider_profiles')
+        .select('user_id, phone, blood_group, bike_model, city')
+        .in('user_id', userIds);
+
+      if (profiles) {
+        profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
+      }
+    } catch { /* silent */ }
+  }
+
+  return (members ?? []).map((m) => ({
+    ...m,
+    profile: profilesMap[m.user_id] ?? null,
+  }));
 }
 
 export async function respondToRequest(roomMemberId: string, action: 'approved' | 'rejected', ownerId: string) {
@@ -327,6 +463,37 @@ export async function respondToRequest(roomMemberId: string, action: 'approved' 
 
   const { error } = await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
   if (error) throw new Error(error.message);
+}
+
+export async function removeMember(tripId: string, roomMemberId: string, currentUserId: string) {
+  const db = getDatabase();
+
+  const { data: member } = await db
+    .from('room_members')
+    .select('id, user_id, room_id, rooms(trip_id)')
+    .eq('id', roomMemberId)
+    .single();
+
+  if (!member) throw new Error('Member not found');
+
+  const { data: trip } = await db
+    .from('trips')
+    .select('id, user_id')
+    .eq('id', tripId)
+    .single();
+
+  if (!trip) throw new Error('Trip not found');
+
+  const isOwner = trip.user_id === currentUserId;
+  const isSelf = member.user_id === currentUserId;
+
+  if (!isOwner && !isSelf) {
+    throw new Error('Not authorized to remove member');
+  }
+
+  const { error } = await db.from('room_members').delete().eq('id', roomMemberId);
+  if (error) throw new Error(error.message);
+  return { success: true };
 }
 
 export async function updateItinerary(tripId: string, userId: string, stops: Array<{

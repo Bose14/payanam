@@ -146,7 +146,28 @@ CREATE TABLE IF NOT EXISTS ride_messages (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 13. INDEXES FOR HIGH-SPEED LOOKUPS
+-- 13. RIDER PROFILES & EMERGENCY DETAILS TABLE
+CREATE TABLE IF NOT EXISTS rider_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blood_group VARCHAR(10),
+  emergency_contact_name VARCHAR(255),
+  emergency_contact_phone VARCHAR(50),
+  emergency_contact_relation VARCHAR(100),
+  allergies TEXT,
+  medical_notes TEXT,
+  bike_model VARCHAR(255),
+  bike_reg_no VARCHAR(100),
+  driving_license_no VARCHAR(100),
+  riding_style VARCHAR(100) DEFAULT 'Adventure / Touring',
+  phone VARCHAR(50),
+  city VARCHAR(255),
+  bio TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. INDEXES FOR HIGH-SPEED LOOKUPS
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_password_token);
 CREATE INDEX IF NOT EXISTS idx_trips_user_id ON trips(user_id);
@@ -155,8 +176,9 @@ CREATE INDEX IF NOT EXISTS idx_rooms_invite_code ON rooms(invite_code);
 CREATE INDEX IF NOT EXISTS idx_trip_expenses_trip_id ON trip_expenses(trip_id);
 CREATE INDEX IF NOT EXISTS idx_expense_splits_expense_id ON expense_splits(expense_id);
 CREATE INDEX IF NOT EXISTS idx_ride_sessions_trip ON ride_sessions(trip_id);
+CREATE INDEX IF NOT EXISTS idx_rider_profiles_user_id ON rider_profiles(user_id);
 
--- 14. PERMISSIONS: DISABLE RLS ACROSS ALL TABLES
+-- 15. PERMISSIONS: DISABLE RLS ACROSS ALL TABLES
 -- This allows your API backend (using JWT tokens & custom auth) full access
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
@@ -169,4 +191,5 @@ ALTER TABLE expense_splits DISABLE ROW LEVEL SECURITY;
 ALTER TABLE ride_sessions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE rider_locations DISABLE ROW LEVEL SECURITY;
 ALTER TABLE ride_messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE rider_profiles DISABLE ROW LEVEL SECURITY;
 

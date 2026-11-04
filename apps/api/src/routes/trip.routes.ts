@@ -12,11 +12,14 @@ import {
   updateItineraryHandler,
   deleteTripHandler,
   getAllTripParticipantsHandler,
+  removeMemberHandler,
 } from '../controllers/trip.controller';
 import {
   addExpenseHandler,
   getExpensesHandler,
   deleteExpenseHandler,
+  toggleSplitSettledHandler,
+  recordSettlementHandler,
 } from '../controllers/expense.controller';
 
 const router = Router();
@@ -31,10 +34,13 @@ router.delete('/:id', deleteTripHandler);
 router.get('/:id/requests', getPendingRequestsHandler);
 router.put('/:id/requests/:memberId', respondToRequestHandler);
 router.get('/:id/members', getApprovedMembersHandler);
+router.delete('/:id/members/:memberId', removeMemberHandler);
 router.get('/:id/participants', getAllTripParticipantsHandler);
 router.get('/:id/expenses', getExpensesHandler);
 router.post('/:id/expenses', addExpenseHandler);
 router.delete('/:id/expenses/:expenseId', deleteExpenseHandler);
+router.patch('/:id/expenses/splits/:splitId/settle', toggleSplitSettledHandler);
+router.post('/:id/expenses/settle', recordSettlementHandler);
 
 export default router;
 

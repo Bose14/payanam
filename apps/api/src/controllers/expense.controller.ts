@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendSuccess, sendError } from '../utils/response';
-import { addExpense, getExpenses, deleteExpense } from '../services/expense.service';
+import {
+  addExpense,
+  getExpenses,
+  deleteExpense,
+  toggleSplitSettled,
+  recordSettlement,
+} from '../services/expense.service';
 
 export async function addExpenseHandler(req: Request, res: Response, next: NextFunction) {
   try {
@@ -29,5 +35,28 @@ export async function deleteExpenseHandler(req: Request, res: Response, next: Ne
   try {
     await deleteExpense(req.params.expenseId, req.userId!);
     return sendSuccess(res, { message: 'Expense deleted' });
+  } catch (err) { next(err); }
+}
+
+export async function toggleSplitSettledHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const split = await toggleSplitSettled(req.params.splitId, req.userId!);
+    return sendSuccess(res, { split });
+  } catch (err) { next(err); }
+}
+
+export async function recordSettlementHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { fromUserId, toUserId, amount, notes } = req.body;
+    if (!fromUserId || !toUserId || !amount) {
+      return sendError(res, 'fromUserId, toUserId, and amount are required', 400, 'VALIDATION_ERROR');
+    }
+    const expense = await recordSettlement(req.params.id, req.userId!, {
+      fromUserId,
+      toUserId,
+      amount: parseFloat(amount),
+      notes,
+    });
+    return sendSuccess(res, { expense }, 201);
   } catch (err) { next(err); }
 }
