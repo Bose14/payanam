@@ -57,6 +57,14 @@ export const authService = {
   logout: async (): Promise<void> => {
     await api.post('/api/auth/logout');
   },
+  forgotPassword: async (email: string) => {
+    const response = await api.post('/api/auth/forgot-password', { email });
+    return response.data.data;
+  },
+  resetPassword: async (token: string, password: string) => {
+    const response = await api.post('/api/auth/reset-password', { token, password });
+    return response.data.data;
+  },
 };
 
 export const tripService = {
