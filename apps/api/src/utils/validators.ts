@@ -19,10 +19,32 @@ export const registerSchema = z.object({
     .max(255, 'Full name must be less than 255 characters'),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Must contain uppercase letter')
+    .regex(/[a-z]/, 'Must contain lowercase letter')
+    .regex(/[0-9]/, 'Must contain number'),
+});
+
 export function validateLoginInput(data: unknown) {
   return loginSchema.parse(data);
 }
 
 export function validateRegisterInput(data: unknown) {
   return registerSchema.parse(data);
+}
+
+export function validateForgotPasswordInput(data: unknown) {
+  return forgotPasswordSchema.parse(data);
+}
+
+export function validateResetPasswordInput(data: unknown) {
+  return resetPasswordSchema.parse(data);
 }
