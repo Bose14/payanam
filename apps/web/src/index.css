@@ -4,23 +4,100 @@
   box-sizing: border-box;
 }
 
-html, body {
-  height: 100%;
+:root,
+:root[data-theme='night'],
+[data-theme='night'] {
+  /* ======================================================== */
+  /* NIGHT / COCKPIT STEALTH MODE (Dusk to Dawn, 18:30 - 06:00) */
+  /* Tuned for unlit highways & pitch black roads: zero photopic */
+  /* glare, preserves rider's rhodopsin dark adaptation.       */
+  /* ======================================================== */
+  --bg-page: #050811;
+  --bg-card: #0d1527;
+  --bg-card-hover: #131e38;
+  --bg-subtle: #080e1b;
+  --bg-hero: linear-gradient(135deg, #090f20 0%, #0f1c3a 50%, #162447 100%);
+  --bg-nav: rgba(7, 12, 24, 0.92);
+  --border-nav: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-card: rgba(255, 255, 255, 0.15);
+  --border-input: #1e293b;
+  --bg-input: #080e1b;
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  /* 590nm Cockpit Amber Gold: does NOT bleach night vision */
+  --accent-gold: #fbbf24;
+  --accent-gold-bg: rgba(251, 191, 36, 0.16);
+  /* Luminescent Radar Blue: high visibility for convoy pins */
+  --accent-cyan: #38bdf8;
+  --accent-cyan-bg: rgba(56, 189, 248, 0.16);
+  /* Luminescent Trail Emerald: clear ride progress */
+  --accent-green: #34d399;
+  --accent-green-bg: rgba(52, 211, 153, 0.16);
+  --btn-primary-bg: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+  --btn-primary-text: #ffffff;
+  --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme='day'],
+[data-theme='day'] {
+  /* ======================================================== */
+  /* DAY / SOLAR HIGH-VISIBILITY MODE (Dawn to Dusk, 06:00 - 18:30) */
+  /* Tuned for 100,000 lux solar glare, reflections, and tinted */
+  /* helmet visors: maximum 21:1 contrast ratio & sharp borders. */
+  /* ======================================================== */
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-subtle: #f1f5f9;
+  --bg-hero: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%);
+  --bg-nav: rgba(255, 255, 255, 0.96);
+  --border-nav: #cbd5e1;
+  --border-subtle: #cbd5e1;
+  /* Darker, defined card borders for instant edge detection under sun */
+  --border-card: #94a3b8;
+  --border-input: #64748b;
+  --bg-input: #ffffff;
+  /* 21:1 Maximum Contrast Obsidian Ink for 0.5s glance legibility */
+  --text-primary: #020617;
+  --text-secondary: #1e293b;
+  --text-muted: #475569;
+  /* Highway Safety Sign Amber & Orange */
+  --accent-gold: #b45309;
+  --accent-gold-bg: #fef3c7;
+  /* High-Vis Aviation Cobalt Blue */
+  --accent-cyan: #0369a1;
+  --accent-cyan-bg: #e0f2fe;
+  /* Deep Highway Emerald Green */
+  --accent-green: #047857;
+  --accent-green-bg: #d1fae5;
+  --btn-primary-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --btn-primary-text: #ffffff;
+  --card-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+
+html, body, #root {
+  min-height: 100%;
   width: 100%;
   overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f172a;
-  color: #333;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
   scrollbar-gutter: stable;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 a {
@@ -40,25 +117,23 @@ select {
   font-family: inherit;
 }
 
-/* Custom smooth scrollbar for auth form panel */
-.auth-form-panel::-webkit-scrollbar,
-.auth-showcase::-webkit-scrollbar {
+/* Custom scrollbars */
+::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
-.auth-form-panel::-webkit-scrollbar-track,
-.auth-showcase::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-.auth-form-panel::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 4px;
 }
-.auth-showcase::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
 }
 
-/* Auth Split-Screen Responsive Layout: Fixed on desktop, fluid on mobile */
+/* Auth Split-Screen Responsive Layout */
 @media (max-width: 800px) {
   .auth-container {
     flex-direction: column !important;
@@ -94,5 +169,168 @@ select {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
     border-radius: 16px !important;
     margin: 0 auto !important;
+  }
+}
+
+/* ======================================================== */
+/* UNIVERSAL MOBILE RESPONSIVE ENHANCEMENTS (Phone & Tablet) */
+/* ======================================================== */
+
+/* Prevent accidental horizontal scrolling on mobile */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Mobile Bottom Navigation Bar */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Hide desktop center links, activate bottom navigation bar */
+  .desktop-nav-links {
+    display: none !important;
+  }
+
+  .navbar-user-name {
+    display: none !important;
+  }
+
+  .mobile-bottom-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-nav);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-nav);
+    z-index: 9999;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 0;
+    transition: color 0.15s ease;
+  }
+
+  .mobile-nav-item.active {
+    color: var(--accent-gold);
+  }
+
+  .mobile-nav-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Responsive Main Page Container */
+  .responsive-page-container {
+    padding: 16px 14px 84px !important;
+  }
+
+  /* Responsive Hero Card */
+  .responsive-hero {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 18px !important;
+    padding: 20px 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .responsive-hero-actions {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    display: flex !important;
+    gap: 10px !important;
+  }
+
+  .responsive-hero-actions > * {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Responsive Grid */
+  .responsive-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  /* Responsive Form Cards */
+  .responsive-card {
+    padding: 20px 14px !important;
+    border-radius: 14px !important;
+  }
+
+  /* Responsive Route Selection Row (Starting Point -> Swap -> Destination) */
+  .responsive-route-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .responsive-swap-btn {
+    align-self: center !important;
+    margin: 4px 0 !important;
+    transform: rotate(90deg);
+  }
+
+  /* Responsive Steppers & Inputs */
+  .responsive-stepper-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+
+  /* Responsive Tabs with smooth horizontal swipe */
+  .responsive-tabs-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    white-space: nowrap !important;
+  }
+
+  .responsive-tabs-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Expense Metrics Grid on mobile (2x2) */
+  .responsive-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Full width button actions on mobile */
+  .btn-mobile-full {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Route Box in Trip Cards */
+  .responsive-route-box {
+    padding: 8px 10px !important;
+  }
+
+  .responsive-route-text {
+    font-size: 12px !important;
   }
 }

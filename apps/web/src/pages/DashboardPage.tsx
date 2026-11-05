@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tripService } from '../services/api';
+import Navbar from '../components/Navbar';
 
 interface Trip {
   id: string;
@@ -16,17 +17,27 @@ interface Trip {
   isJoined?: boolean;
 }
 
-function DashboardPage() {
-  const { user, logout } = useAuth();
+const VEHICLE_ICONS: Record<string, string> = {
+  motorcycle: '🏍️',
+  scooter: '🛵',
+  bicycle: '🚲',
+  car: '🚗',
+};
+
+export default function DashboardPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripsLoading, setTripsLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmTrip, setConfirmTrip] = useState<{ id: string; title: string } | null>(null);
+  const [filterTab, setFilterTab] = useState<'all' | 'owned' | 'joined'>('all');
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteCodeInput, setInviteCodeInput] = useState('');
 
   useEffect(() => {
     tripService.getUserTrips()
-      .then((data) => setTrips(data.trips))
+      .then((data) => setTrips(data.trips ?? []))
       .catch(() => setTrips([]))
       .finally(() => setTripsLoading(false));
   }, []);
@@ -34,118 +45,313 @@ function DashboardPage() {
   const handleDeleteConfirm = async () => {
     if (!confirmTrip) return;
     setDeletingId(confirmTrip.id);
+    const targetId = confirmTrip.id;
     setConfirmTrip(null);
     try {
-      await tripService.deleteTrip(confirmTrip.id);
-      setTrips(prev => prev.filter(t => t.id !== confirmTrip.id));
+      await tripService.deleteTrip(targetId);
+      setTrips(prev => prev.filter(t => t.id !== targetId));
     } catch {
-      // silent — could add a toast here
+      // silent
     } finally {
       setDeletingId(null);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleJoinWithCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteCodeInput.trim()) return;
+    const clean = inviteCodeInput.trim().toUpperCase();
+    setInviteModalOpen(false);
+    navigate(`/join/${clean}`);
   };
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'Rider';
 
+  const ownedCount = trips.filter(t => !t.isJoined).length;
+  const joinedCount = trips.filter(t => t.isJoined).length;
+
+  const filteredTrips = trips.filter(t => {
+    if (filterTab === 'owned') return !t.isJoined;
+    if (filterTab === 'joined') return t.isJoined;
+    return true;
+  });
+
   return (
     <div style={styles.page}>
-      {/* Delete confirmation modal */}
+      <Navbar />
+
+      {/* Delete Confirmation Modal */}
       {confirmTrip && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '32px 28px', maxWidth: 380, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
+        <div style={styles.modalBackdrop}>
+          <div style={styles.modalCard}>
             <div style={{ fontSize: 44, marginBottom: 12 }}>🗑️</div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>Delete Trip?</h3>
-            <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 24px', lineHeight: 1.5 }}>
-              "<strong>{confirmTrip.title}</strong>" will be permanently deleted along with its itinerary and room.
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px' }}>
+              Delete Trip?
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: '0 0 24px', lineHeight: 1.5 }}>
+              Are you sure you want to delete "<strong>{confirmTrip.title}</strong>"? The route, itinerary, and expense records will be permanently removed.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setConfirmTrip(null)} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#374151' }}>
+              <button
+                onClick={() => setConfirmTrip(null)}
+                style={styles.btnSecondary}
+              >
                 Cancel
               </button>
-              <button onClick={handleDeleteConfirm} style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#fff' }}>
-                Yes, Delete
+              <button
+                onClick={handleDeleteConfirm}
+                style={styles.btnDanger}
+              >
+                Yes, Delete Trip
               </button>
             </div>
           </div>
         </div>
       )}
-      <header style={styles.header}>
-        <div style={styles.brand}>
-          <span style={styles.brandIcon}>🏍️</span>
-          <span style={styles.brandName}>Payanam</span>
-        </div>
-        <div style={styles.headerRight}>
-          <span style={styles.userName}>{user?.fullName}</span>
-          <button onClick={handleLogout} style={styles.logoutBtn}>
-            Sign out
-          </button>
-        </div>
-      </header>
 
-      <main style={styles.main}>
-        <div style={styles.welcome}>
-          <h1 style={styles.welcomeTitle}>Welcome back, {firstName}! 🏕️</h1>
-          <p style={styles.welcomeSub}>Ready to plan your next adventure?</p>
-        </div>
-
-        <div style={styles.actions}>
-          <Link to="/trips/new" style={styles.createBtn}>
-            + Create New Trip
-          </Link>
-        </div>
-
-        <section style={styles.tripsSection}>
-          <h2 style={styles.sectionTitle}>My Trips</h2>
-
-          {tripsLoading ? (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}>⏳</div>
-              <p style={styles.emptyTitle}>Loading trips...</p>
+      {/* Join Convoy Modal */}
+      {inviteModalOpen && (
+        <div style={styles.modalBackdrop}>
+          <div style={styles.modalCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                🔑 Enter Convoy Invite Code
+              </h3>
+              <button onClick={() => setInviteModalOpen(false)} style={styles.closeBtn}>✕</button>
             </div>
-          ) : trips.length === 0 ? (
-            <div style={styles.emptyState}>
-              <div style={styles.emptyIcon}>🗺️</div>
-              <p style={styles.emptyTitle}>No trips yet</p>
-              <p style={styles.emptySub}>Create your first trip and let AI plan the perfect route for you.</p>
+            <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--text-secondary)' }}>
+              Paste or type the invite code shared by the trip organizer:
+            </p>
+            <form onSubmit={handleJoinWithCode}>
+              <input
+                type="text"
+                placeholder="e.g. TRP89X"
+                value={inviteCodeInput}
+                onChange={e => setInviteCodeInput(e.target.value.toUpperCase())}
+                style={styles.codeInput}
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setInviteModalOpen(false)}
+                  style={styles.btnSecondary}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!inviteCodeInput.trim()}
+                  style={{ ...styles.btnPrimary, flex: 1 }}
+                >
+                  Join Convoy →
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <main className="responsive-page-container" style={styles.main}>
+        {/* Hero Section */}
+        <div className="responsive-hero" style={styles.heroBanner}>
+          <div style={{ flex: 1, minWidth: 'min(100%, 260px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 24 }}>🏕️</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1.2 }}>
+                Rider Command Center
+              </span>
             </div>
-          ) : (
-            <div style={styles.tripGrid}>
-              {trips.map((trip) => (
-                <div key={trip.id} style={{ position: 'relative' }}>
-                  <Link to={`/trips/${trip.id}`} style={styles.tripCard}>
-                    <div style={styles.tripCardHeader}>
-                      <span style={styles.tripIcon}>🏍️</span>
-                      <span style={{ ...styles.statusBadge, background: trip.isJoined ? '#d1fae5' : '#dbeafe', color: trip.isJoined ? '#065f46' : '#1d4ed8' }}>
-                    {trip.isJoined ? 'Co-rider' : (trip.status ?? 'active')}
-                  </span>
+            <h1 style={styles.heroTitle}>Welcome back, {firstName}!</h1>
+            <p style={styles.heroSubtitle}>
+              Plan AI-optimized motorcycle routes, manage convoy telemetry, and split road trip expenses in real time.
+            </p>
+
+            {/* Quick stats pills */}
+            <div style={styles.statsRow}>
+              <div style={styles.statPill}>
+                <span style={{ fontSize: 14 }}>🗺️</span>
+                <span style={styles.statLabel}>Total Trips:</span>
+                <strong style={styles.statValue}>{trips.length}</strong>
+              </div>
+              <div style={styles.statPill}>
+                <span style={{ fontSize: 14 }}>👑</span>
+                <span style={styles.statLabel}>Lead:</span>
+                <strong style={styles.statValue}>{ownedCount}</strong>
+              </div>
+              <div style={styles.statPill}>
+                <span style={{ fontSize: 14 }}>🤝</span>
+                <span style={styles.statLabel}>Co-rider:</span>
+                <strong style={styles.statValue}>{joinedCount}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* Action CTAs */}
+          <div className="responsive-hero-actions" style={styles.heroActions}>
+            <Link to="/trips/new" style={styles.btnCta}>
+              <span style={{ fontSize: 18 }}>✨</span>
+              <span>Plan New Trip</span>
+            </Link>
+            <button
+              onClick={() => setInviteModalOpen(true)}
+              style={styles.btnOutline}
+            >
+              <span style={{ fontSize: 16 }}>🔑</span>
+              <span>Join with Code</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Trips Hub Header & Filters */}
+        <div style={styles.hubHeader}>
+          <div>
+            <h2 style={styles.sectionTitle}>Your Expeditions & Convoys</h2>
+            <p style={styles.sectionSubtitle}>
+              Manage routes, day-by-day waypoints, and active ride sessions
+            </p>
+          </div>
+
+          {/* Filter Tabs */}
+          <div style={styles.filterTabs}>
+            <button
+              onClick={() => setFilterTab('all')}
+              style={{
+                ...styles.filterBtn,
+                background: filterTab === 'all' ? 'var(--btn-primary-bg)' : 'transparent',
+                color: filterTab === 'all' ? 'var(--btn-primary-text)' : 'var(--text-secondary)',
+              }}
+            >
+              All ({trips.length})
+            </button>
+            <button
+              onClick={() => setFilterTab('owned')}
+              style={{
+                ...styles.filterBtn,
+                background: filterTab === 'owned' ? 'var(--btn-primary-bg)' : 'transparent',
+                color: filterTab === 'owned' ? 'var(--btn-primary-text)' : 'var(--text-secondary)',
+              }}
+            >
+              Lead ({ownedCount})
+            </button>
+            <button
+              onClick={() => setFilterTab('joined')}
+              style={{
+                ...styles.filterBtn,
+                background: filterTab === 'joined' ? 'var(--btn-primary-bg)' : 'transparent',
+                color: filterTab === 'joined' ? 'var(--btn-primary-text)' : 'var(--text-secondary)',
+              }}
+            >
+              Joined ({joinedCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Trips Content */}
+        {tripsLoading ? (
+          <div style={styles.emptyCard}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>⏳</div>
+            <p style={{ margin: 0, fontWeight: 700, color: 'var(--text-primary)', fontSize: 16 }}>
+              Loading your expeditions...
+            </p>
+          </div>
+        ) : filteredTrips.length === 0 ? (
+          <div style={styles.emptyCard}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🏍️</div>
+            <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+              {filterTab === 'all' ? 'No trips planned yet' : `No ${filterTab} trips found`}
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-secondary)', maxWidth: 400, marginInline: 'auto' }}>
+              Create your first road trip and let AI plan fuel stops, food dhabas, scenic viewpoints, and stays!
+            </p>
+            <Link to="/trips/new" style={styles.btnPrimary}>
+              + Plan Your First Road Trip
+            </Link>
+          </div>
+        ) : (
+          <div className="responsive-grid" style={styles.grid}>
+            {filteredTrips.map(trip => {
+              const vehicleIcon = VEHICLE_ICONS[trip.bike_type?.toLowerCase()] ?? '🏍️';
+              const createdDate = new Date(trip.created_at).toLocaleDateString('en-IN', {
+                month: 'short',
+                day: 'numeric',
+              });
+
+              return (
+                <div
+                  key={trip.id}
+                  onClick={() => navigate(`/trips/${trip.id}`)}
+                  style={{ ...styles.tripCard, cursor: 'pointer' }}
+                >
+                  {/* Top Row: Vehicle Icon + Status Pill & Delete Button */}
+                  <div style={styles.tripCardHeader}>
+                    <div style={styles.vehiclePill}>
+                      <span>{vehicleIcon}</span>
+                      <span style={{ textTransform: 'capitalize' }}>{trip.bike_type}</span>
                     </div>
-                    <h3 style={styles.tripTitle}>{trip.title}</h3>
-                    <p style={styles.tripRoute}>{trip.from_place} → {trip.to_place}</p>
-                    <div style={styles.tripFooter}>
-                      <span style={styles.tripMeta}>{trip.days} days</span>
-                      <span style={styles.tripMeta}>{trip.bike_type}</span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <span style={{
+                        ...styles.statusBadge,
+                        background: trip.isJoined ? 'var(--accent-green-bg)' : 'var(--accent-cyan-bg)',
+                        color: trip.isJoined ? 'var(--accent-green)' : 'var(--accent-cyan)',
+                      }}>
+                        {trip.isJoined ? '👥 Co-rider' : '👑 Convoy Lead'}
+                      </span>
+                      {!trip.isJoined && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setConfirmTrip({ id: trip.id, title: trip.title });
+                          }}
+                          disabled={deletingId === trip.id}
+                          title="Delete trip"
+                          style={styles.cardDeleteBtn}
+                        >
+                          {deletingId === trip.id ? '⏳' : '🗑️'}
+                        </button>
+                      )}
                     </div>
-                  </Link>
-                  {!trip.isJoined && (
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirmTrip({ id: trip.id, title: trip.title }); }}
-                      disabled={deletingId === trip.id}
-                      title="Delete trip"
-                      style={{ position: 'absolute', bottom: 12, right: 12, background: '#fee2e2', border: 'none', color: '#dc2626', borderRadius: 6, padding: '5px 8px', fontSize: 16, cursor: 'pointer', opacity: deletingId === trip.id ? 0.4 : 1, lineHeight: 1 }}
-                    >
-                      {deletingId === trip.id ? '⏳' : '🗑️'}
-                    </button>
-                  )}
+                  </div>
+
+                  {/* Route Title */}
+                  <h3 style={styles.cardTitle}>{trip.title}</h3>
+
+                  {/* Route Visualizer */}
+                  <div style={styles.routeBox}>
+                    <div style={styles.routePoint}>
+                      <span style={{ color: '#10b981', fontSize: 12 }}>●</span>
+                      <span style={styles.routeText}>{trip.from_place}</span>
+                    </div>
+                    <div style={styles.routeConnector}>
+                      <span style={{ color: 'var(--accent-gold)', fontSize: 14 }}>➔</span>
+                    </div>
+                    <div style={styles.routePoint}>
+                      <span style={{ color: '#ef4444', fontSize: 12 }}>●</span>
+                      <span style={styles.routeText}>{trip.to_place}</span>
+                    </div>
+                  </div>
+
+                  {/* Footer Details */}
+                  <div style={styles.cardFooter}>
+                    <div style={styles.metaChip}>
+                      <span>📅</span>
+                      <span>{trip.days} Day{trip.days !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div style={styles.metaChip}>
+                      <span>🕒</span>
+                      <span>{createdDate}</span>
+                    </div>
+                    <span style={styles.viewLink}>
+                      Open ➔
+                    </span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              );
+            })}
+          </div>
+        )}
       </main>
     </div>
   );
@@ -154,106 +360,348 @@ function DashboardPage() {
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: '#f5f7fa',
-    fontFamily: 'system-ui, sans-serif',
+    background: 'var(--bg-page)',
+    color: 'var(--text-primary)',
+    transition: 'background-color 0.3s ease, color 0.3s ease',
   },
-  header: {
-    background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)',
-    padding: '0 24px',
-    height: '60px',
+  main: {
+    maxWidth: 1140,
+    margin: '0 auto',
+    padding: '32px 20px 60px',
+  },
+  heroBanner: {
+    background: 'var(--bg-hero)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 20,
+    padding: '32px 28px',
+    boxShadow: 'var(--card-shadow)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 24,
+    flexWrap: 'wrap',
+    marginBottom: 36,
+    color: '#ffffff',
+  },
+  heroTitle: {
+    fontSize: 'clamp(22px, 5vw, 28px)',
+    fontWeight: 900,
+    color: '#ffffff',
+    margin: '0 0 8px',
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 'clamp(13px, 3.5vw, 15px)',
+    margin: '0 0 20px',
+    lineHeight: 1.5,
+    maxWidth: 600,
+  },
+  statsRow: {
+    display: 'flex',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  statPill: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
+    background: 'rgba(255, 255, 255, 0.12)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+    padding: '6px 12px',
+    fontSize: 13,
   },
-  brand: { display: 'flex', alignItems: 'center', gap: '8px' },
-  brandIcon: { fontSize: '24px' },
-  brandName: { color: '#ffffff', fontWeight: 700, fontSize: '20px', letterSpacing: '0.5px' },
-  headerRight: { display: 'flex', alignItems: 'center', gap: '16px' },
-  userName: { color: '#cbd5e1', fontSize: '14px' },
-  logoutBtn: {
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.2)',
+  statLabel: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: 500,
+  },
+  statValue: {
     color: '#ffffff',
-    padding: '6px 14px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px',
+    fontWeight: 800,
   },
-  main: { maxWidth: '900px', margin: '0 auto', padding: '40px 16px' },
-  welcome: { marginBottom: '32px' },
-  welcomeTitle: { fontSize: '28px', fontWeight: 700, color: '#111827', margin: '0 0 6px' },
-  welcomeSub: { color: '#6b7280', fontSize: '16px', margin: 0 },
-  actions: { marginBottom: '40px' },
-  createBtn: {
-    display: 'inline-block',
-    padding: '12px 24px',
-    background: 'linear-gradient(135deg, #0f3460, #533483)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '15px',
-    fontWeight: 600,
-    cursor: 'pointer',
-    textDecoration: 'none',
+  heroActions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+    minWidth: 190,
   },
-  tripsSection: {
+  btnCta: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: '14px 22px',
     background: '#ffffff',
-    borderRadius: '12px',
-    padding: '32px',
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+    color: '#0f172a',
+    border: 'none',
+    borderRadius: 12,
+    fontSize: 15,
+    fontWeight: 800,
+    textDecoration: 'none',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+    cursor: 'pointer',
+    transition: 'transform 0.15s ease',
   },
-  sectionTitle: { fontSize: '18px', fontWeight: 600, color: '#111827', margin: '0 0 24px' },
-  emptyState: { textAlign: 'center', padding: '48px 24px' },
-  emptyIcon: { fontSize: '56px', marginBottom: '16px' },
-  emptyTitle: { fontSize: '18px', fontWeight: 600, color: '#374151', margin: '0 0 8px' },
-  emptySub: {
-    color: '#9ca3af',
-    fontSize: '14px',
+  btnOutline: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: '12px 20px',
+    background: 'rgba(255, 255, 255, 0.12)',
+    color: '#ffffff',
+    border: '1px solid rgba(255, 255, 255, 0.25)',
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  hubHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 20,
+    gap: 16,
+    flexWrap: 'wrap',
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 800,
+    color: 'var(--text-primary)',
     margin: 0,
-    maxWidth: '360px',
-    marginLeft: 'auto',
-    marginRight: 'auto',
+    letterSpacing: -0.3,
   },
-  tripGrid: {
+  sectionSubtitle: {
+    color: 'var(--text-muted)',
+    fontSize: 14,
+    margin: '4px 0 0',
+  },
+  filterTabs: {
+    display: 'flex',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 10,
+    padding: 3,
+    gap: 4,
+  },
+  filterBtn: {
+    border: 'none',
+    borderRadius: 8,
+    padding: '7px 14px',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-    gap: '16px',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
+    gap: 18,
+  },
+  cardContainer: {
+    position: 'relative',
   },
   tripCard: {
-    display: 'block',
+    display: 'flex',
+    flexDirection: 'column',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 16,
     padding: '20px',
-    background: '#f9fafb',
-    borderRadius: '10px',
-    border: '1px solid #e5e7eb',
     textDecoration: 'none',
-    transition: 'box-shadow 0.2s',
+    boxShadow: 'var(--card-shadow)',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   },
   tripCardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '10px',
+    marginBottom: 12,
+    gap: 8,
   },
-  tripIcon: { fontSize: '24px' },
+  vehiclePill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 6,
+    padding: '3px 8px',
+    fontSize: 12,
+    color: 'var(--text-secondary)',
+    fontWeight: 600,
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
+  },
   statusBadge: {
-    fontSize: '11px',
-    background: '#dbeafe',
-    color: '#1d4ed8',
-    padding: '2px 8px',
-    borderRadius: '10px',
-    textTransform: 'capitalize',
+    fontSize: 11,
+    fontWeight: 700,
+    borderRadius: 999,
+    padding: '3px 10px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
   },
-  tripTitle: { fontSize: '15px', fontWeight: 600, color: '#111827', margin: '0 0 4px' },
-  tripRoute: { fontSize: '13px', color: '#6b7280', margin: '0 0 12px' },
-  tripFooter: { display: 'flex', gap: '8px' },
-  tripMeta: {
-    fontSize: '12px',
-    background: '#f3f4f6',
-    color: '#6b7280',
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 800,
+    color: 'var(--text-primary)',
+    margin: '0 0 12px',
+    lineHeight: 1.3,
+  },
+  routeBox: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 10,
+    padding: '10px 14px',
+    marginBottom: 16,
+  },
+  routePoint: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '42%',
+  },
+  routeConnector: {
+    padding: '0 4px',
+  },
+  routeText: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: 'var(--text-primary)',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  cardFooter: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 'auto',
+  },
+  metaChip: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 12,
+    color: 'var(--text-secondary)',
+    background: 'var(--bg-subtle)',
     padding: '2px 8px',
-    borderRadius: '10px',
-    textTransform: 'capitalize',
+    borderRadius: 6,
+    fontWeight: 600,
+  },
+  viewLink: {
+    marginLeft: 'auto',
+    fontSize: 13,
+    fontWeight: 800,
+    color: 'var(--accent-gold)',
+  },
+  cardDeleteBtn: {
+    background: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.25)',
+    color: '#ef4444',
+    borderRadius: 8,
+    padding: '4px 8px',
+    fontSize: 13,
+    cursor: 'pointer',
+    lineHeight: 1,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginLeft: 4,
+    transition: 'background 0.2s ease, transform 0.15s ease',
+  },
+  emptyCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 18,
+    padding: '56px 20px',
+    textAlign: 'center',
+    boxShadow: 'var(--card-shadow)',
+  },
+  btnPrimary: {
+    display: 'inline-block',
+    padding: '12px 24px',
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
+    border: 'none',
+    borderRadius: 10,
+    fontWeight: 800,
+    fontSize: 14,
+    textDecoration: 'none',
+    cursor: 'pointer',
+    boxShadow: 'var(--card-shadow)',
+  },
+  btnSecondary: {
+    flex: 1,
+    padding: '11px',
+    background: 'var(--bg-subtle)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 8,
+    fontWeight: 600,
+    fontSize: 14,
+    cursor: 'pointer',
+  },
+  btnDanger: {
+    flex: 1,
+    padding: '11px',
+    background: '#dc2626',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 8,
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: 'pointer',
+  },
+  modalBackdrop: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(11, 19, 41, 0.8)',
+    backdropFilter: 'blur(6px)',
+    WebkitBackdropFilter: 'blur(6px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: 16,
+  },
+  modalCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 16,
+    padding: '28px 24px',
+    maxWidth: 420,
+    width: '100%',
+    textAlign: 'center',
+    boxShadow: 'var(--card-shadow)',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-secondary)',
+    fontSize: 20,
+    cursor: 'pointer',
+  },
+  codeInput: {
+    width: '100%',
+    padding: '12px 16px',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-input)',
+    borderRadius: 10,
+    color: 'var(--text-primary)',
+    fontSize: 20,
+    fontWeight: 800,
+    letterSpacing: 3,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    outline: 'none',
+    boxSizing: 'border-box',
   },
 };
-
-export default DashboardPage;

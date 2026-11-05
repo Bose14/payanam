@@ -102,3 +102,81 @@ export async function deleteExpense(expenseId: string, userId: string) {
   const { error } = await db.from('trip_expenses').delete().eq('id', expenseId);
   if (error) throw new Error(error.message);
 }
+
+export async function toggleSplitSettled(splitId: string, userId: string) {
+  const db = getDatabase();
+  const { data: split, error: fetchErr } = await db
+    .from('expense_splits')
+    .select('id, user_id, is_settled, expense_id')
+    .eq('id', splitId)
+    .single();
+
+  if (fetchErr || !split) throw new Error('Split not found');
+
+  const { data: expense } = await db
+    .from('trip_expenses')
+    .select('paid_by')
+    .eq('id', split.expense_id)
+    .single();
+
+  if (split.user_id !== userId && expense?.paid_by !== userId) {
+    throw new Error('Not authorized to settle this split');
+  }
+
+  const { data: updated, error } = await db
+    .from('expense_splits')
+    .update({ is_settled: !split.is_settled })
+    .eq('id', splitId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return updated;
+}
+
+export async function recordSettlement(
+  tripId: string,
+  userId: string,
+  data: { fromUserId: string; toUserId: string; amount: number; notes?: string }
+) {
+  const db = getDatabase();
+  await verifyMember(db, tripId, userId);
+
+  if (!data.fromUserId || !data.toUserId || !data.amount || data.amount <= 0) {
+    throw new Error('Invalid settlement data: fromUserId, toUserId, and amount > 0 required');
+  }
+
+  const { data: fromUser } = await db.from('users').select('full_name').eq('id', data.fromUserId).maybeSingle();
+  const { data: toUser } = await db.from('users').select('full_name').eq('id', data.toUserId).maybeSingle();
+
+  const title = `Settlement: ${fromUser?.full_name || 'Rider'} paid ${toUser?.full_name || 'Rider'}`;
+
+  const { data: expense, error } = await db
+    .from('trip_expenses')
+    .insert({
+      trip_id: tripId,
+      added_by: userId,
+      title,
+      amount: data.amount,
+      category: 'settlement',
+      paid_by: data.fromUserId,
+      split_type: 'custom',
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const { error: splitError } = await db.from('expense_splits').insert([
+    {
+      expense_id: expense.id,
+      user_id: data.toUserId,
+      amount: data.amount,
+      is_settled: true,
+    },
+  ]);
+
+  if (splitError) throw new Error(splitError.message);
+
+  return expense;
+}

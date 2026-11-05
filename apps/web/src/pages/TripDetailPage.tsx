@@ -3,14 +3,26 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
-import PlaceInput, { PlaceLocation } from '../components/PlaceInput';
+import PlaceInput from '../components/PlaceInput';
 import ExpenseTracker from '../components/ExpenseTracker';
+import Navbar from '../components/Navbar';
 
 const typeIcons: Record<string, string> = {
-  fuel_stop: '⛽', stay: '🏨', attraction: '📍', meal: '🍽️', rest: '☕', stop: '📌',
+  fuel_stop: '⛽',
+  stay: '🏨',
+  attraction: '📍',
+  meal: '🍽️',
+  rest: '☕',
+  stop: '📌',
 };
-const TYPE_COLORS: Record<string, string> = {
-  fuel_stop: '#f59e0b', stay: '#3b82f6', attraction: '#10b981', meal: '#f97316', rest: '#8b5cf6', stop: '#6b7280',
+
+const TYPE_COLORS: Record<string, { color: string; bg: string }> = {
+  fuel_stop: { color: '#d97706', bg: 'rgba(217, 119, 6, 0.15)' },
+  stay: { color: '#0284c7', bg: 'rgba(2, 132, 199, 0.15)' },
+  attraction: { color: '#059669', bg: 'rgba(5, 150, 105, 0.15)' },
+  meal: { color: '#ea580c', bg: 'rgba(234, 88, 12, 0.15)' },
+  rest: { color: '#7c3aed', bg: 'rgba(124, 58, 237, 0.15)' },
+  stop: { color: '#64748b', bg: 'rgba(100, 116, 139, 0.15)' },
 };
 
 interface Stop {
@@ -28,25 +40,46 @@ interface Stop {
 }
 
 interface Trip {
-  id: string; title: string; from_place: string; to_place: string;
-  days: number; bike_type: string; status: string; user_id: string;
+  id: string;
+  title: string;
+  from_place: string;
+  to_place: string;
+  days: number;
+  bike_type: string;
+  status: string;
+  user_id: string;
   itinerary: Stop[];
   rooms?: Array<{ id: string; invite_code: string }>;
   isOwner?: boolean;
 }
 
+interface MemberProfile {
+  user_id?: string;
+  phone?: string | null;
+  blood_group?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  emergency_contact_relation?: string | null;
+  bike_model?: string | null;
+  bike_reg_no?: string | null;
+  city?: string | null;
+}
+
 interface PendingMember {
   id: string;
   user_id: string;
-  users: { full_name: string; email: string } | null;
+  users: { full_name: string; email: string; avatar_url?: string | null } | null;
+  profile?: MemberProfile | null;
 }
 
 interface AddStopForm {
-  place: string; item_type: string; description: string;
-  lat?: number; lng?: number;
+  place: string;
+  item_type: string;
+  description: string;
+  lat?: number;
+  lng?: number;
 }
 
-// Project new stop onto route axis to find correct insert position
 function getInsertPosition(dayStops: Stop[], newLat: number, newLng: number): number {
   const withCoords = dayStops.filter(s => s.lat && s.lng);
   if (withCoords.length < 2) return dayStops.length;
@@ -66,7 +99,6 @@ function getInsertPosition(dayStops: Stop[], newLat: number, newLng: number): nu
   return dayStops.length;
 }
 
-// Geocode a place name via Nominatim when no suggestion was selected
 async function geocodePlace(name: string): Promise<{ lat: number; lng: number } | null> {
   try {
     const res = await fetch(
@@ -90,7 +122,7 @@ function requestLocationPermission(): Promise<boolean> {
   });
 }
 
-function TripDetailPage() {
+export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -111,10 +143,11 @@ function TripDetailPage() {
   const [pendingRequests, setPendingRequests] = useState<PendingMember[]>([]);
   const [approvedMembers, setApprovedMembers] = useState<PendingMember[]>([]);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // true while initial data is being set — prevents auto-save on first render
   const userEditedRef = useRef(false);
 
   useEffect(() => {
@@ -125,11 +158,10 @@ function TripDetailPage() {
       tripIdRef.current = data.trip.id;
       setTimeout(() => { userEditedRef.current = false; }, 0);
 
+      tripService.getApprovedMembers(id).then((d) => setApprovedMembers(d.members ?? [])).catch(() => {});
       if (data.trip.isOwner) {
         tripService.getPendingRequests(id).then((d) => setPendingRequests(d.requests ?? [])).catch(() => {});
-        tripService.getApprovedMembers(id).then((d) => setApprovedMembers(d.members ?? [])).catch(() => {});
       }
-      // Check for active ride session (anyone in the trip can join)
       rideService.getActiveSession(data.trip.id)
         .then((d) => setActiveSession(d.session ?? null))
         .catch(() => {});
@@ -141,7 +173,10 @@ function TripDetailPage() {
     }).finally(() => setLoading(false));
   }, [id]);
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
 
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
     setSaveStatus('saving');
@@ -154,15 +189,16 @@ function TripDetailPage() {
     }
   }, []);
 
-  // Auto-save 1.5s after a user-initiated change
   useEffect(() => {
     if (!userEditedRef.current || !tripIdRef.current) return;
     setSaveStatus('unsaved');
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
-    const tid = tripIdRef.current;
-    const snapshot = stops;
-    autoSaveRef.current = setTimeout(() => doSave(snapshot, tid), 1500);
-    return () => { if (autoSaveRef.current) clearTimeout(autoSaveRef.current); };
+    autoSaveRef.current = setTimeout(() => {
+      if (tripIdRef.current) doSave(stops, tripIdRef.current);
+    }, 1500);
+    return () => {
+      if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    };
   }, [stops, doSave]);
 
   const inviteCode = trip?.rooms?.[0]?.invite_code;
@@ -170,22 +206,75 @@ function TripDetailPage() {
 
   const handleCopy = () => {
     if (!shareUrl) return;
-    navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      showToast('✅ Invite link copied to clipboard!');
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
+
+  const handleCopyCode = async () => {
+    if (!inviteCode) return;
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      showToast('📋 Convoy code copied!');
+    } catch {
+      showToast('Failed to copy code');
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!inviteCode || !trip || !shareUrl) return;
+    const text = `🏍️ Join our motorcycle convoy on Payanam!\n\n🗺️ Route: ${trip.from_place} ➔ ${trip.to_place} (${trip.days} Days)\n🎟️ Convoy Code: ${inviteCode}\n\nJoin our live convoy here:\n${shareUrl}`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleNativeShare = async () => {
+    if (!shareUrl || !trip || !inviteCode) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Convoy: ${trip.title}`,
+          text: `Join our motorcycle convoy from ${trip.from_place} to ${trip.to_place}! Code: ${inviteCode}`,
+          url: shareUrl,
+        });
+        return;
+      } catch { /* cancelled */ }
+    }
+    handleCopy();
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!id) return;
+    if (!window.confirm(`Remove ${memberName} from the convoy?`)) return;
+    setRemovingMemberId(memberId);
+    try {
+      await tripService.removeMember(id, memberId);
+      setApprovedMembers(prev => prev.filter(m => m.id !== memberId));
+      showToast(`✓ Removed ${memberName} from convoy`);
+    } catch {
+      showToast('❌ Failed to remove member');
+    } finally {
+      setRemovingMemberId(null);
+    }
   };
 
   const handleRespond = async (memberId: string, action: 'approved' | 'rejected') => {
     if (!id) return;
     setRespondingId(memberId);
     try {
-      const approvedMember = pendingRequests.find(m => m.id === memberId);
       await tripService.respondToRequest(id, memberId, action);
       setPendingRequests(prev => prev.filter(m => m.id !== memberId));
-      if (action === 'approved' && approvedMember) {
-        setApprovedMembers(prev => [...prev, approvedMember]);
+      if (action === 'approved') {
+        const approved = pendingRequests.find(m => m.id === memberId);
+        if (approved) setApprovedMembers(prev => [...prev, approved]);
+        showToast('✅ Member approved');
+      } else {
+        showToast('✕ Request declined');
       }
-      showToast(action === 'approved' ? '✅ Member approved' : '✅ Request declined');
     } catch {
-      showToast('❌ Failed to update request');
+      showToast('❌ Action failed');
     } finally {
       setRespondingId(null);
     }
@@ -208,23 +297,25 @@ function TripDetailPage() {
     let lat = addForm.lat;
     let lng = addForm.lng;
 
-    // Geocode if no coordinates (manual type without picking suggestion)
     if (!lat || !lng) {
       const geo = await geocodePlace(addForm.place.trim());
       if (geo) { lat = geo.lat; lng = geo.lng; }
     }
 
     const dayStops = stops.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
-
-    // Auto-calculate insert position from coordinates, fallback to end
     const insertPosition = (lat && lng) ? getInsertPosition(dayStops, lat, lng) : dayStops.length;
 
     const newStop: Stop = {
-      place: addForm.place.trim(), item_type: addForm.item_type,
-      description: addForm.description, estimated_km: 0,
-      duration_hours: 1, tips: '', day_number: day,
-      order_index: insertPosition + 1, // temp, will be reindexed below
-      lat, lng,
+      place: addForm.place.trim(),
+      item_type: addForm.item_type,
+      description: addForm.description,
+      estimated_km: 0,
+      duration_hours: 1,
+      tips: '',
+      day_number: day,
+      order_index: insertPosition + 1,
+      lat,
+      lng,
     };
 
     userEditedRef.current = true;
@@ -248,47 +339,70 @@ function TripDetailPage() {
     return acc;
   }, {});
 
-  if (loading) return (
-    <div style={styles.center}><div style={{ fontSize: 40 }}>⏳</div><p style={{ color: '#6b7280' }}>Loading trip...</p></div>
-  );
-  if (error || !trip) return (
-    <div style={styles.center}><p style={{ color: '#dc2626' }}>{error || 'Trip not found'}</p><Link to="/dashboard">← Back</Link></div>
-  );
+  if (loading) {
+    return (
+      <div style={styles.centerPage}>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>⏳</div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 16, fontWeight: 700 }}>
+          Loading expedition itinerary & convoy data...
+        </p>
+      </div>
+    );
+  }
+
+  if (error || !trip) {
+    return (
+      <div style={styles.centerPage}>
+        <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
+        <p style={{ color: '#ef4444', fontSize: 16, marginBottom: 16, fontWeight: 700 }}>{error || 'Trip not found'}</p>
+        <Link to="/dashboard" style={styles.btnSecondary}>← Back to Dashboard</Link>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={styles.page}>
+      <Navbar />
+
+      {/* Floating Toast */}
       {toast && (
-        <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', background: toast.startsWith('✅') ? '#166534' : '#991b1b', color: 'white', padding: '10px 24px', borderRadius: 8, fontWeight: 600, zIndex: 9999, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+        <div style={styles.toast}>
           {toast}
         </div>
       )}
 
-      <header style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)', padding: '0 24px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>🏍️</span>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>Payanam</span>
-        </div>
-        <Link to="/dashboard" style={{ color: '#cbd5e1', fontSize: 14, textDecoration: 'none' }}>← Dashboard</Link>
-      </header>
+      <main className="responsive-page-container" style={styles.main}>
+        {/* Hero Route Card */}
+        <div className="responsive-hero" style={styles.heroCard}>
+          <div style={{ flex: 1, minWidth: 'min(100%, 280px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+              <span style={styles.tripBadge}>
+                🏍️ {trip.bike_type}
+              </span>
+              <span style={styles.tripBadge}>
+                📅 {trip.days} Days
+              </span>
+              {trip?.isOwner && (
+                <span style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: saveStatus === 'saved' ? '#34d399' : saveStatus === 'saving' ? '#fbbf24' : '#f87171',
+                }}>
+                  {saveStatus === 'saved' ? '✓ Auto-Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved changes'}
+                </span>
+              )}
+            </div>
 
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: '32px 16px' }}>
-        {/* Trip header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h1 style={{ fontSize: 26, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>{trip.title}</h1>
-            <p style={{ color: '#6b7280', fontSize: 15, margin: 0, textTransform: 'capitalize' }}>
-              {trip.from_place} → {trip.to_place} · {trip.days} days · {trip.bike_type}
+            <h1 style={styles.heroTitle}>{trip.title}</h1>
+            <p style={styles.heroRoute}>
+              <span style={{ color: '#34d399' }}>● {trip.from_place}</span>
+              <span style={{ margin: '0 8px', color: '#f59e0b' }}>➔</span>
+              <span style={{ color: '#f87171' }}>● {trip.to_place}</span>
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            {trip?.isOwner && (
-              <span style={{ fontSize: 13, color: saveStatus === 'saved' ? '#16a34a' : saveStatus === 'saving' ? '#d97706' : '#dc2626', fontWeight: 500 }}>
-                {saveStatus === 'saved' ? '✓ Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved'}
-              </span>
-            )}
-            {shareUrl && trip?.isOwner && (
-              <button onClick={handleCopy} style={styles.btnSecondary}>{copied ? '✅ Copied!' : '🔗 Share Trip'}</button>
-            )}
+
+          {/* Action CTAs */}
+          <div className="responsive-hero-actions" style={styles.heroActions}>
             {activeSession ? (
               <button
                 onClick={async () => {
@@ -296,9 +410,10 @@ function TripDetailPage() {
                   if (!ok) { showToast('📍 Enable location permission to join the ride.'); return; }
                   navigate(`/ride/${activeSession.id}`);
                 }}
-                style={{ padding: '10px 18px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={styles.btnActiveRide}
               >
-                🟢 Join Ride
+                <span>🟢</span>
+                <span>Join Live Convoy</span>
               </button>
             ) : trip?.isOwner ? (
               <button
@@ -310,215 +425,1144 @@ function TripDetailPage() {
                   try {
                     const d = await rideService.startRide(id);
                     navigate(`/ride/${d.session.id}`);
-                  } catch { setStartingRide(false); }
+                  } catch {
+                    setStartingRide(false);
+                  }
                 }}
                 disabled={startingRide}
-                style={{ padding: '10px 18px', background: 'linear-gradient(135deg, #1a1a2e, #0f3460)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: startingRide ? 0.7 : 1 }}
+                style={styles.btnStartRide}
               >
-                {startingRide ? '⏳ Starting...' : '🏍️ Start Ride'}
+                <span>🏍️</span>
+                <span>{startingRide ? 'Launching...' : 'Start Live Convoy'}</span>
               </button>
             ) : null}
-          </div>
-        </div>
 
-        {inviteCode && trip?.isOwner && (
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8, fontSize: 14, color: '#1e40af' }}>
-            <span>📨 Invite code: <strong>{inviteCode}</strong></span>
-            <span style={{ color: '#60a5fa', fontSize: 13 }}>Share with fellow riders</span>
-          </div>
-        )}
-
-        {/* Riders panel — owner sees pending requests + current members */}
-        {trip?.isOwner && (pendingRequests.length > 0 || approvedMembers.length > 0) && (
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px 24px', marginBottom: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827', margin: '0 0 14px' }}>👥 Riders</h3>
-
-            {/* Pending requests */}
-            {pendingRequests.length > 0 && (
-              <div style={{ marginBottom: approvedMembers.length > 0 ? 16 : 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>
-                  🔔 Pending Requests ({pendingRequests.length})
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {pendingRequests.map((m) => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: '#fefce8', borderRadius: 8, border: '1px solid #fde68a', flexWrap: 'wrap' }}>
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.users?.full_name ?? 'Unknown'}</p>
-                        <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{m.users?.email}</p>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => handleRespond(m.id, 'approved')} disabled={respondingId === m.id}
-                          style={{ padding: '7px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}>
-                          ✓ Approve
-                        </button>
-                        <button onClick={() => handleRespond(m.id, 'rejected')} disabled={respondingId === m.id}
-                          style={{ padding: '7px 14px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: respondingId === m.id ? 0.6 : 1 }}>
-                          ✕ Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Approved co-riders */}
-            {approvedMembers.length > 0 && (
-              <div>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#065f46', textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>
-                  ✅ Co-Riders ({approvedMembers.length})
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {approvedMembers.map((m) => (
-                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-                      <div style={{ width: 36, height: 36, background: '#16a34a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
-                        {(m.users?.full_name ?? '?')[0].toUpperCase()}
-                      </div>
-                      <div>
-                        <p style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#111827' }}>{m.users?.full_name ?? 'Unknown'}</p>
-                        <p style={{ margin: 0, fontSize: 12, color: '#6b7280' }}>{m.users?.email}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Co-rider view — show who the trip leader is */}
-        {!trip?.isOwner && (
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 14, color: '#1e40af' }}>
-            👀 You're viewing this trip as a co-rider. Only the trip leader can edit the itinerary.
-          </div>
-        )}
-
-        {/* Map — re-keyed when valid stops count changes so it re-mounts */}
-        <div style={{ marginBottom: 28 }}>
-          <TripMap
-            key={mapRevision}
-            stops={stops}
-            fromPlace={trip.from_place}
-            toPlace={trip.to_place}
-          />
-        </div>
-
-        {/* Itinerary */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#111827', margin: 0 }}>Itinerary</h2>
-          {trip?.isOwner && <span style={{ fontSize: 13, color: '#9ca3af' }}>Changes auto-save after 1.5s</span>}
-        </div>
-
-        {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
-          const dayStops = (groupedByDay[day] ?? []).sort((a, b) => a.order_index - b.order_index);
-          const isOpen = openDays.has(day);
-          const toggleDay = () => setOpenDays(prev => { const n = new Set(prev); if (n.has(day)) n.delete(day); else n.add(day); return n; });
-
-          return (
-            <div key={day} style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 12, overflow: 'hidden' }}>
-              <button style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '16px 20px', background: isOpen ? '#f8faff' : 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 15 }} onClick={toggleDay}>
-                <span style={{ fontWeight: 700, color: '#1e40af', fontSize: 16, flex: 1 }}>Day {day}</span>
-                {dayStops.length > 0 && <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: 12, padding: '2px 10px', borderRadius: 12, fontWeight: 500 }}>{dayStops.length} stops</span>}
-                <span style={{ color: '#9ca3af', fontSize: 14 }}>{isOpen ? '▲' : '▼'}</span>
+            {shareUrl && trip?.isOwner && (
+              <button onClick={handleCopy} style={styles.btnShare}>
+                <span>🔗</span>
+                <span>{copied ? 'Copied!' : 'Share Convoy Link'}</span>
               </button>
+            )}
+          </div>
+        </div>
 
-              {isOpen && (
-                <div style={{ padding: '0 20px 20px' }}>
-                  {dayStops.length === 0 && <p style={{ color: '#9ca3af', fontSize: 14 }}>No stops for this day</p>}
+        {/* Convoy Pass & Sharing Hub */}
+        {inviteCode && (
+          <div style={styles.convoyPassCard}>
+            <div style={styles.passTopRow}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={styles.passTicketBadge}>🎟️ CONVOY TRAVEL PASS</span>
+                <div style={styles.passCodePill} onClick={handleCopyCode} title="Click to copy invite code">
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CODE:</span>
+                  <span style={{ fontWeight: 900, letterSpacing: 2, color: 'var(--accent-gold)', fontSize: 15 }}>{inviteCode}</span>
+                  <span style={{ fontSize: 12 }}>📋</span>
+                </div>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                {trip?.isOwner ? 'Riders can join with this code or link' : 'Share this convoy pass with fellow riders'}
+              </span>
+            </div>
 
-                  {dayStops.map((stop, idx) => (
-                    <div key={`${stop.day_number}-${stop.order_index}-${idx}`} style={{ display: 'flex', gap: 12, marginBottom: 4 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 28, flexShrink: 0 }}>
-                        <div style={{ fontSize: 20, lineHeight: 1, marginTop: 2 }}>{typeIcons[stop.item_type] ?? '📌'}</div>
-                        {idx < dayStops.length - 1 && <div style={{ width: 2, flex: 1, background: '#e5e7eb', margin: '4px 0', minHeight: 16 }} />}
+            <div style={styles.passActionsRow}>
+              <button onClick={handleWhatsAppShare} style={styles.passBtnWhatsApp}>
+                <span>💬</span>
+                <span>WhatsApp Share</span>
+              </button>
+              <button onClick={() => setShowQrModal(true)} style={styles.passBtnAction}>
+                <span>📱</span>
+                <span>QR Boarding Pass</span>
+              </button>
+              <button onClick={handleCopy} style={styles.passBtnAction}>
+                <span>🔗</span>
+                <span>{copied ? '✅ Link Copied' : 'Copy Link'}</span>
+              </button>
+              <button onClick={handleNativeShare} style={styles.passBtnAction}>
+                <span>↗️</span>
+                <span>Share</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Convoy Roster (Visible to both Leader and Co-riders) */}
+        <div style={styles.ridersCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>👥</span>
+              <span>Convoy Roster ({approvedMembers.length + 1} Riders)</span>
+            </h3>
+            {trip?.isOwner ? (
+              <span style={styles.leadPill}>👑 You are Convoy Leader</span>
+            ) : (
+              <span style={styles.coRiderPill}>🏍️ You are Co-Rider</span>
+            )}
+          </div>
+
+          {/* Pending Requests (Leader Only) */}
+          {trip?.isOwner && pendingRequests.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={styles.subHeadingAmber}>
+                🔔 Pending Join Requests ({pendingRequests.length})
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {pendingRequests.map(m => (
+                  <div key={m.id} style={styles.pendingRow}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
+                          {m.users?.full_name ?? 'Rider'}
+                        </span>
+                        {m.profile?.blood_group && (
+                          <span style={styles.bloodBadge}>🩸 {m.profile.blood_group}</span>
+                        )}
                       </div>
-                      <div style={{ flex: 1, paddingBottom: 16, borderBottom: '1px solid #f3f4f6' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 600, color: '#111827', fontSize: 15, flex: 1 }}>{stop.place}</span>
-                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, textTransform: 'capitalize', background: (TYPE_COLORS[stop.item_type] ?? '#6b7280') + '20', color: TYPE_COLORS[stop.item_type] ?? '#6b7280' }}>
-                            {stop.item_type.replace('_', ' ')}
-                          </span>
-                          {trip?.isOwner && (
-                            <button onClick={() => removeStop(stop.day_number, stop.order_index)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12, padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>
-                              ✕ Remove
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <span>{m.users?.email}</span>
+                        {m.profile?.bike_model && <span>• 🏍️ {m.profile.bike_model}</span>}
+                        {m.profile?.city && <span>• 📍 {m.profile.city}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => handleRespond(m.id, 'approved')}
+                        disabled={respondingId === m.id}
+                        style={styles.btnApprove}
+                      >
+                        ✓ Approve
+                      </button>
+                      <button
+                        onClick={() => handleRespond(m.id, 'rejected')}
+                        disabled={respondingId === m.id}
+                        style={styles.btnDecline}
+                      >
+                        ✕ Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Confirmed Co-Riders Grid */}
+          <div style={styles.rosterGrid}>
+            {/* Pinned Convoy Leader Card */}
+            <div style={styles.rosterCard}>
+              <div style={styles.rosterCardHeader}>
+                <div style={styles.leaderAvatarCircle}>👑</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
+                      {trip?.isOwner ? (user?.fullName || 'You') : 'Convoy Leader'}
+                    </span>
+                    <span style={styles.leadBadge}>👑 Lead</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                    Trip Organizer & Route Commander
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Approved Co-riders */}
+            {approvedMembers.map(m => (
+              <div key={m.id} style={styles.rosterCard}>
+                <div style={styles.rosterCardHeader}>
+                  <div style={styles.rosterAvatarCircle}>
+                    {(m.users?.full_name ?? 'R')[0]?.toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
+                          {m.users?.full_name ?? 'Co-Rider'}
+                        </span>
+                        <span style={styles.coRiderBadge}>🏍️ Rider</span>
+                      </div>
+                      {trip?.isOwner && (
+                        <button
+                          onClick={() => handleRemoveMember(m.id, m.users?.full_name || 'Rider')}
+                          disabled={removingMemberId === m.id}
+                          style={styles.btnRemoveRider}
+                          title="Remove rider from convoy"
+                        >
+                          {removingMemberId === m.id ? 'Removing...' : '✕ Kick'}
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {m.profile?.bike_model && <span>🏍️ {m.profile.bike_model}</span>}
+                      {m.profile?.bike_reg_no && <span style={styles.plateBadge}>{m.profile.bike_reg_no}</span>}
+                      {m.profile?.city && <span>📍 {m.profile.city}</span>}
+                    </div>
+
+                    {/* Safety details: Blood group & Emergency Call */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                      {m.profile?.blood_group && (
+                        <span style={styles.bloodBadge}>
+                          🩸 {m.profile.blood_group}
+                        </span>
+                      )}
+                      {m.profile?.emergency_contact_phone && (
+                        <a
+                          href={`tel:${m.profile.emergency_contact_phone}`}
+                          style={styles.emergencyCallBtn}
+                          title="Call emergency contact"
+                        >
+                          📞 SOS: {m.profile.emergency_contact_phone}
+                          {m.profile.emergency_contact_relation ? ` (${m.profile.emergency_contact_relation})` : ''}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {approvedMembers.length === 0 && (
+            <div style={styles.emptyRosterNotice}>
+              <span>ℹ️</span>
+              <span>No co-riders have joined yet. Share the Convoy Travel Pass above to invite fellow riders!</span>
+            </div>
+          )}
+        </div>
+
+        {/* Co-rider view note */}
+        {!trip?.isOwner && (
+          <div style={styles.coRiderNotice}>
+            <span>👀</span>
+            <span>You are viewing this trip as a confirmed co-rider. The convoy leader manages the route waypoints.</span>
+          </div>
+        )}
+
+        {/* Interactive Map */}
+        <div style={styles.mapFrame}>
+          <div style={styles.mapHeader}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🗺️</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>Route & GPS Waypoint Map</span>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              {stops.filter(s => s.lat && s.lng).length} mapped waypoints
+            </span>
+          </div>
+          <div style={{ borderRadius: '0 0 16px 16px', overflow: 'hidden' }}>
+            <TripMap
+              key={mapRevision}
+              stops={stops}
+              fromPlace={trip.from_place}
+              toPlace={trip.to_place}
+            />
+          </div>
+        </div>
+
+        {/* Day-by-Day Itinerary */}
+        <div style={{ marginTop: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Day-by-Day Route Itinerary</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>Fuel stops, food breaks, scenic lookouts, and night stays</p>
+            </div>
+            {trip?.isOwner && (
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Changes auto-save automatically</span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
+              const dayStops = (groupedByDay[day] ?? []).sort((a, b) => a.order_index - b.order_index);
+              const isOpen = openDays.has(day);
+              const toggleDay = () => setOpenDays(prev => {
+                const n = new Set(prev);
+                if (n.has(day)) n.delete(day); else n.add(day);
+                return n;
+              });
+
+              return (
+                <div key={day} style={styles.dayCard}>
+                  {/* Day Header Toggle */}
+                  <button onClick={toggleDay} style={styles.dayToggle}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent-cyan)' }}>Day {day}</span>
+                      {dayStops.length > 0 && (
+                        <span style={styles.stopCountBadge}>
+                          {dayStops.length} waypoint{dayStops.length !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>{isOpen ? '▲' : '▼'}</span>
+                  </button>
+
+                  {/* Day Stops Timeline */}
+                  {isOpen && (
+                    <div style={{ padding: '0 20px 20px' }}>
+                      {dayStops.length === 0 ? (
+                        <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: '12px 0' }}>No waypoints logged for Day {day}.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 12 }}>
+                          {dayStops.map((stop, idx) => {
+                            const badge = TYPE_COLORS[stop.item_type] ?? TYPE_COLORS.stop;
+
+                            return (
+                              <div key={`${stop.day_number}-${stop.order_index}-${idx}`} style={styles.timelineItem}>
+                                {/* Left icon column */}
+                                <div style={styles.timelineIconCol}>
+                                  <div style={{ ...styles.stopIconCircle, background: badge.bg, color: badge.color }}>
+                                    {typeIcons[stop.item_type] ?? '📌'}
+                                  </div>
+                                  {idx < dayStops.length - 1 && <div style={styles.timelineConnector} />}
+                                </div>
+
+                                {/* Right content */}
+                                <div style={styles.timelineContent}>
+                                  <div style={styles.stopHeader}>
+                                    <span style={styles.stopPlace}>{stop.place}</span>
+                                    <span style={{ ...styles.itemTypeBadge, background: badge.bg, color: badge.color }}>
+                                      {stop.item_type.replace('_', ' ')}
+                                    </span>
+                                    {trip?.isOwner && (
+                                      <button
+                                        onClick={() => removeStop(stop.day_number, stop.order_index)}
+                                        style={styles.btnRemoveStop}
+                                        title="Remove stop"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {stop.description && (
+                                    <p style={styles.stopDesc}>{stop.description}</p>
+                                  )}
+
+                                  <div style={styles.stopMetaRow}>
+                                    {stop.estimated_km > 0 && <span>🛣️ ~{stop.estimated_km} km</span>}
+                                    {stop.duration_hours > 0 && <span>⏱️ ~{stop.duration_hours} hr</span>}
+                                  </div>
+
+                                  {stop.tips && (
+                                    <div style={styles.tipsBox}>
+                                      <span style={{ fontSize: 14 }}>💡</span>
+                                      <span style={{ fontSize: 12, color: 'var(--accent-gold)' }}>{stop.tips}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Add Stop to Day Form for Trip Leader */}
+                      {trip?.isOwner && (
+                        <div style={{ marginTop: 16 }}>
+                          {addingToDay === day ? (
+                            <div style={styles.addStopBox}>
+                              <h4 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
+                                + Add Waypoint to Day {day}
+                              </h4>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <PlaceInput
+                                  value={addForm.place}
+                                  onChange={v => setAddForm(f => ({ ...f, place: v, lat: undefined, lng: undefined }))}
+                                  onSelect={(loc) => setAddForm(f => ({ ...f, place: loc.name, lat: loc.lat, lng: loc.lng }))}
+                                  placeholder="Search location or landmark..."
+                                />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                  <select
+                                    value={addForm.item_type}
+                                    onChange={e => setAddForm(f => ({ ...f, item_type: e.target.value }))}
+                                    style={styles.selectInput}
+                                  >
+                                    <option value="fuel_stop">⛽ Fuel Stop</option>
+                                    <option value="meal">🍽️ Food / Dhaba</option>
+                                    <option value="attraction">📍 Attraction / Scenic</option>
+                                    <option value="rest">☕ Tea / Rest Break</option>
+                                    <option value="stay">🏨 Night Stay</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={addForm.description}
+                                    onChange={e => setAddForm(f => ({ ...f, description: e.target.value }))}
+                                    placeholder="Brief note or stop description"
+                                    style={styles.textInput}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                                  <button
+                                    onClick={() => addStop(day)}
+                                    disabled={addingStop || !addForm.place.trim()}
+                                    style={styles.btnConfirmAdd}
+                                  >
+                                    {addingStop ? 'Adding...' : 'Add Waypoint'}
+                                  </button>
+                                  <button
+                                    onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }}
+                                    style={styles.btnCancelAdd}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setAddingToDay(day); setAddForm({ place: '', item_type: 'attraction', description: '' }); }}
+                              style={styles.btnAddStopTrigger}
+                            >
+                              + Add Waypoint to Day {day}
                             </button>
                           )}
                         </div>
-                        {stop.description && <p style={{ color: '#374151', fontSize: 14, margin: '0 0 6px' }}>{stop.description}</p>}
-                        <div style={{ display: 'flex', gap: 12, fontSize: 13, color: '#6b7280', marginBottom: 4 }}>
-                          {stop.estimated_km > 0 && <span>🛣️ {stop.estimated_km}km</span>}
-                          {stop.duration_hours > 0 && <span>⏱️ {stop.duration_hours}h</span>}
-                        </div>
-                        {stop.tips && <div style={{ background: '#fefce8', border: '1px solid #fde68a', borderRadius: 6, padding: '8px 12px', fontSize: 13, color: '#92400e' }}>💡 {stop.tips}</div>}
-                      </div>
+                      )}
                     </div>
-                  ))}
-
-                  {/* Add stop form — owner only */}
-                  {trip?.isOwner && addingToDay === day ? (
-                    <div style={{ marginTop: 12, padding: 16, background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
-                      <p style={{ fontWeight: 600, fontSize: 14, color: '#111827', margin: '0 0 12px' }}>Add a stop to Day {day}</p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <PlaceInput
-                          value={addForm.place}
-                          onChange={(v) => setAddForm(f => ({ ...f, place: v, lat: undefined, lng: undefined }))}
-                          onLocationSelect={(loc) => setAddForm(f => ({ ...f, place: loc.name, lat: loc.lat, lng: loc.lng }))}
-                          placeholder="Place name (type to search or enter manually)"
-                        />
-                        <select
-                          value={addForm.item_type}
-                          onChange={(e) => setAddForm(f => ({ ...f, item_type: e.target.value }))}
-                          style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-                        >
-                          <option value="attraction">📍 Attraction</option>
-                          <option value="meal">🍽️ Meal</option>
-                          <option value="fuel_stop">⛽ Fuel Stop</option>
-                          <option value="rest">☕ Rest</option>
-                          <option value="stay">🏨 Stay</option>
-                        </select>
-                        <input
-                          value={addForm.description}
-                          onChange={(e) => setAddForm(f => ({ ...f, description: e.target.value }))}
-                          placeholder="Description (optional)"
-                          style={{ padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
-                        />
-                        <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>📍 Position will be auto-detected from the place's location on the route</p>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => addStop(day)} disabled={addingStop} style={{ ...styles.btnPrimary, opacity: addingStop ? 0.6 : 1 }}>
-                            {addingStop ? '📍 Adding...' : '+ Add Stop'}
-                          </button>
-                          <button onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }} style={styles.btnSecondary}>
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : trip?.isOwner ? (
-                    <button
-                      onClick={() => setAddingToDay(day)}
-                      style={{ marginTop: 12, padding: '10px 16px', background: '#eff6ff', border: '2px dashed #93c5fd', borderRadius: 8, cursor: 'pointer', color: '#1d4ed8', fontSize: 14, fontWeight: 600, width: '100%' }}
-                    >
-                      + Add Stop to Day {day}
-                    </button>
-                  ) : null}
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-        {/* Expense Tracker */}
-        <div style={{ marginTop: 24 }}>
-          <ExpenseTracker tripId={trip.id} currentUserId={user!.id} />
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Integrated Expense Tracker */}
+        <div style={{ marginTop: 36 }}>
+          <ExpenseTracker
+            tripId={trip.id}
+            currentUserId={user!.id}
+            tripTitle={`${trip.from_place} → ${trip.to_place}`}
+          />
         </div>
       </main>
+
+      {/* QR Code Pass Modal */}
+      {showQrModal && shareUrl && (
+        <div style={styles.modalOverlay} onClick={() => setShowQrModal(false)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>
+                  🎟️ Convoy Boarding Pass
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {trip.from_place} ➔ {trip.to_place} ({trip.days}d)
+                </p>
+              </div>
+              <button onClick={() => setShowQrModal(false)} style={styles.closeBtn}>✕</button>
+            </div>
+
+            <div style={styles.qrContainer}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(shareUrl)}`}
+                alt="Convoy QR Code"
+                style={styles.qrImage}
+              />
+            </div>
+
+            <div style={styles.qrCodeBox}>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Convoy Invite Code</span>
+              <strong style={{ fontSize: 22, letterSpacing: 2, color: 'var(--accent-gold)' }}>{inviteCode}</strong>
+            </div>
+
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '12px 0 16px', lineHeight: 1.4 }}>
+              Riders can scan this QR code with any smartphone camera to open the expedition and request to join.
+            </p>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleCopy} style={styles.btnPrimaryModal}>
+                {copied ? '✅ Link Copied' : '📋 Copy Link'}
+              </button>
+              <button onClick={() => setShowQrModal(false)} style={styles.btnSecondaryModal}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  center: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  btnPrimary: { padding: '10px 18px', background: 'linear-gradient(135deg, #0f3460, #533483)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  btnSecondary: { padding: '10px 18px', background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' },
+  page: {
+    minHeight: '100vh',
+    background: 'var(--bg-page)',
+    color: 'var(--text-primary)',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    transition: 'background-color 0.3s ease, color 0.3s ease',
+  },
+  centerPage: {
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--bg-page)',
+    color: 'var(--text-primary)',
+  },
+  main: {
+    maxWidth: 960,
+    margin: '0 auto',
+    padding: '32px 20px 80px',
+  },
+  toast: {
+    position: 'fixed',
+    top: 24,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: '#059669',
+    color: '#ffffff',
+    padding: '12px 24px',
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: 14,
+    zIndex: 10000,
+    boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
+    whiteSpace: 'nowrap',
+  },
+  heroCard: {
+    background: 'var(--bg-hero)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 20,
+    padding: '28px 24px',
+    boxShadow: 'var(--card-shadow)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 20,
+    flexWrap: 'wrap',
+    marginBottom: 20,
+    color: '#ffffff',
+  },
+  tripBadge: {
+    background: 'rgba(255, 255, 255, 0.12)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: 6,
+    padding: '3px 8px',
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#ffffff',
+    textTransform: 'capitalize',
+  },
+  heroTitle: {
+    fontSize: 'clamp(20px, 5vw, 26px)',
+    fontWeight: 900,
+    color: '#ffffff',
+    margin: '0 0 8px',
+    letterSpacing: -0.4,
+  },
+  heroRoute: {
+    fontSize: 15,
+    fontWeight: 700,
+    margin: 0,
+    display: 'flex',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  heroActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  btnActiveRide: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 20px',
+    background: '#10b981',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 800,
+    cursor: 'pointer',
+    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+  },
+  btnStartRide: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 20px',
+    background: '#ffffff',
+    color: '#0f172a',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 800,
+    cursor: 'pointer',
+    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+  },
+  btnShare: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '11px 16px',
+    background: 'rgba(255, 255, 255, 0.12)',
+    border: '1px solid rgba(255, 255, 255, 0.25)',
+    color: '#ffffff',
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  convoyPassCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 16,
+    padding: '16px 20px',
+    marginBottom: 20,
+    boxShadow: 'var(--card-shadow)',
+  },
+  passTopRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+    marginBottom: 14,
+  },
+  passTicketBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    background: 'var(--accent-gold-bg)',
+    border: '1px solid var(--accent-gold)',
+    color: 'var(--accent-gold)',
+    fontSize: 11,
+    fontWeight: 800,
+    padding: '4px 10px',
+    borderRadius: 999,
+    letterSpacing: 0.8,
+  },
+  passCodePill: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    padding: '5px 12px',
+    borderRadius: 8,
+    cursor: 'pointer',
+  },
+  passActionsRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: 10,
+  },
+  passBtnWhatsApp: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: '10px 14px',
+    background: '#25D366',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  passBtnAction: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '10px 14px',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 10,
+    color: 'var(--text-primary)',
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  leadPill: {
+    fontSize: 11,
+    fontWeight: 800,
+    background: 'var(--accent-gold-bg)',
+    color: 'var(--accent-gold)',
+    border: '1px solid var(--accent-gold)',
+    borderRadius: 999,
+    padding: '3px 10px',
+  },
+  coRiderPill: {
+    fontSize: 11,
+    fontWeight: 800,
+    background: 'var(--accent-cyan-bg)',
+    color: 'var(--accent-cyan)',
+    border: '1px solid var(--accent-cyan)',
+    borderRadius: 999,
+    padding: '3px 10px',
+  },
+  rosterGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: 12,
+  },
+  rosterCard: {
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 14,
+    padding: '14px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  rosterCardHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  leaderAvatarCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: '50%',
+    background: 'var(--accent-gold-bg)',
+    border: '2px solid var(--accent-gold)',
+    color: 'var(--accent-gold)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 16,
+    fontWeight: 900,
+    flexShrink: 0,
+  },
+  rosterAvatarCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: '50%',
+    background: 'var(--accent-green-bg)',
+    border: '2px solid var(--accent-green)',
+    color: 'var(--accent-green)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 14,
+    fontWeight: 900,
+    flexShrink: 0,
+  },
+  leadBadge: {
+    fontSize: 10,
+    fontWeight: 800,
+    background: 'var(--accent-gold-bg)',
+    color: 'var(--accent-gold)',
+    border: '1px solid var(--accent-gold)',
+    borderRadius: 6,
+    padding: '1px 6px',
+    textTransform: 'uppercase',
+  },
+  coRiderBadge: {
+    fontSize: 10,
+    fontWeight: 800,
+    background: 'var(--accent-cyan-bg)',
+    color: 'var(--accent-cyan)',
+    border: '1px solid var(--accent-cyan)',
+    borderRadius: 6,
+    padding: '1px 6px',
+    textTransform: 'uppercase',
+  },
+  btnRemoveRider: {
+    background: 'rgba(239, 68, 68, 0.12)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    color: '#ef4444',
+    fontSize: 11,
+    padding: '3px 8px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  plateBadge: {
+    fontSize: 11,
+    fontWeight: 800,
+    fontFamily: 'monospace',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    color: 'var(--text-primary)',
+    padding: '1px 6px',
+    borderRadius: 4,
+    letterSpacing: 0.5,
+  },
+  bloodBadge: {
+    fontSize: 11,
+    fontWeight: 800,
+    background: 'rgba(239, 68, 68, 0.15)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    color: '#ef4444',
+    padding: '2px 8px',
+    borderRadius: 999,
+  },
+  emergencyCallBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 11,
+    fontWeight: 700,
+    background: 'var(--accent-green-bg)',
+    border: '1px solid var(--accent-green)',
+    color: 'var(--accent-green)',
+    padding: '3px 8px',
+    borderRadius: 999,
+    textDecoration: 'none',
+  },
+  emptyRosterNotice: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--bg-subtle)',
+    border: '1px dashed var(--border-card)',
+    borderRadius: 12,
+    padding: '14px 16px',
+    color: 'var(--text-secondary)',
+    fontSize: 13,
+    marginTop: 12,
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.65)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 10000,
+  },
+  modalCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 380,
+    textAlign: 'center',
+    boxShadow: 'var(--card-shadow)',
+  },
+  modalHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    textAlign: 'left',
+  },
+  closeBtn: {
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-card)',
+    color: 'var(--text-primary)',
+    borderRadius: '50%',
+    width: 28,
+    height: 28,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    fontSize: 14,
+  },
+  qrContainer: {
+    background: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    display: 'inline-block',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    marginBottom: 16,
+  },
+  qrImage: {
+    width: 220,
+    height: 220,
+    display: 'block',
+  },
+  qrCodeBox: {
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 10,
+    padding: '8px 12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 2,
+  },
+  btnPrimaryModal: {
+    flex: 1,
+    padding: '11px 16px',
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  btnSecondaryModal: {
+    padding: '11px 18px',
+    background: 'var(--bg-subtle)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 10,
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  ridersCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 16,
+    padding: '20px 22px',
+    marginBottom: 20,
+    boxShadow: 'var(--card-shadow)',
+  },
+  subHeadingAmber: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--accent-gold)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    margin: '0 0 8px',
+  },
+  subHeadingGreen: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: 'var(--accent-green)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    margin: '0 0 8px',
+  },
+  pendingRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 14px',
+    background: 'var(--bg-subtle)',
+    borderRadius: 10,
+    border: '1px solid var(--border-subtle)',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  btnApprove: {
+    padding: '6px 14px',
+    background: '#10b981',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  btnDecline: {
+    padding: '6px 14px',
+    background: 'rgba(239, 68, 68, 0.15)',
+    color: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  coRiderNotice: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    background: 'var(--accent-cyan-bg)',
+    border: '1px solid var(--accent-cyan)',
+    borderRadius: 10,
+    padding: '12px 16px',
+    color: 'var(--accent-cyan)',
+    fontSize: 13,
+    fontWeight: 600,
+    marginBottom: 20,
+  },
+  mapFrame: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 18,
+    overflow: 'hidden',
+    boxShadow: 'var(--card-shadow)',
+  },
+  mapHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 18px',
+    background: 'var(--bg-subtle)',
+    borderBottom: '1px solid var(--border-subtle)',
+  },
+  dayCard: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    boxShadow: 'var(--card-shadow)',
+  },
+  dayToggle: {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 20px',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    textAlign: 'left',
+  },
+  stopCountBadge: {
+    background: 'var(--accent-cyan-bg)',
+    color: 'var(--accent-cyan)',
+    fontSize: 11,
+    padding: '2px 8px',
+    borderRadius: 999,
+    fontWeight: 700,
+  },
+  timelineItem: {
+    display: 'flex',
+    gap: 14,
+    marginBottom: 4,
+  },
+  timelineIconCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: 32,
+    flexShrink: 0,
+  },
+  stopIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 16,
+    marginTop: 2,
+  },
+  timelineConnector: {
+    width: 2,
+    flex: 1,
+    background: 'var(--border-subtle)',
+    margin: '4px 0',
+    minHeight: 20,
+  },
+  timelineContent: {
+    flex: 1,
+    paddingBottom: 16,
+    borderBottom: '1px solid var(--border-subtle)',
+  },
+  stopHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  stopPlace: {
+    fontWeight: 800,
+    color: 'var(--text-primary)',
+    fontSize: 15,
+    flex: 1,
+  },
+  itemTypeBadge: {
+    fontSize: 11,
+    padding: '2px 8px',
+    borderRadius: 999,
+    textTransform: 'capitalize',
+    fontWeight: 700,
+  },
+  btnRemoveStop: {
+    background: 'rgba(239, 68, 68, 0.15)',
+    border: 'none',
+    color: '#ef4444',
+    fontSize: 12,
+    padding: '2px 8px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontWeight: 700,
+  },
+  stopDesc: {
+    color: 'var(--text-secondary)',
+    fontSize: 13,
+    margin: '0 0 6px',
+    lineHeight: 1.4,
+  },
+  stopMetaRow: {
+    display: 'flex',
+    gap: 12,
+    fontSize: 12,
+    color: 'var(--text-muted)',
+    marginBottom: 6,
+    fontWeight: 600,
+  },
+  tipsBox: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 6,
+    background: 'var(--accent-gold-bg)',
+    border: '1px solid var(--accent-gold)',
+    borderRadius: 8,
+    padding: '6px 10px',
+  },
+  addStopBox: {
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  selectInput: {
+    padding: '8px 12px',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-input)',
+    borderRadius: 8,
+    color: 'var(--text-primary)',
+    fontSize: 13,
+    outline: 'none',
+  },
+  textInput: {
+    padding: '8px 12px',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-input)',
+    borderRadius: 8,
+    color: 'var(--text-primary)',
+    fontSize: 13,
+    outline: 'none',
+  },
+  btnConfirmAdd: {
+    padding: '8px 16px',
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  btnCancelAdd: {
+    padding: '8px 14px',
+    background: 'transparent',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border-input)',
+    borderRadius: 8,
+    fontSize: 13,
+    cursor: 'pointer',
+  },
+  btnAddStopTrigger: {
+    width: '100%',
+    padding: '10px',
+    background: 'var(--bg-subtle)',
+    border: '1px dashed var(--accent-cyan)',
+    borderRadius: 10,
+    color: 'var(--accent-cyan)',
+    fontSize: 13,
+    fontWeight: 800,
+    cursor: 'pointer',
+  },
+  btnSecondary: {
+    padding: '10px 18px',
+    background: 'var(--bg-subtle)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 700,
+    textDecoration: 'none',
+  },
 };
-
-export default TripDetailPage;

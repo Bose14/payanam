@@ -114,6 +114,11 @@ export const tripService = {
     return response.data.data;
   },
 
+  removeMember: async (tripId: string, memberId: string) => {
+    const response = await api.delete(`/api/trips/${tripId}/members/${memberId}`);
+    return response.data.data;
+  },
+
   updateItinerary: async (tripId: string, stops: unknown[]) => {
     const response = await api.put(`/api/trips/${tripId}/itinerary`, { stops });
     return response.data;
@@ -146,6 +151,21 @@ export const tripService = {
   deleteExpense: async (tripId: string, expenseId: string) => {
     const response = await api.delete(`/api/trips/${tripId}/expenses/${expenseId}`);
     return response.data;
+  },
+
+  toggleSplitSettled: async (tripId: string, splitId: string) => {
+    const response = await api.patch(`/api/trips/${tripId}/expenses/splits/${splitId}/settle`);
+    return response.data.data;
+  },
+
+  recordSettlement: async (tripId: string, data: {
+    fromUserId: string;
+    toUserId: string;
+    amount: number;
+    notes?: string;
+  }) => {
+    const response = await api.post(`/api/trips/${tripId}/expenses/settle`, data);
+    return response.data.data;
   },
 };
 
@@ -185,6 +205,44 @@ export const rideService = {
   getMessages: async (sessionId: string, since?: string) => {
     const params = since ? `?since=${encodeURIComponent(since)}` : '';
     const response = await api.get(`/api/rides/${sessionId}/messages${params}`);
+    return response.data.data;
+  },
+};
+
+export interface RiderProfile {
+  userId: string;
+  fullName: string;
+  email: string;
+  avatarUrl?: string | null;
+  phone?: string | null;
+  bloodGroup?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  emergencyContactRelation?: string | null;
+  allergies?: string | null;
+  medicalNotes?: string | null;
+  bikeModel?: string | null;
+  bikeRegNo?: string | null;
+  drivingLicenseNo?: string | null;
+  ridingStyle?: string | null;
+  city?: string | null;
+  bio?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const profileService = {
+  getProfile: async (): Promise<{ profile: RiderProfile }> => {
+    const response = await api.get('/api/profile');
+    return response.data.data;
+  },
+  updateProfile: async (data: Partial<RiderProfile>): Promise<{ profile: RiderProfile; message: string }> => {
+    const response = await api.put('/api/profile', data);
+    return response.data.data;
+  },
+  getRiderCard: async (userId?: string): Promise<{ card: RiderProfile }> => {
+    const url = userId ? `/api/profile/card/${userId}` : '/api/profile/card';
+    const response = await api.get(url);
     return response.data.data;
   },
 };

@@ -3,6 +3,7 @@ import authRoutes from './auth.routes';
 import healthRoutes from './health.routes';
 import tripRoutes, { roomRoutes, publicRoomRoutes } from './trip.routes';
 import rideRoutes from './ride.routes';
+import profileRoutes from './profile.routes';
 
 const registry = [
   { path: '/health', router: healthRoutes },
@@ -11,6 +12,7 @@ const registry = [
   { path: '/rooms',  router: publicRoomRoutes }, // public preview — no auth
   { path: '/rooms',  router: roomRoutes },
   { path: '/rides',  router: rideRoutes },
+  { path: '/profile', router: profileRoutes },
 ];
 
 export function registerRoutes(app: Express) {

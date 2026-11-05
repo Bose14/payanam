@@ -7,7 +7,7 @@ export function errorHandler(
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ) {
   const timestamp = new Date().toISOString();
   const requestId = req.id || 'unknown';

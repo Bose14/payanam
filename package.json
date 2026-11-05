@@ -8,9 +8,9 @@
     "dev:web": "cd apps/web && npm run dev",
     "dev:api": "cd apps/api && npm run dev",
     "dev": "npm run install:all && npm run dev:api & npm run dev:web",
-    "build": "cd apps/web && npm run build && cd ../api && npm run build && cd ../..",
+    "build": "npm run --prefix apps/api build && npm run --prefix apps/web build",
     "lint": "eslint . --ext .ts,.tsx",
-    "type-check": "tsc --noEmit",
+    "type-check": "npm run --prefix apps/api type-check && npm run --prefix apps/web type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },

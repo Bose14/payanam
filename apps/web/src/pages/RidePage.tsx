@@ -266,7 +266,7 @@ export default function RidePage() {
     // Refresh every 2 min so route updates as you progress
     const interval = setInterval(buildRoute, 120_000);
     return () => { clearTimeout(timer); clearInterval(interval); };
-  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session]);
 
   // Wake Lock + background visibility tracking
   useEffect(() => {
