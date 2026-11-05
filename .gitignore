@@ -49,3 +49,4 @@ Thumbs.db
 # Misc
 .cache/
 .env.local.js
+data/

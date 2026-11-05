@@ -1,5 +1,6 @@
 import { getDatabase } from '../config/database';
 import { generateItinerary } from './ai.service';
+import { readLocalProfiles } from './profile.service';
 
 async function geocodePlace(name: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -316,6 +317,12 @@ export async function getRoomPreview(inviteCode: string) {
       .maybeSingle();
     leaderProfile = lp;
     if (!leaderProfile) {
+      const localProfiles = readLocalProfiles();
+      if (localProfiles[room.created_by]) {
+        leaderProfile = localProfiles[room.created_by];
+      }
+    }
+    if (!leaderProfile) {
       const { data: fallbackLog } = await db
         .from('audit_logs')
         .select('details')
@@ -407,6 +414,12 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
       if (profiles && profiles.length > 0) {
         profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
       } else {
+        const localProfiles = readLocalProfiles();
+        for (const uid of userIds) {
+          if (localProfiles[uid]) {
+            profilesMap[uid] = localProfiles[uid];
+          }
+        }
         const { data: logs } = await db
           .from('audit_logs')
           .select('user_id, details')
@@ -460,6 +473,12 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
       if (profiles && profiles.length > 0) {
         profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
       } else {
+        const localProfiles = readLocalProfiles();
+        for (const uid of userIds) {
+          if (localProfiles[uid]) {
+            profilesMap[uid] = localProfiles[uid];
+          }
+        }
         const { data: logs } = await db
           .from('audit_logs')
           .select('user_id, details')
