@@ -370,6 +370,22 @@ html, body {
     white-space: nowrap !important;
   }
 
+  @media (max-width: 380px) {
+    .responsive-vehicle-grid {
+      gap: 6px !important;
+    }
+    .responsive-vehicle-btn {
+      padding: 10px 8px !important;
+      gap: 6px !important;
+    }
+    .responsive-vehicle-btn span:first-child {
+      font-size: 18px !important;
+    }
+    .responsive-vehicle-btn span:last-child {
+      font-size: 12px !important;
+    }
+  }
+
   /* Responsive Tabs with smooth horizontal swipe */
   .responsive-tabs-bar {
     overflow-x: auto !important;
