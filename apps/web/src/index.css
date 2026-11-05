@@ -248,7 +248,8 @@ html, body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 4px);
     background: var(--bg-nav);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -256,8 +257,21 @@ html, body {
     z-index: 9999;
     align-items: center;
     justify-content: space-around;
-    padding: 0 8px;
+    padding-left: 8px;
+    padding-right: 8px;
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Shift deployment / Netlify badge above bottom nav bar */
+  [data-netlify-badge],
+  .netlify-badge,
+  #netlify-badge,
+  div[class*="netlify"],
+  iframe[src*="netlify"] {
+    bottom: calc(68px + env(safe-area-inset-bottom, 8px)) !important;
+    right: 12px !important;
+    transform: scale(0.85);
+    transform-origin: bottom right;
   }
 
   .mobile-nav-item {
@@ -289,7 +303,7 @@ html, body {
 
   /* Responsive Main Page Container */
   .responsive-page-container {
-    padding: 16px 14px 84px !important;
+    padding: 16px 14px calc(92px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* Responsive Hero Card */
@@ -386,16 +400,75 @@ html, body {
     }
   }
 
-  /* Responsive Tabs with smooth horizontal swipe */
+  /* Responsive Tabs with smooth horizontal swipe & no overlap */
+  .desktop-tab-sub {
+    display: none !important;
+  }
+
   .responsive-tabs-bar {
+    display: flex !important;
     overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
     white-space: nowrap !important;
+    gap: 6px !important;
+    padding: 6px 10px 0 !important;
+    border-bottom: 1px solid var(--border-card) !important;
   }
 
   .responsive-tabs-bar::-webkit-scrollbar {
-    display: none;
+    display: none !important;
+  }
+
+  .responsive-tab-btn {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+    min-width: unset !important;
+  }
+
+  /* Expense Header Actions Grid on mobile */
+  .expense-header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 6px !important;
+  }
+
+  .expense-header-actions > button:last-child {
+    grid-column: 1 / -1 !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+    font-size: 14px !important;
+  }
+
+  .expense-header-actions > button:not(:last-child) {
+    justify-content: center !important;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Expense Search & Filter on mobile */
+  .expense-search-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .expense-search-row > * {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .expense-search-row select {
+    width: 100% !important;
+  }
+
+  /* Profile Logout row on mobile */
+  .profile-logout-row {
+    justify-content: center !important;
+    width: 100% !important;
   }
 
   /* Expense Metrics Grid on mobile (2x2) */
