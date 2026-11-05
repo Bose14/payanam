@@ -15,6 +15,7 @@ interface Trip {
   created_at: string;
   isOwner?: boolean;
   isJoined?: boolean;
+  pendingRequestCount?: number;
 }
 
 const VEHICLE_ICONS: Record<string, string> = {
@@ -36,10 +37,26 @@ export default function DashboardPage() {
   const [inviteCodeInput, setInviteCodeInput] = useState('');
 
   useEffect(() => {
-    tripService.getUserTrips()
-      .then((data) => setTrips(data.trips ?? []))
-      .catch(() => setTrips([]))
-      .finally(() => setTripsLoading(false));
+    let mounted = true;
+    const fetchTrips = () => {
+      tripService.getUserTrips()
+        .then((data) => {
+          if (mounted) setTrips(data.trips ?? []);
+        })
+        .catch(() => {
+          if (mounted) setTrips([]);
+        })
+        .finally(() => {
+          if (mounted) setTripsLoading(false);
+        });
+    };
+
+    fetchTrips();
+    const interval = setInterval(fetchTrips, 7000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleDeleteConfirm = async () => {
@@ -319,6 +336,19 @@ export default function DashboardPage() {
                   {/* Route Title */}
                   <h3 style={styles.cardTitle}>{trip.title}</h3>
 
+                  {/* Pending Join Requests Alert Badge */}
+                  {trip.isOwner && !!trip.pendingRequestCount && trip.pendingRequestCount > 0 && (
+                    <div style={styles.pendingBadgeCard}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13 }}>🔔</span>
+                        <span>
+                          <strong>{trip.pendingRequestCount}</strong> rider{trip.pendingRequestCount > 1 ? 's' : ''} waiting to join!
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 800 }}>Approve ➔</span>
+                    </div>
+                  )}
+
                   {/* Route Visualizer */}
                   <div style={styles.routeBox}>
                     <div style={styles.routePoint}>
@@ -558,6 +588,20 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary)',
     margin: '0 0 12px',
     lineHeight: 1.3,
+  },
+  pendingBadgeCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    background: 'rgba(245, 158, 11, 0.15)',
+    border: '1px solid rgba(245, 158, 11, 0.5)',
+    color: '#f59e0b',
+    padding: '7px 12px',
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    marginBottom: 12,
   },
   routeBox: {
     display: 'flex',

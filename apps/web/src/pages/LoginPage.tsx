@@ -171,7 +171,7 @@ function LoginPage() {
 
       <div style={styles.bottomLinkRow}>
         <span style={{ color: '#64748b', fontSize: '13.5px' }}>New to Payanam?</span>{' '}
-        <Link to="/register" style={styles.primaryLink}>
+        <Link to={redirectTo !== '/dashboard' ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'} style={styles.primaryLink}>
           Create an account
         </Link>
       </div>

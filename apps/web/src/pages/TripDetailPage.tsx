@@ -122,6 +122,29 @@ function requestLocationPermission(): Promise<boolean> {
   });
 }
 
+function playNotificationSound() {
+  try {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
+
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch { /* silent */ }
+}
+
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -177,6 +200,30 @@ export default function TripDetailPage() {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
   };
+
+  // Live real-time polling for incoming join requests (Leader Only)
+  useEffect(() => {
+    if (!id || !trip?.isOwner) return;
+
+    const pollInterval = setInterval(() => {
+      tripService.getPendingRequests(id)
+        .then((d) => {
+          const reqs = d.requests ?? [];
+          setPendingRequests((prev) => {
+            if (reqs.length > prev.length) {
+              playNotificationSound();
+              const newest = reqs[reqs.length - 1];
+              const name = newest?.users?.full_name || 'A rider';
+              showToast(`🔔 ${name} requested to join your convoy!`);
+            }
+            return reqs;
+          });
+        })
+        .catch(() => {});
+    }, 3500);
+
+    return () => clearInterval(pollInterval);
+  }, [id, trip?.isOwner]);
 
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
     setSaveStatus('saving');
@@ -372,6 +419,44 @@ export default function TripDetailPage() {
       )}
 
       <main className="responsive-page-container" style={styles.main}>
+        {/* Urgent Pending Join Requests Banner for Leader */}
+        {trip?.isOwner && pendingRequests.length > 0 && (
+          <div style={styles.topPendingBanner}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 }}>
+              <span style={{ fontSize: 24 }}>🚨</span>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: '#f59e0b' }}>
+                  {pendingRequests.length} {pendingRequests.length === 1 ? 'Rider' : 'Riders'} Waiting to Join Convoy!
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                  {pendingRequests.map(m => m.users?.full_name || 'Rider').join(', ')} requested entry.
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={() => {
+                  const firstReq = pendingRequests[0];
+                  if (firstReq) handleRespond(firstReq.id, 'approved');
+                }}
+                disabled={!!respondingId}
+                style={styles.btnApprove}
+              >
+                {respondingId === pendingRequests[0]?.id ? '⏳ Approving...' : `✓ Approve ${pendingRequests[0]?.users?.full_name?.split(' ')[0] || 'Rider'}`}
+              </button>
+              <button
+                onClick={() => {
+                  const el = document.getElementById('pending-requests-section');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                style={styles.btnReviewAll}
+              >
+                View Details ({pendingRequests.length}) ↓
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Hero Route Card */}
         <div className="responsive-hero" style={styles.heroCard}>
           <div style={{ flex: 1, minWidth: 'min(100%, 280px)' }}>
@@ -500,7 +585,7 @@ export default function TripDetailPage() {
 
           {/* Pending Requests (Leader Only) */}
           {trip?.isOwner && pendingRequests.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
+            <div id="pending-requests-section" style={{ marginBottom: 20 }}>
               <p style={styles.subHeadingAmber}>
                 🔔 Pending Join Requests ({pendingRequests.length})
               </p>
@@ -1339,6 +1424,29 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border-subtle)',
     gap: 12,
     flexWrap: 'wrap',
+  },
+  topPendingBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    flexWrap: 'wrap',
+    background: 'rgba(245, 158, 11, 0.12)',
+    border: '1.5px solid #f59e0b',
+    borderRadius: 16,
+    padding: '14px 18px',
+    marginBottom: 20,
+    boxShadow: '0 4px 16px rgba(245, 158, 11, 0.15)',
+  },
+  btnReviewAll: {
+    padding: '7px 14px',
+    background: 'var(--bg-subtle)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
   },
   btnApprove: {
     padding: '6px 14px',

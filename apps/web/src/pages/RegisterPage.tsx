@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
 
 function RegisterPage() {
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') ?? '/dashboard';
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,7 +50,7 @@ function RegisterPage() {
     setIsLoading(true);
     try {
       await register(cleanEmail, password, cleanName);
-      navigate('/dashboard');
+      navigate(redirectTo);
     } catch (err: unknown) {
       const errorObj = err as { message?: string; code?: string; response?: { data?: { message?: string } } };
       if (errorObj?.message === 'Network Error' || errorObj?.code === 'ERR_NETWORK') {
@@ -224,7 +226,7 @@ function RegisterPage() {
 
       <div style={styles.bottomLinkRow}>
         <span style={{ color: '#64748b', fontSize: '13.5px' }}>Already have an account?</span>{' '}
-        <Link to="/login" style={styles.primaryLink}>
+        <Link to={redirectTo !== '/dashboard' ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'} style={styles.primaryLink}>
           Sign in
         </Link>
       </div>

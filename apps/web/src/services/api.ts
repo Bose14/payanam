@@ -1,10 +1,24 @@
 import axios, { AxiosInstance } from 'axios';
 import { ApiResponse, LoginRequest, RegisterRequest, AuthResponse } from '@payanam/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+function getApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_URL as string | undefined;
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // If accessing from a phone/tablet or other machine on the local Wi-Fi/LAN (e.g. 192.168.x.x, 10.x.x.x)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+        return `http://${hostname}:3001`;
+      }
+    }
+  }
+
+  return envUrl || 'http://localhost:3001';
+}
 
 const api: AxiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -22,11 +36,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthEndpoint = error.config?.url?.includes('/api/auth/login') ||
-      error.config?.url?.includes('/api/auth/register');
+      error.config?.url?.includes('/api/auth/register') ||
+      error.config?.url?.includes('/api/rooms/status');
     if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      window.location.href = '/login';
+      const currentPath = window.location.pathname + window.location.search;
+      const redirectParam = currentPath && currentPath !== '/login' && currentPath !== '/register'
+        ? `?redirect=${encodeURIComponent(currentPath)}`
+        : '';
+      window.location.href = `/login${redirectParam}`;
     }
     return Promise.reject(error);
   },
@@ -97,6 +116,16 @@ export const tripService = {
   getRoomPreview: async (inviteCode: string) => {
     const response = await api.get(`/api/rooms/preview/${inviteCode}`);
     return response.data.data;
+  },
+
+  getRoomMemberStatus: async (inviteCode: string) => {
+    const response = await api.get(`/api/rooms/status/${inviteCode}`);
+    return response.data.data;
+  },
+
+  getPendingCounts: async (): Promise<Record<string, number>> => {
+    const response = await api.get('/api/trips/pending-counts');
+    return response.data.data.counts;
   },
 
   getPendingRequests: async (tripId: string) => {

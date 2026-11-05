@@ -35,7 +35,7 @@ const VEHICLE_ICONS: Record<string, string> = {
   bicycle: '🚲',
 };
 
-type PageState = 'loading' | 'preview' | 'requesting' | 'pending' | 'approved' | 'rejected' | 'error';
+type PageState = 'loading' | 'preview' | 'requesting' | 'pending' | 'approved' | 'rejected' | 'error' | 'owner';
 
 export default function JoinRoomPage() {
   const { inviteCode } = useParams<{ inviteCode: string }>();
@@ -67,7 +67,7 @@ export default function JoinRoomPage() {
     }
 
     tripService.getRoomPreview(inviteCode)
-      .then((data) => {
+      .then(async (data) => {
         const p = data.preview;
         const trip = p?.trips as TripPreview;
         setPreview(trip);
@@ -76,15 +76,25 @@ export default function JoinRoomPage() {
         if (typeof p?.memberCount === 'number') setMemberCount(p.memberCount);
         if (Array.isArray(p?.stopsPreview)) setStopsPreview(p.stopsPreview);
 
-        // If user is already logged in, check if they can access the trip (already approved or owner)
-        if (user && trip?.id) {
-          tripService.getTripById(trip.id)
-            .then(() => {
+        // If user is already logged in, check their member status directly
+        if (user) {
+          try {
+            const memberStatusRes = await tripService.getRoomMemberStatus(inviteCode);
+            const status = memberStatusRes?.status;
+            if (status === 'owner') {
+              setPageState('owner');
+            } else if (status === 'approved') {
               setPageState('approved');
-            })
-            .catch(() => {
+            } else if (status === 'pending') {
+              setPageState('pending');
+            } else if (status === 'rejected') {
+              setPageState('rejected');
+            } else {
               setPageState('preview');
-            });
+            }
+          } catch {
+            setPageState('preview');
+          }
         } else {
           setPageState('preview');
         }
@@ -95,26 +105,27 @@ export default function JoinRoomPage() {
       });
   }, [inviteCode, user]);
 
-  // Auto-polling when request is pending approval
+  // Fast auto-polling when request is pending approval (every 2.5s)
   useEffect(() => {
     if (pageState === 'pending' && inviteCode && user) {
       pollTimerRef.current = setInterval(async () => {
         try {
-          const res = await tripService.joinRoom(inviteCode);
-          if (res?.memberStatus === 'approved') {
-            const destTripId = res.room?.trips?.id ?? res.room?.trip_id ?? tripId;
+          const res = await tripService.getRoomMemberStatus(inviteCode);
+          const st = res?.status;
+          if (st === 'approved') {
+            const destTripId = res.tripId ?? res.room?.trips?.id ?? res.room?.trip_id ?? tripId;
             setPageState('approved');
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            showToastMsg('🎉 Request Approved! Opening convoy mission control...');
             if (destTripId) {
-              showToastMsg('🎉 Request Approved! Opening convoy...');
-              setTimeout(() => navigate(`/trips/${destTripId}`, { replace: true }), 1200);
+              setTimeout(() => navigate(`/trips/${destTripId}`, { replace: true }), 1000);
             }
-          } else if (res?.memberStatus === 'rejected') {
+          } else if (st === 'rejected') {
             setPageState('rejected');
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           }
         } catch { /* silent retry */ }
-      }, 4000);
+      }, 2500);
     }
 
     return () => {
@@ -136,12 +147,14 @@ export default function JoinRoomPage() {
       const status = data.memberStatus as string;
       const roomTripId = data.room?.trips?.id ?? data.room?.trip_id ?? tripId;
 
-      if (status === 'approved') {
+      if (status === 'owner') {
+        setPageState('owner');
+      } else if (status === 'approved') {
         if (roomTripId) navigate(`/trips/${roomTripId}`, { replace: true });
         else setPageState('approved');
       } else if (status === 'pending') {
         setPageState('pending');
-        showToastMsg('Request sent! Awaiting leader confirmation.');
+        showToastMsg('⚡ Request sent! Awaiting leader confirmation.');
       } else if (status === 'rejected') {
         setPageState('rejected');
       } else {
@@ -228,29 +241,64 @@ export default function JoinRoomPage() {
           </div>
         )}
 
+        {/* Convoy Leader / Owner State */}
+        {pageState === 'owner' && (
+          <div className="responsive-card" style={styles.card}>
+            <div style={{ fontSize: 52, marginBottom: 12 }}>👑</div>
+            <div style={styles.leadBadgeBig}>Convoy Leader</div>
+            <h2 style={styles.title}>You are the Leader!</h2>
+            <p style={styles.subtitle}>
+              You are the creator of <strong>{preview?.title}</strong>. Co-riders use this invite link to request entry into your convoy.
+            </p>
+            {tripId && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+                <Link to={`/trips/${tripId}`} style={styles.btnPrimary}>
+                  Open Convoy Command Center ➔
+                </Link>
+                <button onClick={handleCopyLink} style={styles.btnSecondary}>
+                  🔗 Copy Invite Link to Share
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Pending Approval State */}
         {pageState === 'pending' && (
           <div className="responsive-card" style={styles.card}>
-            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 16 }}>
-              <div style={{ fontSize: 50 }}>⏳</div>
-              <div style={styles.pulseDot} />
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 96, height: 96, margin: '0 auto 16px' }}>
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '2px solid rgba(234, 88, 12, 0.4)',
+                animation: 'pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite',
+              }} />
+              <div style={{
+                position: 'absolute',
+                inset: 12,
+                borderRadius: '50%',
+                background: 'rgba(234, 88, 12, 0.1)',
+                border: '1px dashed var(--accent-gold)',
+              }} />
+              <div style={{ fontSize: 44, zIndex: 1 }}>{vehicleIcon}</div>
             </div>
 
-            <div style={styles.pendingBadge}>● Waiting for Convoy Leader</div>
+            <div style={styles.pendingBadge}>● Live Sync • Waiting for Leader</div>
             <h2 style={styles.title}>Request Sent!</h2>
             <p style={styles.subtitle}>
-              Your request to join <strong>{preview?.title}</strong> is awaiting approval from the convoy leader.
+              Your request to join <strong>{preview?.title}</strong> is awaiting approval from {leader?.fullName || 'the convoy leader'}.
             </p>
 
             <div style={styles.infoNotice}>
-              <span>⚡</span>
-              <span>This screen automatically updates the instant the leader approves you. Keep this tab open or return whenever ready!</span>
+              <span style={{ fontSize: 16 }}>⚡</span>
+              <span><strong>Live automatic sync:</strong> This screen will instantly open the convoy the moment the leader hits Approve. No need to refresh!</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
               <button onClick={handleWhatsAppShare} style={styles.btnWhatsApp}>
                 <span>💬</span>
-                <span>Ping Leader on WhatsApp</span>
+                <span>Ping {leader?.fullName?.split(' ')[0] || 'Leader'} on WhatsApp</span>
               </button>
               <Link to="/dashboard" style={styles.btnSecondary}>
                 Return to Dashboard
@@ -282,11 +330,16 @@ export default function JoinRoomPage() {
             <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
             <h2 style={styles.title}>Join Request Declined</h2>
             <p style={styles.subtitle}>
-              The convoy leader declined your request to join this expedition.
+              The convoy leader declined your request to join <strong>{preview?.title}</strong>.
             </p>
-            <Link to="/dashboard" style={styles.btnPrimary}>
-              Back to Dashboard
-            </Link>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+              <button onClick={handleRequestJoin} style={styles.btnPrimary}>
+                🔄 Request to Join Again
+              </button>
+              <Link to="/dashboard" style={styles.btnSecondary}>
+                Back to Dashboard
+              </Link>
+            </div>
           </div>
         )}
 
@@ -664,6 +717,20 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     padding: '1px 6px',
     textTransform: 'uppercase',
+  },
+  leadBadgeBig: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    background: 'var(--accent-gold-bg)',
+    color: 'var(--accent-gold)',
+    border: '1px solid var(--accent-gold)',
+    borderRadius: 999,
+    padding: '4px 14px',
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: 'uppercase',
+    marginBottom: 12,
   },
   statsGrid: {
     display: 'grid',

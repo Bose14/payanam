@@ -16,6 +16,8 @@ import {
   deleteTrip,
   getAllTripParticipants,
   removeMember,
+  getRoomMemberStatus,
+  getPendingRequestsCount,
 } from '../services/trip.service';
 
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
@@ -118,6 +120,24 @@ export async function getRoomPreviewHandler(req: Request, res: Response, next: N
   try {
     const preview = await getRoomPreview(req.params.inviteCode);
     return sendSuccess(res, { preview });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getRoomMemberStatusHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const result = await getRoomMemberStatus(req.params.inviteCode, req.userId!);
+    return sendSuccess(res, result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPendingRequestsCountHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const counts = await getPendingRequestsCount(req.userId!);
+    return sendSuccess(res, { counts });
   } catch (err) {
     next(err);
   }

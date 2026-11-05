@@ -13,6 +13,8 @@ import {
   deleteTripHandler,
   getAllTripParticipantsHandler,
   removeMemberHandler,
+  getRoomMemberStatusHandler,
+  getPendingRequestsCountHandler,
 } from '../controllers/trip.controller';
 import {
   addExpenseHandler,
@@ -28,6 +30,7 @@ router.use(authMiddleware);
 
 router.post('/', createTripHandler);
 router.get('/', getUserTripsHandler);
+router.get('/pending-counts', getPendingRequestsCountHandler);
 router.get('/:id', getTripByIdHandler);
 router.put('/:id/itinerary', updateItineraryHandler);
 router.delete('/:id', deleteTripHandler);
@@ -47,6 +50,7 @@ export default router;
 export const roomRoutes = Router();
 roomRoutes.use(authMiddleware);
 roomRoutes.post('/join', joinRoomHandler);
+roomRoutes.get('/status/:inviteCode', getRoomMemberStatusHandler);
 
 // Public — no auth middleware
 export const publicRoomRoutes = Router();
