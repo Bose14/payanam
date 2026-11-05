@@ -274,7 +274,7 @@ export default function CreateTripPage() {
               {/* Vehicle Type */}
               <div style={styles.fieldGroup}>
                 <label style={styles.label}>Vehicle Type</label>
-                <div style={styles.vehicleGrid}>
+                <div className="responsive-vehicle-grid" style={styles.vehicleGrid}>
                   {VEHICLES.map(v => {
                     const isSelected = form.bike_type === v.value;
                     return (
@@ -282,15 +282,17 @@ export default function CreateTripPage() {
                         key={v.value}
                         type="button"
                         onClick={() => setForm(f => ({ ...f, bike_type: v.value }))}
+                        className="responsive-vehicle-btn"
                         style={{
                           ...styles.vehicleBtn,
                           borderColor: isSelected ? 'var(--accent-cyan)' : 'var(--border-subtle)',
                           background: isSelected ? 'var(--accent-cyan-bg)' : 'var(--bg-subtle)',
                           color: isSelected ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                          boxShadow: isSelected ? '0 0 0 1px var(--accent-cyan)' : 'none',
                         }}
                       >
-                        <span style={{ fontSize: 16 }}>{v.icon}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700 }}>{v.label}</span>
+                        <span style={{ fontSize: 18 }}>{v.icon}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{v.label}</span>
                       </button>
                     );
                   })}
@@ -535,19 +537,20 @@ const styles: Record<string, React.CSSProperties> = {
   vehicleGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 6,
+    gap: 8,
   },
   vehicleBtn: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    padding: '8px 4px',
+    gap: 5,
+    padding: '10px 4px',
     borderRadius: 10,
-    border: '1px solid',
+    border: '1.5px solid',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
+    minHeight: 54,
   },
   chipsRow: {
     display: 'flex',

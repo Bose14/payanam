@@ -341,9 +341,33 @@ html, body {
 
   /* Responsive Steppers & Inputs */
   .responsive-stepper-row {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 14px !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Responsive Vehicle Selection on mobile phones (clean 2x2 grid) */
+  .responsive-vehicle-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .responsive-vehicle-btn {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 14px !important;
+    gap: 8px !important;
+    min-height: 48px !important;
+  }
+
+  .responsive-vehicle-btn span:first-child {
+    font-size: 20px !important;
+    line-height: 1 !important;
+  }
+
+  .responsive-vehicle-btn span:last-child {
+    font-size: 13px !important;
+    white-space: nowrap !important;
   }
 
   /* Responsive Tabs with smooth horizontal swipe */
