@@ -1,4 +1,46 @@
+import fs from 'fs';
+import path from 'path';
 import { getDatabase } from '../config/database';
+
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const PROFILES_FILE = path.join(DATA_DIR, 'profiles.json');
+
+function ensureDataDir(): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+  } catch { /* silent */ }
+}
+
+export function readLocalProfiles(): Record<string, Record<string, unknown>> {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(PROFILES_FILE)) {
+      const raw = fs.readFileSync(PROFILES_FILE, 'utf-8');
+      return JSON.parse(raw) || {};
+    }
+  } catch (err) {
+    console.warn('[profile.service] readLocalProfiles failed:', err);
+  }
+  return {};
+}
+
+export function writeLocalProfile(userId: string, data: Record<string, unknown>): void {
+  try {
+    ensureDataDir();
+    const all = readLocalProfiles();
+    all[userId] = {
+      ...(all[userId] || {}),
+      ...data,
+      user_id: userId,
+      updated_at: new Date().toISOString(),
+    };
+    fs.writeFileSync(PROFILES_FILE, JSON.stringify(all, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[profile.service] writeLocalProfile failed:', err);
+  }
+}
 
 export interface RiderProfileData {
   userId: string;
@@ -53,20 +95,30 @@ export async function getProfile(userId: string): Promise<RiderProfileData> {
     throw new Error('User not found');
   }
 
-  // 2. Try fetching rider_profiles row
+  // 2. Try fetching rider_profiles row from Supabase
   let profileRow: Record<string, unknown> | null = null;
   try {
-    const { data: profile } = await db
+    const { data: profile, error: profileErr } = await db
       .from('rider_profiles')
       .select('*')
       .eq('user_id', userId)
       .maybeSingle();
-    profileRow = profile;
+    if (!profileErr && profile) {
+      profileRow = profile;
+    }
   } catch (err) {
     console.warn('[profile.service] rider_profiles query fallback:', err);
   }
 
-  // 3. Resilient fallback: If rider_profiles table does not exist or has no row, load from audit_logs
+  // 3. Fallback: Check local persistent store
+  if (!profileRow || Object.keys(profileRow).length === 0) {
+    const localProfiles = readLocalProfiles();
+    if (localProfiles[userId]) {
+      profileRow = localProfiles[userId];
+    }
+  }
+
+  // 4. Fallback: If audit_logs exists, load from latest snapshot
   if (!profileRow || Object.keys(profileRow).length === 0) {
     try {
       const { data: logEntry } = await db
@@ -138,7 +190,10 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
   if (input.city !== undefined) profileRow.city = input.city?.trim() || null;
   if (input.bio !== undefined) profileRow.bio = input.bio?.trim() || null;
 
-  // 3. Try to save to rider_profiles table (check existing -> update or insert)
+  // 3. Immediately persist to local persistent store so data is never lost
+  writeLocalProfile(userId, profileRow);
+
+  // 4. Try to save to Supabase rider_profiles table (if migrated)
   try {
     const { data: existing } = await db
       .from('rider_profiles')
@@ -167,7 +222,7 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
     console.warn('[profile.service] rider_profiles table save attempt:', err);
   }
 
-  // 4. Always save to audit_logs as high-resilience fallback store
+  // 5. Also attempt to save to audit_logs (if available)
   try {
     await db.from('audit_logs').insert({
       user_id: userId,

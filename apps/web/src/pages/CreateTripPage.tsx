@@ -245,56 +245,60 @@ export default function CreateTripPage() {
               </div>
             </div>
 
-            {/* Days & Vehicle Selection */}
-            <div className="responsive-stepper-row" style={styles.twoColGrid}>
-              {/* Days Selector */}
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Number of Days</label>
-                <div style={styles.stepperBox}>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, days: Math.max(1, f.days - 1) }))}
-                    style={styles.stepperBtn}
-                  >
-                    –
-                  </button>
-                  <div style={styles.stepperValue}>
-                    <strong>{form.days}</strong> <span>Day{form.days !== 1 ? 's' : ''}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, days: Math.min(14, f.days + 1) }))}
-                    style={styles.stepperBtn}
-                  >
-                    +
-                  </button>
+            {/* Number of Days */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Number of Days</label>
+              <div style={styles.stepperBox}>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, days: Math.max(1, f.days - 1) }))}
+                  style={styles.stepperBtn}
+                  aria-label="Decrease days"
+                >
+                  –
+                </button>
+                <div style={styles.stepperValue}>
+                  <strong style={{ fontSize: 17, fontWeight: 800 }}>{form.days}</strong>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {form.days === 1 ? 'Day' : 'Days'}
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, days: Math.min(14, f.days + 1) }))}
+                  style={styles.stepperBtn}
+                  aria-label="Increase days"
+                >
+                  +
+                </button>
               </div>
+            </div>
 
-              {/* Vehicle Type */}
-              <div style={styles.fieldGroup}>
-                <label style={styles.label}>Vehicle Type</label>
-                <div style={styles.vehicleGrid}>
-                  {VEHICLES.map(v => {
-                    const isSelected = form.bike_type === v.value;
-                    return (
-                      <button
-                        key={v.value}
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, bike_type: v.value }))}
-                        style={{
-                          ...styles.vehicleBtn,
-                          borderColor: isSelected ? 'var(--accent-cyan)' : 'var(--border-subtle)',
-                          background: isSelected ? 'var(--accent-cyan-bg)' : 'var(--bg-subtle)',
-                          color: isSelected ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                        }}
-                      >
-                        <span style={{ fontSize: 16 }}>{v.icon}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700 }}>{v.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+            {/* Vehicle Type */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Vehicle Type</label>
+              <div className="responsive-vehicle-grid" style={styles.vehicleGrid}>
+                {VEHICLES.map(v => {
+                  const isSelected = form.bike_type === v.value;
+                  return (
+                    <button
+                      key={v.value}
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, bike_type: v.value }))}
+                      className="responsive-vehicle-btn"
+                      style={{
+                        ...styles.vehicleBtn,
+                        borderColor: isSelected ? 'var(--accent-cyan)' : 'var(--border-subtle)',
+                        background: isSelected ? 'var(--accent-cyan-bg)' : 'var(--bg-subtle)',
+                        color: isSelected ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                        boxShadow: isSelected ? '0 0 0 1.5px var(--accent-cyan)' : 'none',
+                      }}
+                    >
+                      <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{v.icon}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{v.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -499,11 +503,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     textAlign: 'center',
   },
-  twoColGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1.6fr',
-    gap: 14,
-  },
   stepperBox: {
     display: 'flex',
     alignItems: 'center',
@@ -511,6 +510,8 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border-input)',
     borderRadius: 10,
     padding: 4,
+    maxWidth: 240,
+    width: '100%',
   },
   stepperBtn: {
     width: 38,
@@ -528,26 +529,34 @@ const styles: Record<string, React.CSSProperties> = {
   },
   stepperValue: {
     flex: 1,
-    textAlign: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    whiteSpace: 'nowrap',
     fontSize: 15,
     color: 'var(--text-primary)',
   },
   vehicleGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 6,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gap: 10,
+    width: '100%',
   },
   vehicleBtn: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    padding: '8px 4px',
-    borderRadius: 10,
-    border: '1px solid',
+    gap: 8,
+    padding: '12px 14px',
+    borderRadius: 12,
+    border: '1.5px solid',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
+    minHeight: 48,
+    width: '100%',
+    boxSizing: 'border-box',
   },
   chipsRow: {
     display: 'flex',
