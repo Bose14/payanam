@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { sendSuccess, sendError } from '../utils/response';
+import { sendSuccess } from '../utils/response';
 import { getProfile, updateProfile, getRiderCard } from '../services/profile.service';
 
 export async function getProfileHandler(req: Request, res: Response, next: NextFunction) {

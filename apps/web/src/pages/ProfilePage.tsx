@@ -16,7 +16,7 @@ const RELATIONS = ['Spouse', 'Parent', 'Sibling', 'Riding Partner', 'Friend', 'O
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<RiderProfile | null>(null);
+  const [, setProfile] = useState<RiderProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState('');

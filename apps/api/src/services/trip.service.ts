@@ -55,9 +55,9 @@ export async function createTrip(userId: string, data: CreateTripData) {
   if (data.to_lat != null) row.to_lat = data.to_lat;
   if (data.to_lng != null) row.to_lng = data.to_lng;
 
-  let { data: trip, error } = await db.from('trips').insert(row).select().single();
-  if (error) {
-    console.warn('[createTrip] Insert with extended columns failed, falling back to base columns:', error.message);
+  const insertRes = await db.from('trips').insert(row).select().single();
+  if (insertRes.error) {
+    console.warn('[createTrip] Insert with extended columns failed, falling back to base columns:', insertRes.error.message);
     const baseRow = {
       title,
       user_id: userId,
@@ -68,9 +68,9 @@ export async function createTrip(userId: string, data: CreateTripData) {
     };
     const retry = await db.from('trips').insert(baseRow).select().single();
     if (retry.error) throw new Error(retry.error.message);
-    trip = retry.data;
+    return retry.data;
   }
-  return trip;
+  return insertRes.data;
 }
 
 export async function getUserTrips(userId: string) {
@@ -221,10 +221,10 @@ export async function saveItinerary(
   }] : [];
 
   const rows = [...startRow, ...midRows, ...endRow];
-  let { error } = await db.from('itinerary_items').insert(rows);
+  const { error } = await db.from('itinerary_items').insert(rows);
   if (error) {
     console.warn('[saveItinerary] insert failed, retrying without lat/lng columns:', error.message);
-    const strippedRows = rows.map(({ lat, lng, ...rest }) => rest);
+    const strippedRows = rows.map(({ lat: _lat, lng: _lng, ...rest }) => rest);
     const retry = await db.from('itinerary_items').insert(strippedRows);
     if (retry.error) {
       console.error('[saveItinerary] insert without lat/lng also failed:', retry.error.message);
