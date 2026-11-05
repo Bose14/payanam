@@ -315,6 +315,17 @@ export async function getRoomPreview(inviteCode: string) {
       .eq('user_id', room.created_by)
       .maybeSingle();
     leaderProfile = lp;
+    if (!leaderProfile) {
+      const { data: fallbackLog } = await db
+        .from('audit_logs')
+        .select('details')
+        .eq('user_id', room.created_by)
+        .eq('action', 'RIDER_PROFILE')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fallbackLog?.details) leaderProfile = fallbackLog.details as Record<string, unknown>;
+    }
   } catch { /* silent fallback */ }
 
   // Count approved members
@@ -393,8 +404,22 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
         .select('user_id, phone, blood_group, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, bike_model, bike_reg_no, city')
         .in('user_id', userIds);
 
-      if (profiles) {
+      if (profiles && profiles.length > 0) {
         profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
+      } else {
+        const { data: logs } = await db
+          .from('audit_logs')
+          .select('user_id, details')
+          .eq('action', 'RIDER_PROFILE')
+          .in('user_id', userIds)
+          .order('created_at', { ascending: false });
+        if (logs) {
+          for (const l of logs) {
+            if (!profilesMap[l.user_id] && l.details) {
+              profilesMap[l.user_id] = l.details as Record<string, unknown>;
+            }
+          }
+        }
       }
     } catch { /* silent */ }
   }
@@ -432,8 +457,22 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
         .select('user_id, phone, blood_group, bike_model, city')
         .in('user_id', userIds);
 
-      if (profiles) {
+      if (profiles && profiles.length > 0) {
         profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
+      } else {
+        const { data: logs } = await db
+          .from('audit_logs')
+          .select('user_id, details')
+          .eq('action', 'RIDER_PROFILE')
+          .in('user_id', userIds)
+          .order('created_at', { ascending: false });
+        if (logs) {
+          for (const l of logs) {
+            if (!profilesMap[l.user_id] && l.details) {
+              profilesMap[l.user_id] = l.details as Record<string, unknown>;
+            }
+          }
+        }
       }
     } catch { /* silent */ }
   }

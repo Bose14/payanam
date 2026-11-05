@@ -66,6 +66,24 @@ export async function getProfile(userId: string): Promise<RiderProfileData> {
     console.warn('[profile.service] rider_profiles query fallback:', err);
   }
 
+  // 3. Resilient fallback: If rider_profiles table does not exist or has no row, load from audit_logs
+  if (!profileRow || Object.keys(profileRow).length === 0) {
+    try {
+      const { data: logEntry } = await db
+        .from('audit_logs')
+        .select('details')
+        .eq('user_id', userId)
+        .eq('action', 'RIDER_PROFILE')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (logEntry?.details && typeof logEntry.details === 'object') {
+        profileRow = logEntry.details as Record<string, unknown>;
+      }
+    } catch { /* silent fallback */ }
+  }
+
   return {
     userId: user.id,
     fullName: user.full_name || '',
@@ -120,16 +138,46 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
   if (input.city !== undefined) profileRow.city = input.city?.trim() || null;
   if (input.bio !== undefined) profileRow.bio = input.bio?.trim() || null;
 
+  // 3. Try to save to rider_profiles table (check existing -> update or insert)
   try {
-    const { error } = await db
+    const { data: existing } = await db
       .from('rider_profiles')
-      .upsert(profileRow, { onConflict: 'user_id' });
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-    if (error) {
-      console.warn('[profile.service] upsert rider_profiles error:', error.message);
+    if (existing?.id) {
+      const { error: updateErr } = await db
+        .from('rider_profiles')
+        .update(profileRow)
+        .eq('user_id', userId);
+      if (updateErr) throw updateErr;
+    } else {
+      const { error: insertErr } = await db
+        .from('rider_profiles')
+        .insert(profileRow);
+      if (insertErr) {
+        const { error: upsertErr } = await db
+          .from('rider_profiles')
+          .upsert(profileRow, { onConflict: 'user_id' });
+        if (upsertErr) throw upsertErr;
+      }
     }
   } catch (err) {
-    console.warn('[profile.service] rider_profiles upsert failed:', err);
+    console.warn('[profile.service] rider_profiles table save attempt:', err);
+  }
+
+  // 4. Always save to audit_logs as high-resilience fallback store
+  try {
+    await db.from('audit_logs').insert({
+      user_id: userId,
+      action: 'RIDER_PROFILE',
+      resource: 'rider_profile',
+      resource_id: userId,
+      details: profileRow,
+    });
+  } catch (err) {
+    console.warn('[profile.service] audit_logs backup save note:', err);
   }
 
   return getProfile(userId);

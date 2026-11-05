@@ -289,7 +289,7 @@ export default function DashboardPage() {
                       <span>{vehicleIcon}</span>
                       <span style={{ textTransform: 'capitalize' }}>{trip.bike_type}</span>
                     </div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <div style={styles.cardHeaderActions}>
                       <span style={{
                         ...styles.statusBadge,
                         background: trip.isJoined ? 'var(--accent-green-bg)' : 'var(--accent-cyan-bg)',
@@ -307,6 +307,7 @@ export default function DashboardPage() {
                           }}
                           disabled={deletingId === trip.id}
                           title="Delete trip"
+                          aria-label="Delete trip"
                           style={styles.cardDeleteBtn}
                         >
                           {deletingId === trip.id ? '⏳' : '🗑️'}
@@ -519,6 +520,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     marginBottom: 12,
     gap: 8,
+    flexWrap: 'wrap',
+  },
+  cardHeaderActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
   },
   vehiclePill: {
     display: 'inline-flex',
@@ -614,7 +622,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    marginLeft: 4,
+    position: 'relative',
     transition: 'background 0.2s ease, transform 0.15s ease',
   },
   emptyCard: {
