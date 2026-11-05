@@ -47,13 +47,13 @@ export default function Navbar() {
   return (
     <>
       <nav style={styles.nav}>
-        <div style={styles.inner}>
+        <div className="navbar-inner" style={styles.inner}>
           {/* Brand */}
           <Link to="/dashboard" style={styles.brand}>
             <span style={styles.logoIcon}>🏍️</span>
             <div>
               <span style={styles.brandTitle}>PAYANAM</span>
-              <span style={styles.brandSub}>Touring & Convoy</span>
+              <span className="navbar-brand-sub" style={styles.brandSub}>Touring & Convoy</span>
             </div>
           </Link>
 
@@ -93,6 +93,7 @@ export default function Navbar() {
             <button
               onClick={cycleMode}
               title={modeTooltip}
+              className="navbar-theme-btn"
               style={{
                 ...styles.themeToggleBtn,
                 background: 'var(--accent-gold-bg)',
@@ -100,11 +101,12 @@ export default function Navbar() {
                 borderColor: 'var(--accent-gold)',
               }}
             >
-              <span>{modeLabel}</span>
+              <span className="desktop-theme-text">{modeLabel}</span>
+              <span className="mobile-theme-icon">{mode === 'auto' ? '⏱️' : mode === 'day' ? '☀️' : '🌙'}</span>
             </button>
 
             {/* Profile Avatar / Passport Link */}
-            <Link to="/profile" style={styles.profileChip} title="Rider Profile & Emergency SOS">
+            <Link to="/profile" className="navbar-profile-chip" style={styles.profileChip} title="Rider Profile & Emergency SOS">
               <div style={styles.avatar}>{initial}</div>
               <span className="navbar-user-name" style={styles.userName}>{firstName}</span>
             </Link>
@@ -112,10 +114,12 @@ export default function Navbar() {
             {/* Sign out */}
             <button
               onClick={handleLogout}
+              className="navbar-logout-btn"
               style={styles.logoutBtn}
               title="Sign out of Payanam"
             >
-              Exit
+              <span style={{ fontSize: 13 }}>🚪</span>
+              <span className="desktop-logout-text">Exit</span>
             </button>
           </div>
         </div>
@@ -323,15 +327,19 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
   },
   logoutBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
     background: 'rgba(239, 68, 68, 0.1)',
     border: '1px solid rgba(239, 68, 68, 0.25)',
     color: '#ef4444',
-    padding: '6px 12px',
+    padding: '6px 10px',
     borderRadius: 8,
     fontSize: 12,
     fontWeight: 700,
     cursor: 'pointer',
     transition: 'all 0.2s',
+    flexShrink: 0,
   },
   modalBackdrop: {
     position: 'fixed',

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { profileService, RiderProfile } from '../services/api';
 import Navbar from '../components/Navbar';
@@ -15,7 +15,8 @@ const RIDING_STYLES = [
 const RELATIONS = ['Spouse', 'Parent', 'Sibling', 'Riding Partner', 'Friend', 'Other'];
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [, setProfile] = useState<RiderProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,11 @@ export default function ProfilePage() {
       .finally(() => setLoading(false));
   }, [user]);
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -92,9 +98,26 @@ export default function ProfilePage() {
         bio,
       });
       setProfile(res.profile);
+      if (res.profile) {
+        setFullName(res.profile.fullName || fullName);
+        setPhone(res.profile.phone || phone);
+        setBloodGroup(res.profile.bloodGroup || bloodGroup);
+        setEmergencyName(res.profile.emergencyContactName || emergencyName);
+        setEmergencyPhone(res.profile.emergencyContactPhone || emergencyPhone);
+        setEmergencyRelation(res.profile.emergencyContactRelation || emergencyRelation);
+        setAllergies(res.profile.allergies || allergies);
+        setMedicalNotes(res.profile.medicalNotes || medicalNotes);
+        setBikeModel(res.profile.bikeModel || bikeModel);
+        setBikeRegNo(res.profile.bikeRegNo || bikeRegNo);
+        setDrivingLicenseNo(res.profile.drivingLicenseNo || drivingLicenseNo);
+        setRidingStyle(res.profile.ridingStyle || ridingStyle);
+        setCity(res.profile.city || city);
+        setBio(res.profile.bio || bio);
+      }
       showNotification('✅ Rider Profile & SOS info saved!');
-    } catch {
-      showNotification('❌ Failed to update profile. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update profile. Please try again.';
+      showNotification(`❌ ${message}`);
     } finally {
       setSaving(false);
     }
@@ -435,6 +458,31 @@ export default function ProfilePage() {
             </div>
           </form>
         )}
+
+        {/* Account & Session Management Card */}
+        <div style={{ ...styles.sectionCard, marginTop: 24, borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+          <div style={styles.sectionHeader}>
+            <div style={{ ...styles.sectionIconAmber, background: 'rgba(239, 68, 68, 0.15)' }}>
+              🚪
+            </div>
+            <div style={{ flex: 1 }}>
+              <h2 style={styles.sectionTitle}>Account & Session</h2>
+              <p style={styles.sectionDesc}>
+                Signed in as <strong>{user?.email}</strong>. Manage your active rider session or log out of this device.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={styles.btnLogoutFull}
+            >
+              🚪 Sign Out of Account
+            </button>
+          </div>
+        </div>
       </main>
 
       {/* SOS Rider Card Digital Modal */}
@@ -448,10 +496,10 @@ export default function ProfilePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 26 }}>🚨</span>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#ffffff' }}>
+                  <h3 style={{ margin: 0, fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: 900, color: '#ffffff' }}>
                     EMERGENCY RIDER CARD
                   </h3>
-                  <span style={{ fontSize: 11, color: '#fca5a5', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  <span style={{ fontSize: 10, color: '#fca5a5', textTransform: 'uppercase', letterSpacing: 1 }}>
                     Payanam Convoy Safety Passport
                   </span>
                 </div>
@@ -459,17 +507,18 @@ export default function ProfilePage() {
               <button
                 onClick={() => setShowSosModal(false)}
                 style={styles.modalCloseBtn}
+                title="Close"
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ padding: '24px 20px', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+            <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(14px, 3vw, 20px)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
               {/* Highlight Row: Rider Name + Blood Group */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16 }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>RIDER NAME</div>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--text-primary)' }}>{fullName || 'Rider'}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 140 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 0.5 }}>RIDER NAME</div>
+                  <div style={{ fontSize: 'clamp(17px, 4vw, 20px)', fontWeight: 900, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{fullName || 'Rider'}</div>
                 </div>
                 <div style={styles.bloodBadgeLarge}>
                   🩸 {bloodGroup || 'UNKNOWN'}
@@ -478,17 +527,17 @@ export default function ProfilePage() {
 
               {/* Emergency Contact Row */}
               <div style={styles.sosDataBox}>
-                <div style={{ fontSize: 12, color: '#ef4444', fontWeight: 800, marginBottom: 4 }}>
+                <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 800, marginBottom: 4, letterSpacing: 0.5 }}>
                   🚨 PRIMARY EMERGENCY CONTACT
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                   {emergencyName || 'Not Set'} ({emergencyRelation || 'Contact'})
                 </div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--accent-cyan)', marginTop: 4 }}>
+                <div style={{ fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: 900, color: 'var(--accent-cyan)', marginTop: 4, wordBreak: 'break-all' }}>
                   {emergencyPhone || 'No Phone Number Added'}
                 </div>
                 {emergencyPhone && (
-                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 12 }}>
                     <a
                       href={`tel:${emergencyPhone}`}
                       style={styles.btnSosCall}
@@ -507,11 +556,11 @@ export default function ProfilePage() {
               </div>
 
               {/* Bike & Medical Specs */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: 12, marginTop: 16 }}>
                 <div style={styles.sosSmallBox}>
                   <div style={styles.sosSmallLabel}>MOTORCYCLE</div>
                   <div style={styles.sosSmallVal}>{bikeModel || 'N/A'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--accent-gold)', fontWeight: 800, marginTop: 2 }}>
+                  <div style={{ fontSize: 12, color: 'var(--accent-gold)', fontWeight: 800, marginTop: 2, wordBreak: 'break-all' }}>
                     {bikeRegNo || 'No Plate'}
                   </div>
                 </div>
@@ -527,7 +576,7 @@ export default function ProfilePage() {
               {medicalNotes && (
                 <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg-subtle)', borderRadius: 8 }}>
                   <div style={styles.sosSmallLabel}>MEDICAL NOTES / CONDITIONS</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>{medicalNotes}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2, wordBreak: 'break-word' }}>{medicalNotes}</div>
                 </div>
               )}
             </div>
@@ -831,21 +880,32 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
     border: '2px solid #ef4444',
+    maxHeight: '92vh',
+    overflowY: 'auto',
   },
   sosCardHeader: {
     background: 'linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%)',
-    padding: '18px 20px',
+    padding: '16px 20px',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   modalCloseBtn: {
-    background: 'none',
+    width: 32,
+    height: 32,
+    borderRadius: '50%',
+    background: 'rgba(255, 255, 255, 0.2)',
     border: 'none',
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: 800,
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    lineHeight: 1,
   },
   bloodBadgeLarge: {
     padding: '8px 16px',
@@ -855,6 +915,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 18,
     fontWeight: 900,
     letterSpacing: 1,
+    flexShrink: 0,
+  },
+  btnLogoutFull: {
+    padding: '12px 24px',
+    background: '#dc2626',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 800,
+    cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
   },
   sosDataBox: {
     background: 'rgba(239, 68, 68, 0.08)',
