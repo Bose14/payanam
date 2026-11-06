@@ -63,9 +63,27 @@ export function getLocalRequestByRoomAndUser(roomId: string, userId: string): Lo
   return Object.values(all).find((r) => r.room_id === roomId && r.user_id === userId);
 }
 
+export function getLocalRequestByTripAndUser(tripId: string, userId: string): LocalRoomRequest | undefined {
+  const all = readLocalRequests();
+  return Object.values(all).find((r) => r.trip_id === tripId && r.user_id === userId);
+}
+
 export function getLocalRequestsForRoom(roomId: string): LocalRoomRequest[] {
   const all = readLocalRequests();
   return Object.values(all).filter((r) => r.room_id === roomId);
+}
+
+export function getLocalRequestsForTrip(tripId: string): LocalRoomRequest[] {
+  const all = readLocalRequests();
+  return Object.values(all).filter((r) => r.trip_id === tripId);
+}
+
+export function getLocalApprovedTripsForUser(userId: string): string[] {
+  const all = readLocalRequests();
+  return Object.values(all)
+    .filter((r) => r.user_id === userId && r.status === 'approved' && r.role !== 'owner')
+    .map((r) => r.trip_id)
+    .filter(Boolean);
 }
 
 export function updateLocalRequestStatus(identifier: string, status: 'pending' | 'approved' | 'rejected'): boolean {

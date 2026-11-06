@@ -5,7 +5,10 @@ import {
   writeLocalRequest,
   readLocalRequests,
   getLocalRequestByRoomAndUser,
+  getLocalRequestByTripAndUser,
   getLocalRequestsForRoom,
+  getLocalRequestsForTrip,
+  getLocalApprovedTripsForUser,
   updateLocalRequestStatus,
   LocalRoomRequest,
 } from './roomRequest.service';
@@ -82,62 +85,191 @@ export async function createTrip(userId: string, data: CreateTripData) {
   return insertRes.data;
 }
 
+export async function assertUserTripMembership(
+  tripId: string,
+  userId: string
+): Promise<{ isOwner: boolean; status: 'approved' | 'pending' | 'rejected' | 'none' }> {
+  const db = getDatabase();
+
+  // 1. Check if user is trip owner
+  const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
+  if (!trip) return { isOwner: false, status: 'none' };
+  if (trip.user_id === userId) return { isOwner: true, status: 'approved' };
+
+  // 2. Check local requests store by trip_id and user_id
+  const localReq = getLocalRequestByTripAndUser(tripId, userId);
+  if (localReq) {
+    if (localReq.status === 'approved') return { isOwner: false, status: 'approved' };
+    if (localReq.status === 'pending') return { isOwner: false, status: 'pending' };
+    if (localReq.status === 'rejected') return { isOwner: false, status: 'rejected' };
+  }
+
+  // 3. Find rooms for this trip
+  const { data: rooms } = await db.from('rooms').select('id').eq('trip_id', tripId);
+  const roomIds = (rooms ?? []).map((r) => r.id);
+
+  if (roomIds.length > 0) {
+    // Check local store by room_id and user_id
+    for (const rid of roomIds) {
+      const byRoom = getLocalRequestByRoomAndUser(rid, userId);
+      if (byRoom) {
+        if (byRoom.status === 'approved') return { isOwner: false, status: 'approved' };
+        if (byRoom.status === 'pending') return { isOwner: false, status: 'pending' };
+        if (byRoom.status === 'rejected') return { isOwner: false, status: 'rejected' };
+      }
+    }
+
+    // Check room_members in DB
+    try {
+      const { data: members, error } = await db
+        .from('room_members')
+        .select('id, role, status')
+        .in('room_id', roomIds)
+        .eq('user_id', userId);
+
+      if (!error && members && members.length > 0) {
+        const m = members[0];
+        if (m.status === 'pending') return { isOwner: false, status: 'pending' };
+        if (m.status === 'rejected') return { isOwner: false, status: 'rejected' };
+        return { isOwner: false, status: 'approved' };
+      }
+    } catch {
+      // If status column doesn't exist, try querying without status
+      try {
+        const { data: fallbackMembers } = await db
+          .from('room_members')
+          .select('id, role')
+          .in('room_id', roomIds)
+          .eq('user_id', userId);
+
+        if (fallbackMembers && fallbackMembers.length > 0) {
+          return { isOwner: false, status: 'approved' };
+        }
+      } catch { /* silent */ }
+    }
+  }
+
+  // 4. Check audit_logs snapshot in Supabase
+  try {
+    const { data: auditLogs } = await db
+      .from('audit_logs')
+      .select('details')
+      .eq('user_id', userId)
+      .eq('action', 'ROOM_REQUEST')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    for (const log of auditLogs ?? []) {
+      const det = log.details as Record<string, unknown> | null;
+      if (det && det.trip_id === tripId) {
+        if (det.status === 'approved') return { isOwner: false, status: 'approved' };
+        if (det.status === 'pending') return { isOwner: false, status: 'pending' };
+        if (det.status === 'rejected') return { isOwner: false, status: 'rejected' };
+      }
+    }
+  } catch { /* silent */ }
+
+  return { isOwner: false, status: 'none' };
+}
+
 export async function getUserTrips(userId: string) {
   const db = getDatabase();
 
   // Trips the user owns
-  const { data: ownedTrips, error } = await db
+  const { data: rawOwnedTrips, error } = await db
     .from('trips')
-    .select('*, rooms(id, invite_code)')
+    .select('*')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
 
-  // Step 1: get room_ids where user is an approved member (not owner)
-  const { data: memberships } = await db
-    .from('room_members')
-    .select('room_id')
-    .eq('user_id', userId)
-    .eq('status', 'approved')
-    .neq('role', 'owner');
+  const ownedTrips = rawOwnedTrips ?? [];
+  const ownedTripIds = ownedTrips.map((t) => t.id);
+
+  // Fetch rooms for owned trips cleanly
+  if (ownedTripIds.length > 0) {
+    try {
+      const { data: rooms } = await db.from('rooms').select('id, invite_code, trip_id').in('trip_id', ownedTripIds);
+      (ownedTrips as Array<Record<string, unknown>>).forEach((t) => {
+        t.rooms = (rooms ?? []).filter((r) => r.trip_id === t.id);
+      });
+    } catch { /* silent */ }
+  }
+
+  // Step 1: get joined trip IDs from Supabase room_members
+  const joinedTripIdSet = new Set<string>();
+
+  try {
+    const { data: memberships } = await db
+      .from('room_members')
+      .select('room_id, role, status')
+      .eq('user_id', userId)
+      .neq('role', 'owner');
+
+    const validRoomIds = (memberships ?? [])
+      .filter((m: any) => m.status !== 'pending' && m.status !== 'rejected')
+      .map((m: any) => m.room_id);
+
+    if (validRoomIds.length > 0) {
+      const { data: rooms } = await db.from('rooms').select('id, trip_id').in('id', validRoomIds);
+      (rooms ?? []).forEach((r: any) => { if (r.trip_id) joinedTripIdSet.add(r.trip_id); });
+    }
+  } catch (err) {
+    console.warn('[getUserTrips] room_members fetch error:', err);
+  }
+
+  // Step 2: get joined trip IDs from local approved requests
+  const localApprovedTrips = getLocalApprovedTripsForUser(userId);
+  localApprovedTrips.forEach((tid) => joinedTripIdSet.add(tid));
+
+  // Step 3: get joined trip IDs from audit_logs
+  try {
+    const { data: auditLogs } = await db
+      .from('audit_logs')
+      .select('details')
+      .eq('user_id', userId)
+      .eq('action', 'ROOM_REQUEST')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    for (const log of auditLogs ?? []) {
+      const det = log.details as Record<string, unknown> | null;
+      if (det && det.status === 'approved' && det.trip_id) {
+        joinedTripIdSet.add(det.trip_id as string);
+      }
+    }
+  } catch { /* silent */ }
+
+  // Exclude owned trips from joined trips
+  ownedTripIds.forEach((tid) => joinedTripIdSet.delete(tid));
 
   const joinedTrips: unknown[] = [];
+  const joinedTripIds = Array.from(joinedTripIdSet);
 
-  if (memberships && memberships.length > 0) {
-    const roomIds = memberships.map((m) => m.room_id);
+  if (joinedTripIds.length > 0) {
+    try {
+      const { data: tripData } = await db.from('trips').select('*').in('id', joinedTripIds);
+      const { data: rooms } = await db.from('rooms').select('id, invite_code, trip_id').in('trip_id', joinedTripIds);
 
-    // Step 2: get rooms to find trip_ids
-    const { data: rooms } = await db
-      .from('rooms')
-      .select('id, invite_code, trip_id')
-      .in('id', roomIds);
-
-    if (rooms && rooms.length > 0) {
-      const tripIds = rooms.map((r) => r.trip_id);
-
-      // Step 3: get the actual trips
-      const { data: tripData } = await db
-        .from('trips')
-        .select('*')
-        .in('id', tripIds);
-
-      (tripData ?? []).forEach((t) => {
-        const room = rooms.find((r) => r.trip_id === t.id);
+      (tripData ?? []).forEach((t: any) => {
+        const tripRooms = (rooms ?? []).filter((r: any) => r.trip_id === t.id);
         joinedTrips.push({
           ...t,
-          rooms: room ? [{ id: room.id, invite_code: room.invite_code }] : [],
+          rooms: tripRooms,
           isOwner: false,
           isJoined: true,
         });
       });
+    } catch (err) {
+      console.warn('[getUserTrips] joined trips query error:', err);
     }
   }
 
-  console.log(`[getUserTrips] userId=${userId} owned=${ownedTrips?.length ?? 0} joined=${joinedTrips.length}`);
+  console.log(`[getUserTrips] userId=${userId} owned=${ownedTrips.length} joined=${joinedTrips.length}`);
   const pendingCounts = await getPendingRequestsCount(userId);
 
   return [
-    ...(ownedTrips ?? []).map((t) => ({
+    ...ownedTrips.map((t) => ({
       ...t,
       isOwner: true,
       pendingRequestCount: pendingCounts[t.id] ?? 0,
@@ -149,34 +281,28 @@ export async function getUserTrips(userId: string) {
 export async function getTripById(tripId: string, userId: string) {
   const db = getDatabase();
 
-  // Try as owner first
-  const { data: ownerTrip } = await db
-    .from('trips')
-    .select('*, rooms(id, invite_code)')
-    .eq('id', tripId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const authCheck = await assertUserTripMembership(tripId, userId);
+  if (authCheck.status === 'pending') throw new Error('PENDING');
+  if (authCheck.status === 'rejected') throw new Error('REJECTED');
+  if (authCheck.status === 'none') throw new Error('Trip not found');
 
-  if (ownerTrip) {
-    const { data: items } = await db.from('itinerary_items').select('*').eq('trip_id', tripId).order('day_number').order('order_index');
-    return { ...ownerTrip, itinerary: items ?? [], isOwner: true };
-  }
-
-  // Try as approved room member
-  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
-  if (!room) throw new Error('Trip not found');
-
-  const { data: membership } = await db.from('room_members').select('status').eq('room_id', room.id).eq('user_id', userId).maybeSingle();
-
-  if (!membership) throw new Error('Trip not found');
-  if (membership.status === 'pending') throw new Error('PENDING');
-  if (membership.status === 'rejected') throw new Error('REJECTED');
-
-  const { data: trip, error } = await db.from('trips').select('*, rooms(id, invite_code)').eq('id', tripId).single();
+  const { data: trip, error } = await db.from('trips').select('*').eq('id', tripId).maybeSingle();
   if (error || !trip) throw new Error('Trip not found');
 
-  const { data: items } = await db.from('itinerary_items').select('*').eq('trip_id', tripId).order('day_number').order('order_index');
-  return { ...trip, itinerary: items ?? [], isOwner: false };
+  const { data: rooms } = await db.from('rooms').select('id, invite_code').eq('trip_id', tripId);
+  const { data: items } = await db
+    .from('itinerary_items')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('day_number')
+    .order('order_index');
+
+  return {
+    ...trip,
+    rooms: rooms ?? [],
+    itinerary: items ?? [],
+    isOwner: authCheck.isOwner,
+  };
 }
 
 export async function saveItinerary(
@@ -296,37 +422,47 @@ export async function joinRoom(inviteCode: string, userId: string) {
     return { room, memberStatus: 'owner', isNew: false };
   }
 
-  // 2. Check if already in Supabase
-  const { data: existing } = await db
-    .from('room_members')
-    .select('id, status, role')
-    .eq('room_id', room.id)
-    .eq('user_id', userId)
-    .maybeSingle();
+  // Fetch joining user profile info
+  let userDetails: { full_name: string; email: string; avatar_url?: string | null } | null = null;
+  try {
+    const { data: u } = await db.from('users').select('full_name, email, avatar_url').eq('id', userId).maybeSingle();
+    if (u) userDetails = { full_name: u.full_name || 'Rider', email: u.email || '', avatar_url: u.avatar_url };
+  } catch { /* silent */ }
 
-  if (existing) {
-    if (existing.status === 'rejected') {
-      // Re-requesting after previous rejection: reset to pending
-      await db.from('room_members').update({ status: 'pending' }).eq('id', existing.id);
-      writeLocalRequest({
-        id: existing.id,
-        room_id: room.id,
-        trip_id: tripId,
-        user_id: userId,
-        status: 'pending',
-        role: 'member',
-        joined_at: new Date().toISOString(),
-      });
-      return { room, memberStatus: 'pending', isNew: true };
+  // 2. Check if already in Supabase
+  try {
+    const { data: existing } = await db
+      .from('room_members')
+      .select('id, status, role')
+      .eq('room_id', room.id)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existing) {
+      if (existing.status === 'rejected') {
+        // Re-requesting after previous rejection: reset to pending
+        try { await db.from('room_members').update({ status: 'pending' }).eq('id', existing.id); } catch { /* silent */ }
+        writeLocalRequest({
+          id: existing.id,
+          room_id: room.id,
+          trip_id: tripId,
+          user_id: userId,
+          status: 'pending',
+          role: 'member',
+          joined_at: new Date().toISOString(),
+          users: userDetails,
+        });
+        return { room, memberStatus: 'pending', isNew: true };
+      }
+      return { room, memberStatus: existing.status ?? 'approved', isNew: false };
     }
-    return { room, memberStatus: existing.status ?? 'approved', isNew: false };
-  }
+  } catch { /* silent */ }
 
   // 3. Check local fallback
   const localReq = getLocalRequestByRoomAndUser(room.id, userId);
   if (localReq) {
     if (localReq.status === 'rejected') {
-      const updatedReq: LocalRoomRequest = { ...localReq, status: 'pending', joined_at: new Date().toISOString() };
+      const updatedReq: LocalRoomRequest = { ...localReq, status: 'pending', joined_at: new Date().toISOString(), users: userDetails ?? localReq.users };
       writeLocalRequest(updatedReq);
       return { room, memberStatus: 'pending', isNew: true };
     }
@@ -353,6 +489,7 @@ export async function joinRoom(inviteCode: string, userId: string) {
         status: 'pending',
         role: 'member',
         joined_at: new Date().toISOString(),
+        users: userDetails,
       });
     }
   } catch (err) {
@@ -368,8 +505,26 @@ export async function joinRoom(inviteCode: string, userId: string) {
       status: 'pending',
       role: 'member',
       joined_at: new Date().toISOString(),
+      users: userDetails,
     });
   }
+
+  // Backup pending request to audit_logs
+  try {
+    await db.from('audit_logs').insert({
+      user_id: userId,
+      action: 'ROOM_REQUEST',
+      resource: 'rooms',
+      resource_id: room.id,
+      details: {
+        trip_id: tripId,
+        user_id: userId,
+        role: 'member',
+        status: 'pending',
+        member_name: userDetails?.full_name ?? '',
+      },
+    });
+  } catch { /* silent */ }
 
   return { room, memberStatus: 'pending', isNew: true };
 }
@@ -498,30 +653,93 @@ export async function getRoomPreview(inviteCode: string) {
 
 export async function getApprovedMembers(tripId: string, currentUserId: string) {
   const db = getDatabase();
-  const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
-  if (!trip) throw new Error('Trip not found');
 
-  if (trip.user_id !== currentUserId) {
-    const { data: roomCheck } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
-    if (!roomCheck) throw new Error('Not authorized');
-    const { data: memberCheck } = await db.from('room_members').select('status').eq('room_id', roomCheck.id).eq('user_id', currentUserId).maybeSingle();
-    if (!memberCheck || memberCheck.status !== 'approved') throw new Error('Not authorized');
+  const auth = await assertUserTripMembership(tripId, currentUserId);
+  if (auth.status !== 'approved') throw new Error('Not authorized');
+
+  const { data: rooms } = await db.from('rooms').select('id').eq('trip_id', tripId);
+  const roomIds = (rooms ?? []).map((r) => r.id);
+
+  let dbMembers: Array<{
+    id: string;
+    user_id: string;
+    role: string;
+    status: string;
+    joined_at: string;
+    users?: { full_name: string; email: string; avatar_url?: string | null } | null;
+  }> = [];
+
+  if (roomIds.length > 0) {
+    try {
+      const { data: members, error } = await db
+        .from('room_members')
+        .select('id, user_id, role, status, joined_at, users(full_name, email, avatar_url)')
+        .in('room_id', roomIds)
+        .neq('role', 'owner');
+
+      if (!error && members) {
+        dbMembers = (members as any[]).filter((m) => m.status !== 'pending' && m.status !== 'rejected');
+      }
+    } catch {
+      try {
+        const { data: fallbackMembers } = await db
+          .from('room_members')
+          .select('id, user_id, role, joined_at, users(full_name, email, avatar_url)')
+          .in('room_id', roomIds)
+          .neq('role', 'owner');
+
+        if (fallbackMembers) {
+          dbMembers = fallbackMembers.map((m: any) => ({ ...m, status: 'approved' }));
+        }
+      } catch { /* silent */ }
+    }
   }
 
-  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).single();
-  if (!room) return [];
+  // Merge local approved requests
+  const localReqs = getLocalRequestsForTrip(tripId).filter(
+    (r) => r.status === 'approved' && r.role !== 'owner'
+  );
+  if (roomIds.length > 0) {
+    for (const rid of roomIds) {
+      const rReqs = getLocalRequestsForRoom(rid).filter(
+        (r) => r.status === 'approved' && r.role !== 'owner'
+      );
+      localReqs.push(...rReqs);
+    }
+  }
 
-  const { data: members, error } = await db
-    .from('room_members')
-    .select('id, user_id, role, status, joined_at, users(full_name, email, avatar_url)')
-    .eq('room_id', room.id)
-    .eq('status', 'approved')
-    .neq('role', 'owner');
+  const seenUserIds = new Set(dbMembers.map((m) => m.user_id));
+  const seenMemberIds = new Set(dbMembers.map((m) => m.id));
 
-  if (error) throw new Error(error.message);
+  for (const lr of localReqs) {
+    if (!seenUserIds.has(lr.user_id) && !seenMemberIds.has(lr.id)) {
+      dbMembers.push({
+        id: lr.id,
+        user_id: lr.user_id,
+        role: lr.role,
+        status: lr.status,
+        joined_at: lr.joined_at,
+        users: lr.users ?? null,
+      });
+      seenUserIds.add(lr.user_id);
+      seenMemberIds.add(lr.id);
+    }
+  }
+
+  // Ensure all members have user name/email info
+  for (const m of dbMembers) {
+    if (!m.users?.full_name || !m.users?.email) {
+      try {
+        const { data: u } = await db.from('users').select('full_name, email, avatar_url').eq('id', m.user_id).maybeSingle();
+        if (u) {
+          m.users = { full_name: u.full_name || 'Rider', email: u.email || '', avatar_url: u.avatar_url };
+        }
+      } catch { /* silent */ }
+    }
+  }
 
   // Enrich with rider profiles if available
-  const userIds = (members ?? []).map((m) => m.user_id);
+  const userIds = dbMembers.map((m) => m.user_id);
   let profilesMap: Record<string, Record<string, unknown>> = {};
   if (userIds.length > 0) {
     try {
@@ -556,7 +774,7 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
     } catch { /* silent */ }
   }
 
-  return (members ?? []).map((m) => ({
+  return dbMembers.map((m) => ({
     ...m,
     profile: profilesMap[m.user_id] ?? null,
   }));
@@ -677,8 +895,19 @@ export async function respondToRequest(roomMemberId: string, action: 'approved' 
       const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
       if (!trip) throw new Error('Not authorized');
     }
-    await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
+    try {
+      await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
+    } catch { /* status column might not exist */ }
     updateLocalRequestStatus(roomMemberId, action);
+    try {
+      await db.from('audit_logs').insert({
+        user_id: member.user_id,
+        action: 'ROOM_REQUEST',
+        resource: 'rooms',
+        resource_id: member.room_id,
+        details: { trip_id: tripId, user_id: member.user_id, role: 'member', status: action },
+      });
+    } catch { /* silent */ }
     return;
   }
 
@@ -692,17 +921,49 @@ export async function respondToRequest(roomMemberId: string, action: 'approved' 
 
   updateLocalRequestStatus(localTarget.id, action);
 
-  // If approved, try inserting into room_members in DB as approved
-  if (action === 'approved') {
-    try {
+  // Sync to room_members in DB
+  try {
+    const upsertRes = await db.from('room_members').upsert({
+      room_id: localTarget.room_id,
+      user_id: localTarget.user_id,
+      role: 'member',
+      status: action,
+    });
+    if (upsertRes.error && action === 'approved') {
       await db.from('room_members').upsert({
         room_id: localTarget.room_id,
         user_id: localTarget.user_id,
         role: 'member',
-        status: 'approved',
       });
-    } catch { /* silent fallback */ }
+    }
+  } catch {
+    if (action === 'approved') {
+      try {
+        await db.from('room_members').upsert({
+          room_id: localTarget.room_id,
+          user_id: localTarget.user_id,
+          role: 'member',
+        });
+      } catch { /* silent */ }
+    }
   }
+
+  // Backup to audit_logs
+  try {
+    await db.from('audit_logs').insert({
+      user_id: localTarget.user_id,
+      action: 'ROOM_REQUEST',
+      resource: 'rooms',
+      resource_id: localTarget.room_id,
+      details: {
+        trip_id: localTarget.trip_id,
+        user_id: localTarget.user_id,
+        role: 'member',
+        status: action,
+        member_name: localTarget.users?.full_name ?? '',
+      },
+    });
+  } catch { /* silent */ }
 }
 
 export async function getPendingRequestsCount(userId: string): Promise<Record<string, number>> {
@@ -789,8 +1050,9 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   lat?: number; lng?: number;
 }>) {
   const db = getDatabase();
-  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', userId).single();
-  if (!trip) throw new Error('Trip not found');
+  const auth = await assertUserTripMembership(tripId, userId);
+  if (auth.status !== 'approved') throw new Error('Not authorized');
+
   await db.from('itinerary_items').delete().eq('trip_id', tripId);
   if (stops.length > 0) {
     const { error } = await db.from('itinerary_items').insert(
@@ -800,40 +1062,103 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   }
 }
 
+export async function addStopToTrip(
+  tripId: string,
+  userId: string,
+  stop: {
+    place: string;
+    item_type?: string;
+    description?: string;
+    day_number?: number;
+    order_index?: number;
+    lat?: number | null;
+    lng?: number | null;
+  }
+) {
+  const db = getDatabase();
+  const auth = await assertUserTripMembership(tripId, userId);
+  if (auth.status !== 'approved') throw new Error('Not authorized');
+
+  let day = stop.day_number ?? 1;
+  const { data: existingStops } = await db
+    .from('itinerary_items')
+    .select('day_number, order_index')
+    .eq('trip_id', tripId)
+    .order('day_number', { ascending: false })
+    .order('order_index', { ascending: false });
+
+  let orderIndex = 1;
+  if (existingStops && existingStops.length > 0) {
+    if (!stop.day_number) {
+      day = existingStops[0].day_number;
+    }
+    const dayStops = existingStops.filter((s) => s.day_number === day);
+    if (dayStops.length > 0) {
+      orderIndex = Math.max(...dayStops.map((s) => s.order_index)) + 1;
+    }
+  }
+
+  const { data, error } = await db
+    .from('itinerary_items')
+    .insert({
+      trip_id: tripId,
+      day_number: day,
+      order_index: stop.order_index ?? orderIndex,
+      place: stop.place,
+      item_type: stop.item_type || 'stop',
+      description: stop.description || 'Added from chat/live',
+      estimated_km: 0,
+      duration_hours: 1,
+      tips: '',
+      lat: stop.lat ?? null,
+      lng: stop.lng ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // Retry without lat/lng if column issues exist
+    const { data: retryData, error: retryErr } = await db
+      .from('itinerary_items')
+      .insert({
+        trip_id: tripId,
+        day_number: day,
+        order_index: stop.order_index ?? orderIndex,
+        place: stop.place,
+        item_type: stop.item_type || 'stop',
+        description: stop.description || 'Added from chat/live',
+        estimated_km: 0,
+        duration_hours: 1,
+        tips: '',
+      })
+      .select()
+      .single();
+    if (retryErr) throw new Error(retryErr.message);
+    return retryData;
+  }
+  return data;
+}
+
 export async function getAllTripParticipants(tripId: string, userId: string) {
   const db = getDatabase();
+
+  const auth = await assertUserTripMembership(tripId, userId);
+  if (auth.status !== 'approved') throw new Error('Not authorized');
 
   const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
   if (!trip) throw new Error('Trip not found');
 
-  if (trip.user_id !== userId) {
-    const { data: roomCheck } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
-    if (!roomCheck) throw new Error('Not authorized');
-    const { data: memberCheck } = await db.from('room_members').select('status').eq('room_id', roomCheck.id).eq('user_id', userId).maybeSingle();
-    if (!memberCheck || memberCheck.status !== 'approved') throw new Error('Not authorized');
-  }
-
   const { data: owner } = await db.from('users').select('id, full_name, email').eq('id', trip.user_id).single();
-  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
-  const coRiders: Array<{ id: string; full_name: string; email: string }> = [];
-
-  if (room) {
-    const { data: members } = await db
-      .from('room_members')
-      .select('user_id, users(id, full_name, email)')
-      .eq('room_id', room.id)
-      .eq('status', 'approved')
-      .neq('role', 'owner');
-
-    (members ?? []).forEach((m: unknown) => {
-      const member = m as { users: { id: string; full_name: string; email: string } | null };
-      if (member.users) coRiders.push(member.users);
-    });
-  }
+  const approved = await getApprovedMembers(tripId, userId);
 
   return [
     { id: owner!.id, full_name: owner!.full_name ?? 'Lead Rider', email: owner!.email, role: 'owner' as const },
-    ...coRiders.map(r => ({ ...r, role: 'member' as const })),
+    ...approved.map((m) => ({
+      id: m.user_id,
+      full_name: m.users?.full_name ?? 'Rider',
+      email: m.users?.email ?? '',
+      role: 'member' as const,
+    })),
   ];
 }
 

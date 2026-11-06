@@ -6,6 +6,7 @@ import TripMap from '../components/TripMap';
 import PlaceInput from '../components/PlaceInput';
 import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
+import NavigationAppModal from '../components/NavigationAppModal';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: '⛽',
@@ -168,6 +169,8 @@ export default function TripDetailPage() {
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
+  const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [showNavModal, setShowNavModal] = useState(false);
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -807,6 +810,45 @@ export default function TripDetailPage() {
                                     <span style={{ ...styles.itemTypeBadge, background: badge.bg, color: badge.color }}>
                                       {stop.item_type.replace('_', ' ')}
                                     </span>
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        let targetLat = stop.lat;
+                                        let targetLng = stop.lng;
+                                        if (!targetLat || !targetLng) {
+                                          showToast(`Finding GPS coordinates for ${stop.place}...`);
+                                          const coords = await geocodePlace(stop.place);
+                                          if (coords) {
+                                            targetLat = coords.lat;
+                                            targetLng = coords.lng;
+                                          }
+                                        }
+                                        if (targetLat && targetLng) {
+                                          setNavTarget({ name: stop.place, lat: targetLat, lng: targetLng });
+                                          setShowNavModal(true);
+                                        } else {
+                                          showToast('Could not find GPS coordinates for this stop');
+                                        }
+                                      }}
+                                      style={{
+                                        background: 'rgba(59, 130, 246, 0.15)',
+                                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                                        color: '#60a5fa',
+                                        borderRadius: 6,
+                                        padding: '2px 8px',
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        marginLeft: 'auto',
+                                      }}
+                                      title="Open in Maps"
+                                    >
+                                      🧭 Nav
+                                    </button>
                                     {trip?.isOwner && (
                                       <button
                                         onClick={() => removeStop(stop.day_number, stop.order_index)}
@@ -964,6 +1006,13 @@ export default function TripDetailPage() {
           </div>
         </div>
       )}
+
+      {/* External Navigation Launcher Modal */}
+      <NavigationAppModal
+        isOpen={showNavModal}
+        onClose={() => setShowNavModal(false)}
+        target={navTarget}
+      />
     </div>
   );
 }

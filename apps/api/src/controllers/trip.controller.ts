@@ -13,6 +13,7 @@ import {
   respondToRequest,
   getApprovedMembers,
   updateItinerary,
+  addStopToTrip,
   deleteTrip,
   getAllTripParticipants,
   removeMember,
@@ -94,6 +95,23 @@ export async function updateItineraryHandler(req: Request, res: Response, next: 
     if (!Array.isArray(stops)) return sendError(res, 'stops array required', 400, 'VALIDATION_ERROR');
     await updateItinerary(req.params.id, req.userId!, stops);
     return sendSuccess(res, { message: 'Itinerary updated' });
+  } catch (err) { next(err); }
+}
+
+export async function addStopHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { place, item_type, description, day_number, order_index, lat, lng } = req.body;
+    if (!place || typeof place !== 'string') return sendError(res, 'place is required', 400, 'VALIDATION_ERROR');
+    const stop = await addStopToTrip(req.params.id, req.userId!, {
+      place: place.trim(),
+      item_type,
+      description,
+      day_number,
+      order_index,
+      lat,
+      lng,
+    });
+    return sendSuccess(res, { stop, message: 'Stop added to itinerary' }, 201);
   } catch (err) { next(err); }
 }
 
