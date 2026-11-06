@@ -231,26 +231,17 @@ html, body {
   .navbar-theme-btn {
     padding: 6px 10px !important;
     font-size: 14px !important;
-    min-width: 34px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
     justify-content: center !important;
   }
 
+  /* On mobile screens, hide the redundant Exit button from top header to keep header spacious; logout is cleanly placed in Profile */
   .navbar-logout-btn {
-    padding: 6px 8px !important;
-    font-size: 14px !important;
-    min-width: 34px !important;
-    justify-content: center !important;
-  }
-
-  .navbar-join-label {
     display: none !important;
-  }
-
-  .navbar-join-btn {
-    padding: 6px 10px !important;
-    font-size: 13px !important;
-    min-width: 34px !important;
-    justify-content: center !important;
   }
 
   .mobile-bottom-nav {
@@ -259,18 +250,18 @@ html, body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    height: calc(62px + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 4px);
     background: var(--bg-nav);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-nav);
     z-index: 9999;
     align-items: center;
     justify-content: space-around;
-    padding-left: 8px;
-    padding-right: 8px;
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+    padding-left: 12px;
+    padding-right: 12px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.18);
   }
 
   /* Shift deployment / Netlify badge above bottom nav bar */
@@ -294,22 +285,63 @@ html, body {
     gap: 3px;
     text-decoration: none;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-secondary);
     background: transparent;
     border: none;
     cursor: pointer;
     padding: 6px 0;
+    position: relative;
     transition: color 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-nav-item:active {
+    transform: scale(0.92);
+  }
+
+  .mobile-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 28px;
+    border-radius: 14px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mobile-nav-item.active .mobile-nav-icon-wrap {
+    background: var(--accent-gold-bg);
+    color: var(--accent-gold);
   }
 
   .mobile-nav-item.active {
     color: var(--accent-gold);
   }
 
-  .mobile-nav-icon {
-    font-size: 18px;
-    line-height: 1;
+  .mobile-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--accent-gold);
+    box-shadow: 0 1px 8px var(--accent-gold);
+  }
+
+  .mobile-nav-item span:last-child {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    transition: font-weight 0.15s ease;
+  }
+
+  .mobile-nav-item.active span:last-child {
+    font-weight: 800;
   }
 
   /* Responsive Main Page Container */
@@ -355,6 +387,12 @@ html, body {
   .responsive-route-row {
     flex-direction: column !important;
     align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  /* Responsive Trip Type on Mobile */
+  .responsive-trip-type-grid {
+    grid-template-columns: 1fr !important;
     gap: 8px !important;
   }
 
@@ -482,28 +520,64 @@ html, body {
     width: 100% !important;
   }
 
-  /* Dashboard Quick Join on mobile */
+  /* Dashboard Quick Join on mobile (Edge-to-edge touch layout) */
   .dashboard-quick-join {
     flex-direction: column !important;
     align-items: stretch !important;
-    gap: 12px !important;
-    padding: 14px 16px !important;
+    gap: 14px !important;
+    padding: 16px !important;
   }
 
   .dashboard-quick-join-form {
     width: 100% !important;
     display: flex !important;
-    gap: 8px !important;
+    flex-direction: column !important;
+    gap: 10px !important;
   }
 
-  .dashboard-quick-join-form input {
+  .quick-join-input-wrap {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .quick-join-paste-btn {
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+  }
+
+  .quick-join-submit-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+
+  /* Dashboard Segmented Filter Tabs on Mobile */
+  .dashboard-hub-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .dashboard-filter-tabs {
+    width: 100% !important;
+    display: flex !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-filter-btn {
     flex: 1 !important;
-    width: auto !important;
-    min-width: 0 !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 8px 6px !important;
+    font-size: 12px !important;
   }
 
-  .dashboard-quick-join-form button {
-    flex-shrink: 0 !important;
+  /* Trip Cards tap feedback */
+  .responsive-grid > div:active {
+    transform: scale(0.98);
   }
 
   /* Expense Metrics Grid on mobile (2x2) */
