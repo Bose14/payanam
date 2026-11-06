@@ -207,12 +207,12 @@ export async function getUserTrips(userId: string) {
       .neq('role', 'owner');
 
     const validRoomIds = (memberships ?? [])
-      .filter((m: any) => m.status !== 'pending' && m.status !== 'rejected')
-      .map((m: any) => m.room_id);
+      .filter((m: { status?: string }) => m.status !== 'pending' && m.status !== 'rejected')
+      .map((m: { room_id: string }) => m.room_id);
 
     if (validRoomIds.length > 0) {
       const { data: rooms } = await db.from('rooms').select('id, trip_id').in('id', validRoomIds);
-      (rooms ?? []).forEach((r: any) => { if (r.trip_id) joinedTripIdSet.add(r.trip_id); });
+      (rooms ?? []).forEach((r: { trip_id?: string }) => { if (r.trip_id) joinedTripIdSet.add(r.trip_id); });
     }
   } catch (err) {
     console.warn('[getUserTrips] room_members fetch error:', err);
@@ -251,8 +251,8 @@ export async function getUserTrips(userId: string) {
       const { data: tripData } = await db.from('trips').select('*').in('id', joinedTripIds);
       const { data: rooms } = await db.from('rooms').select('id, invite_code, trip_id').in('trip_id', joinedTripIds);
 
-      (tripData ?? []).forEach((t: any) => {
-        const tripRooms = (rooms ?? []).filter((r: any) => r.trip_id === t.id);
+      (tripData ?? []).forEach((t: Record<string, unknown>) => {
+        const tripRooms = (rooms ?? []).filter((r: { trip_id?: string }) => r.trip_id === (t as { id: string }).id);
         joinedTrips.push({
           ...t,
           rooms: tripRooms,
@@ -660,14 +660,15 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
   const { data: rooms } = await db.from('rooms').select('id').eq('trip_id', tripId);
   const roomIds = (rooms ?? []).map((r) => r.id);
 
-  let dbMembers: Array<{
+  type ApprovedMemberItem = {
     id: string;
     user_id: string;
     role: string;
     status: string;
     joined_at: string;
     users?: { full_name: string; email: string; avatar_url?: string | null } | null;
-  }> = [];
+  };
+  let dbMembers: ApprovedMemberItem[] = [];
 
   if (roomIds.length > 0) {
     try {
@@ -678,7 +679,9 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
         .neq('role', 'owner');
 
       if (!error && members) {
-        dbMembers = (members as any[]).filter((m) => m.status !== 'pending' && m.status !== 'rejected');
+        dbMembers = (members as unknown as ApprovedMemberItem[]).filter(
+          (m) => m.status !== 'pending' && m.status !== 'rejected'
+        );
       }
     } catch {
       try {
@@ -689,7 +692,10 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
           .neq('role', 'owner');
 
         if (fallbackMembers) {
-          dbMembers = fallbackMembers.map((m: any) => ({ ...m, status: 'approved' }));
+          dbMembers = (fallbackMembers as unknown as Array<Omit<ApprovedMemberItem, 'status'>>).map((m) => ({
+            ...m,
+            status: 'approved',
+          }));
         }
       } catch { /* silent */ }
     }

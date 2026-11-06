@@ -82,15 +82,6 @@ async function fetchOsrmRoute(waypoints: [number, number][]): Promise<{ route: [
   } catch { /* fallback */ }
   return { route: waypoints, steps: [] };
 }
-const QUICK_STATUS_OPTIONS = [
-  { label: '✅ All Good', value: '✅ All Good' },
-  { label: '⛽ Need Fuel', value: '⛽ Need Fuel' },
-  { label: '☕ Taking a Break', value: '☕ Taking a Break' },
-  { label: '🚨 Flat Tyre', value: '🚨 Flat Tyre' },
-  { label: '🔧 Bike Issue', value: '🔧 Bike Issue' },
-  { label: '🏁 Clear Status', value: '' },
-];
-
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
