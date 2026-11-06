@@ -87,8 +87,19 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Right Section: Theme Toggle + Profile + Logout */}
+          {/* Right Section: Join Pill + Theme Toggle + Profile + Logout */}
           <div style={styles.rightSection}>
+            {/* Quick Join Convoy button */}
+            <button
+              onClick={() => setShowJoinModal(true)}
+              className="navbar-join-btn"
+              style={styles.navJoinBtn}
+              title="Enter Convoy Code to Join"
+            >
+              <span style={{ fontSize: 13 }}>🎟️</span>
+              <span className="navbar-join-label">Join</span>
+            </button>
+
             {/* Sunlight vs Moon Mode Switcher */}
             <button
               onClick={cycleMode}
@@ -125,7 +136,7 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation Bar (Fixed at bottom for thumb ergonomics on phone screens) */}
+      {/* Mobile Bottom Navigation Bar (Fixed at bottom for thumb ergonomics on phone screens - 3 core tabs) */}
       <div className="mobile-bottom-nav">
         <Link
           to="/dashboard"
@@ -141,14 +152,6 @@ export default function Navbar() {
           <span className="mobile-nav-icon">✨</span>
           <span>Plan Trip</span>
         </Link>
-        <button
-          type="button"
-          onClick={() => setShowJoinModal(true)}
-          className="mobile-nav-item"
-        >
-          <span className="mobile-nav-icon">🤝</span>
-          <span>Join Convoy</span>
-        </button>
         <Link
           to="/profile"
           className={`mobile-nav-item ${isActive('/profile') ? 'active' : ''}`}
@@ -285,7 +288,22 @@ const styles: Record<string, React.CSSProperties> = {
   rightSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+  },
+  navJoinBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    padding: '6px 12px',
+    background: 'var(--bg-subtle)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    whiteSpace: 'nowrap',
   },
   themeToggleBtn: {
     display: 'inline-flex',

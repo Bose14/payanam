@@ -242,6 +242,17 @@ html, body {
     justify-content: center !important;
   }
 
+  .navbar-join-label {
+    display: none !important;
+  }
+
+  .navbar-join-btn {
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+    min-width: 34px !important;
+    justify-content: center !important;
+  }
+
   .mobile-bottom-nav {
     display: flex !important;
     position: fixed;
@@ -469,6 +480,30 @@ html, body {
   .profile-logout-row {
     justify-content: center !important;
     width: 100% !important;
+  }
+
+  /* Dashboard Quick Join on mobile */
+  .dashboard-quick-join {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+  }
+
+  .dashboard-quick-join-form {
+    width: 100% !important;
+    display: flex !important;
+    gap: 8px !important;
+  }
+
+  .dashboard-quick-join-form input {
+    flex: 1 !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  .dashboard-quick-join-form button {
+    flex-shrink: 0 !important;
   }
 
   /* Expense Metrics Grid on mobile (2x2) */

@@ -220,6 +220,45 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Quick Join Convoy Strip for Mobile & Quick Access */}
+        <div className="dashboard-quick-join" style={styles.quickJoinCard}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 'min(100%, 220px)' }}>
+            <span style={{ fontSize: 26, lineHeight: 1 }}>🎟️</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
+                Have a Convoy Invite Code?
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
+                Enter the code shared by your convoy leader to join
+              </div>
+            </div>
+          </div>
+          <form onSubmit={handleJoinWithCode} className="dashboard-quick-join-form" style={styles.quickJoinForm}>
+            <input
+              type="text"
+              placeholder="e.g. 9QDA6FP5"
+              value={inviteCodeInput}
+              onChange={e => setInviteCodeInput(e.target.value.toUpperCase())}
+              style={styles.quickJoinInput}
+              maxLength={12}
+            />
+            <button
+              type="submit"
+              disabled={!inviteCodeInput.trim()}
+              style={{
+                ...styles.btnPrimary,
+                padding: '10px 18px',
+                fontSize: 13,
+                opacity: !inviteCodeInput.trim() ? 0.6 : 1,
+                cursor: !inviteCodeInput.trim() ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Join Convoy ➔
+            </button>
+          </form>
+        </div>
+
         {/* Trips Hub Header & Filters */}
         <div style={styles.hubHeader}>
           <div>
@@ -281,9 +320,18 @@ export default function DashboardPage() {
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-secondary)', maxWidth: 400, marginInline: 'auto' }}>
               Create your first road trip and let AI plan fuel stops, food dhabas, scenic viewpoints, and stays!
             </p>
-            <Link to="/trips/new" style={styles.btnPrimary}>
-              + Plan Your First Road Trip
-            </Link>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/trips/new" style={styles.btnPrimary}>
+                + Plan Your First Road Trip
+              </Link>
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(true)}
+                style={styles.btnSecondary}
+              >
+                🔑 Join with Code
+              </button>
+            </div>
           </div>
         ) : (
           <div className="responsive-grid" style={styles.grid}>
@@ -487,6 +535,42 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 700,
     cursor: 'pointer',
+  },
+  quickJoinCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    flexWrap: 'wrap',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 14,
+    padding: '14px 18px',
+    marginBottom: 24,
+    boxShadow: 'var(--card-shadow)',
+  },
+  quickJoinForm: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+    justifyContent: 'flex-end',
+    minWidth: 'min(100%, 260px)',
+  },
+  quickJoinInput: {
+    padding: '9px 14px',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: 10,
+    color: 'var(--text-primary)',
+    fontWeight: 800,
+    fontSize: 14,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    outline: 'none',
+    width: 140,
+    boxSizing: 'border-box',
   },
   hubHeader: {
     display: 'flex',
