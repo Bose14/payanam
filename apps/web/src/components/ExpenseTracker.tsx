@@ -500,7 +500,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="expense-header-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button
             onClick={generateWhatsAppSummary}
             title="Share summary on WhatsApp"
@@ -528,6 +528,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
       <div className="responsive-tabs-bar" style={styles.tabsContainer}>
         <button
           onClick={() => setActiveTab('expenses')}
+          className="responsive-tab-btn"
           style={{
             ...styles.tabBtn,
             color: activeTab === 'expenses' ? 'var(--accent-gold)' : 'var(--text-secondary)',
@@ -535,10 +536,12 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             background: activeTab === 'expenses' ? 'var(--accent-gold-bg)' : 'transparent',
           }}
         >
-          📋 Expenses ({expenses.length})
+          <span>📋 Expenses</span>
+          <span style={styles.tabCountPill}>({expenses.length})</span>
         </button>
         <button
           onClick={() => setActiveTab('analytics')}
+          className="responsive-tab-btn"
           style={{
             ...styles.tabBtn,
             color: activeTab === 'analytics' ? 'var(--accent-gold)' : 'var(--text-secondary)',
@@ -546,10 +549,12 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             background: activeTab === 'analytics' ? 'var(--accent-gold-bg)' : 'transparent',
           }}
         >
-          📊 Analytics & Breakdown
+          <span>📊 Analytics</span>
+          <span className="desktop-tab-sub"> & Breakdown</span>
         </button>
         <button
           onClick={() => setActiveTab('balances')}
+          className="responsive-tab-btn"
           style={{
             ...styles.tabBtn,
             color: activeTab === 'balances' ? 'var(--accent-gold)' : 'var(--text-secondary)',
@@ -557,15 +562,17 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             background: activeTab === 'balances' ? 'var(--accent-gold-bg)' : 'transparent',
           }}
         >
-          ⚖️ Balances & Settle Up {settlements.length > 0 && <span style={styles.pendingBadge}>{settlements.length}</span>}
+          <span>⚖️ Settle Up</span>
+          <span className="desktop-tab-sub"> & Balances</span>
+          {settlements.length > 0 && <span style={styles.pendingBadge}>{settlements.length}</span>}
         </button>
       </div>
 
       {/* TAB 1: EXPENSES LIST */}
       {activeTab === 'expenses' && (
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: 'clamp(14px, 3vw, 20px)' }}>
           {/* Search & Category Filter Bar */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+          <div className="expense-search-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
             <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
               <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
               <input
@@ -1410,23 +1417,37 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabsContainer: {
     display: 'flex',
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    flexWrap: 'nowrap',
     borderBottom: '1px solid var(--border-card)',
     background: 'var(--bg-subtle)',
+    gap: 6,
+    padding: '4px 8px 0',
   },
   tabBtn: {
-    flex: 1,
-    minWidth: 120,
+    flex: '0 0 auto',
     whiteSpace: 'nowrap',
-    padding: '14px 12px',
+    padding: '11px 16px',
     border: 'none',
+    borderBottom: '3px solid transparent',
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: 700,
     transition: 'all 0.2s ease',
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    flexShrink: 0,
+    borderRadius: '8px 8px 0 0',
+  },
+  tabCountPill: {
+    fontSize: 11,
+    fontWeight: 800,
+    opacity: 0.85,
   },
   pendingBadge: {
     background: '#ea580c',

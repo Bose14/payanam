@@ -12,10 +12,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [env.CORS_ORIGIN, env.FRONTEND_URL].filter(Boolean);
+const isDev = env.NODE_ENV !== 'production';
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || /^http:\/\/localhost:\d+$/.test(origin) || allowedOrigins.includes(origin)) {
+    // In development or on local Wi-Fi, allow localhost, 127.0.0.1, and private LAN IPs
+    if (
+      !origin ||
+      isDev ||
+      /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin) ||
+      allowedOrigins.includes(origin)
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

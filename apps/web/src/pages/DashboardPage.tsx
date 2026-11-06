@@ -15,6 +15,7 @@ interface Trip {
   created_at: string;
   isOwner?: boolean;
   isJoined?: boolean;
+  pendingRequestCount?: number;
 }
 
 const VEHICLE_ICONS: Record<string, string> = {
@@ -36,10 +37,26 @@ export default function DashboardPage() {
   const [inviteCodeInput, setInviteCodeInput] = useState('');
 
   useEffect(() => {
-    tripService.getUserTrips()
-      .then((data) => setTrips(data.trips ?? []))
-      .catch(() => setTrips([]))
-      .finally(() => setTripsLoading(false));
+    let mounted = true;
+    const fetchTrips = () => {
+      tripService.getUserTrips()
+        .then((data) => {
+          if (mounted) setTrips(data.trips ?? []);
+        })
+        .catch(() => {
+          if (mounted) setTrips([]);
+        })
+        .finally(() => {
+          if (mounted) setTripsLoading(false);
+        });
+    };
+
+    fetchTrips();
+    const interval = setInterval(fetchTrips, 7000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const handleDeleteConfirm = async () => {
@@ -63,6 +80,29 @@ export default function DashboardPage() {
     const clean = inviteCodeInput.trim().toUpperCase();
     setInviteModalOpen(false);
     navigate(`/join/${clean}`);
+  };
+
+  const handlePasteCode = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        const trimmed = text.trim();
+        // If a full join link was copied e.g. https://.../join/9QDA6FP5 or ?code=9QDA6FP5
+        const urlMatch = trimmed.match(/\/join\/([A-Za-z0-9_-]+)/i) || trimmed.match(/[?&]code=([A-Za-z0-9_-]+)/i);
+        if (urlMatch && urlMatch[1]) {
+          setInviteCodeInput(urlMatch[1].toUpperCase());
+          return;
+        }
+        const codeMatch = trimmed.match(/[A-Za-z0-9]{4,12}/);
+        if (codeMatch) {
+          setInviteCodeInput(codeMatch[0].toUpperCase());
+        } else {
+          setInviteCodeInput(trimmed.slice(0, 12).toUpperCase());
+        }
+      }
+    } catch {
+      // clipboard access not permitted or unavailable
+    }
   };
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'Rider';
@@ -123,14 +163,24 @@ export default function DashboardPage() {
               Paste or type the invite code shared by the trip organizer:
             </p>
             <form onSubmit={handleJoinWithCode}>
-              <input
-                type="text"
-                placeholder="e.g. TRP89X"
-                value={inviteCodeInput}
-                onChange={e => setInviteCodeInput(e.target.value.toUpperCase())}
-                style={styles.codeInput}
-                autoFocus
-              />
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="e.g. TRP89X"
+                  value={inviteCodeInput}
+                  onChange={e => setInviteCodeInput(e.target.value.toUpperCase())}
+                  style={{ ...styles.codeInput, flex: 1 }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handlePasteCode}
+                  title="Paste from clipboard"
+                  style={styles.quickJoinPasteBtn}
+                >
+                  📋 Paste
+                </button>
+              </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                 <button
                   type="button"
@@ -142,7 +192,11 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={!inviteCodeInput.trim()}
-                  style={{ ...styles.btnPrimary, flex: 1 }}
+                  style={{
+                    ...styles.btnPrimary,
+                    flex: 1,
+                    opacity: !inviteCodeInput.trim() ? 0.6 : 1,
+                  }}
                 >
                   Join Convoy →
                 </button>
@@ -203,8 +257,63 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Quick Join Convoy Strip for Mobile & Quick Access */}
+        <div className="dashboard-quick-join" style={styles.quickJoinCard}>
+          <div style={styles.quickJoinHeader}>
+            <div style={styles.quickJoinBadge}>
+              <span style={{ fontSize: 13 }}>🤝</span>
+              <span>CONVOY ACCESS</span>
+            </div>
+            <h3 style={styles.quickJoinTitle}>Have a Convoy Invite Code?</h3>
+            <p style={styles.quickJoinSubtitle}>
+              Enter the code shared by your convoy leader to join routes, waypoints, and live telemetry
+            </p>
+          </div>
+
+          <form onSubmit={handleJoinWithCode} className="dashboard-quick-join-form" style={styles.quickJoinForm}>
+            <div className="quick-join-input-wrap" style={styles.quickJoinInputWrap}>
+              <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>🔑</span>
+              <input
+                type="text"
+                placeholder="e.g. 9QDA6FP5"
+                value={inviteCodeInput}
+                onChange={e => setInviteCodeInput(e.target.value.toUpperCase())}
+                style={styles.quickJoinInput}
+                maxLength={12}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                onClick={handlePasteCode}
+                title="Paste from clipboard"
+                className="quick-join-paste-btn"
+                style={styles.quickJoinPasteBtn}
+              >
+                📋 Paste
+              </button>
+            </div>
+            <button
+              type="submit"
+              disabled={!inviteCodeInput.trim()}
+              className="quick-join-submit-btn"
+              style={{
+                ...styles.btnPrimary,
+                padding: '11px 20px',
+                fontSize: 13,
+                fontWeight: 800,
+                opacity: !inviteCodeInput.trim() ? 0.6 : 1,
+                cursor: !inviteCodeInput.trim() ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Join Convoy ➔
+            </button>
+          </form>
+        </div>
+
         {/* Trips Hub Header & Filters */}
-        <div style={styles.hubHeader}>
+        <div className="dashboard-hub-header" style={styles.hubHeader}>
           <div>
             <h2 style={styles.sectionTitle}>Your Expeditions & Convoys</h2>
             <p style={styles.sectionSubtitle}>
@@ -213,9 +322,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div style={styles.filterTabs}>
+          <div className="dashboard-filter-tabs" style={styles.filterTabs}>
             <button
               onClick={() => setFilterTab('all')}
+              className={`dashboard-filter-btn ${filterTab === 'all' ? 'active' : ''}`}
               style={{
                 ...styles.filterBtn,
                 background: filterTab === 'all' ? 'var(--btn-primary-bg)' : 'transparent',
@@ -226,6 +336,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setFilterTab('owned')}
+              className={`dashboard-filter-btn ${filterTab === 'owned' ? 'active' : ''}`}
               style={{
                 ...styles.filterBtn,
                 background: filterTab === 'owned' ? 'var(--btn-primary-bg)' : 'transparent',
@@ -236,6 +347,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setFilterTab('joined')}
+              className={`dashboard-filter-btn ${filterTab === 'joined' ? 'active' : ''}`}
               style={{
                 ...styles.filterBtn,
                 background: filterTab === 'joined' ? 'var(--btn-primary-bg)' : 'transparent',
@@ -264,9 +376,18 @@ export default function DashboardPage() {
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-secondary)', maxWidth: 400, marginInline: 'auto' }}>
               Create your first road trip and let AI plan fuel stops, food dhabas, scenic viewpoints, and stays!
             </p>
-            <Link to="/trips/new" style={styles.btnPrimary}>
-              + Plan Your First Road Trip
-            </Link>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link to="/trips/new" style={styles.btnPrimary}>
+                + Plan Your First Road Trip
+              </Link>
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(true)}
+                style={styles.btnSecondary}
+              >
+                🔑 Join with Code
+              </button>
+            </div>
           </div>
         ) : (
           <div className="responsive-grid" style={styles.grid}>
@@ -318,6 +439,19 @@ export default function DashboardPage() {
 
                   {/* Route Title */}
                   <h3 style={styles.cardTitle}>{trip.title}</h3>
+
+                  {/* Pending Join Requests Alert Badge */}
+                  {trip.isOwner && !!trip.pendingRequestCount && trip.pendingRequestCount > 0 && (
+                    <div style={styles.pendingBadgeCard}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 13 }}>🔔</span>
+                        <span>
+                          <strong>{trip.pendingRequestCount}</strong> rider{trip.pendingRequestCount > 1 ? 's' : ''} waiting to join!
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 800 }}>Approve ➔</span>
+                    </div>
+                  )}
 
                   {/* Route Visualizer */}
                   <div style={styles.routeBox}>
@@ -458,6 +592,96 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     cursor: 'pointer',
   },
+  quickJoinCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 18,
+    flexWrap: 'wrap',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderLeft: '4px solid var(--accent-gold)',
+    borderRadius: 16,
+    padding: '16px 20px',
+    marginBottom: 24,
+    boxShadow: 'var(--card-shadow)',
+  },
+  quickJoinHeader: {
+    flex: 1,
+    minWidth: 'min(100%, 260px)',
+  },
+  quickJoinBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '3px 8px',
+    borderRadius: 999,
+    background: 'var(--accent-gold-bg)',
+    color: 'var(--accent-gold)',
+    fontSize: 11,
+    fontWeight: 800,
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  quickJoinTitle: {
+    fontWeight: 800,
+    fontSize: 15,
+    color: 'var(--text-primary)',
+    margin: 0,
+    letterSpacing: -0.2,
+  },
+  quickJoinSubtitle: {
+    fontSize: 12,
+    color: 'var(--text-secondary)',
+    margin: '3px 0 0',
+    lineHeight: 1.4,
+  },
+  quickJoinForm: {
+    display: 'flex',
+    gap: 8,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+    justifyContent: 'flex-end',
+    minWidth: 'min(100%, 280px)',
+  },
+  quickJoinInputWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    background: 'var(--bg-subtle)',
+    border: '1.5px solid var(--border-subtle)',
+    borderRadius: 12,
+    padding: '4px 10px',
+    flex: 1,
+    minWidth: 160,
+  },
+  quickJoinInput: {
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-primary)',
+    fontWeight: 800,
+    fontSize: 14,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    outline: 'none',
+    width: '100%',
+    padding: '6px 4px',
+    boxSizing: 'border-box',
+  },
+  quickJoinPasteBtn: {
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-card)',
+    borderRadius: 8,
+    padding: '5px 9px',
+    fontSize: 11,
+    fontWeight: 700,
+    color: 'var(--accent-cyan)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
+  },
   hubHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -558,6 +782,20 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--text-primary)',
     margin: '0 0 12px',
     lineHeight: 1.3,
+  },
+  pendingBadgeCard: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
+    background: 'rgba(245, 158, 11, 0.15)',
+    border: '1px solid rgba(245, 158, 11, 0.5)',
+    color: '#f59e0b',
+    padding: '7px 12px',
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    marginBottom: 12,
   },
   routeBox: {
     display: 'flex',

@@ -260,7 +260,7 @@ export default function ProfilePage() {
                       value={emergencyPhone}
                       onChange={(e) => setEmergencyPhone(e.target.value)}
                       placeholder="e.g. 9876543210"
-                      style={styles.input}
+                      style={{ ...styles.input, flex: 1, minWidth: 0 }}
                     />
                     {emergencyPhone && (
                       <a
@@ -473,10 +473,11 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+          <div className="profile-logout-row" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
             <button
               type="button"
               onClick={handleLogout}
+              className="btn-mobile-full"
               style={styles.btnLogoutFull}
             >
               🚪 Sign Out of Account
@@ -516,11 +517,11 @@ export default function ProfilePage() {
             <div style={{ padding: 'clamp(16px, 4vw, 24px) clamp(14px, 3vw, 20px)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
               {/* Highlight Row: Rider Name + Blood Group */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 16, gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 140 }}>
+                <div style={{ flex: 1, minWidth: 'min(100%, 140px)' }}>
                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700, letterSpacing: 0.5 }}>RIDER NAME</div>
                   <div style={{ fontSize: 'clamp(17px, 4vw, 20px)', fontWeight: 900, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{fullName || 'Rider'}</div>
                 </div>
-                <div style={styles.bloodBadgeLarge}>
+                <div style={{ ...styles.bloodBadgeLarge, flexShrink: 0 }}>
                   🩸 {bloodGroup || 'UNKNOWN'}
                 </div>
               </div>
@@ -537,7 +538,7 @@ export default function ProfilePage() {
                   {emergencyPhone || 'No Phone Number Added'}
                 </div>
                 {emergencyPhone && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginTop: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 10, marginTop: 12 }}>
                     <a
                       href={`tel:${emergencyPhone}`}
                       style={styles.btnSosCall}

@@ -167,7 +167,7 @@ export default function CreateTripPage() {
             {/* Trip Type */}
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Trip Style</label>
-              <div style={styles.tripTypeGrid}>
+              <div className="responsive-trip-type-grid" style={styles.tripTypeGrid}>
                 {TRIP_TYPES.map(t => {
                   const isSelected = form.trip_type === t.value;
                   return (

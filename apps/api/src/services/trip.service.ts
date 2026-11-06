@@ -1,6 +1,14 @@
 import { getDatabase } from '../config/database';
 import { generateItinerary } from './ai.service';
 import { readLocalProfiles } from './profile.service';
+import {
+  writeLocalRequest,
+  readLocalRequests,
+  getLocalRequestByRoomAndUser,
+  getLocalRequestsForRoom,
+  updateLocalRequestStatus,
+  LocalRoomRequest,
+} from './roomRequest.service';
 
 async function geocodePlace(name: string): Promise<{ lat: number; lng: number } | null> {
   try {
@@ -126,8 +134,14 @@ export async function getUserTrips(userId: string) {
   }
 
   console.log(`[getUserTrips] userId=${userId} owned=${ownedTrips?.length ?? 0} joined=${joinedTrips.length}`);
+  const pendingCounts = await getPendingRequestsCount(userId);
+
   return [
-    ...(ownedTrips ?? []).map((t) => ({ ...t, isOwner: true })),
+    ...(ownedTrips ?? []).map((t) => ({
+      ...t,
+      isOwner: true,
+      pendingRequestCount: pendingCounts[t.id] ?? 0,
+    })),
     ...joinedTrips,
   ];
 }
@@ -275,6 +289,14 @@ export async function joinRoom(inviteCode: string, userId: string) {
 
   if (error || !room) throw new Error('Room not found');
 
+  const tripId = (room.trips as unknown as { id: string } | null)?.id || room.trip_id;
+
+  // 1. If user is the creator of the room, they are the convoy leader
+  if (room.created_by === userId) {
+    return { room, memberStatus: 'owner', isNew: false };
+  }
+
+  // 2. Check if already in Supabase
   const { data: existing } = await db
     .from('room_members')
     .select('id, status, role')
@@ -283,11 +305,108 @@ export async function joinRoom(inviteCode: string, userId: string) {
     .maybeSingle();
 
   if (existing) {
+    if (existing.status === 'rejected') {
+      // Re-requesting after previous rejection: reset to pending
+      await db.from('room_members').update({ status: 'pending' }).eq('id', existing.id);
+      writeLocalRequest({
+        id: existing.id,
+        room_id: room.id,
+        trip_id: tripId,
+        user_id: userId,
+        status: 'pending',
+        role: 'member',
+        joined_at: new Date().toISOString(),
+      });
+      return { room, memberStatus: 'pending', isNew: true };
+    }
     return { room, memberStatus: existing.status ?? 'approved', isNew: false };
   }
 
-  await db.from('room_members').insert({ room_id: room.id, user_id: userId, role: 'member', status: 'pending' });
+  // 3. Check local fallback
+  const localReq = getLocalRequestByRoomAndUser(room.id, userId);
+  if (localReq) {
+    if (localReq.status === 'rejected') {
+      const updatedReq: LocalRoomRequest = { ...localReq, status: 'pending', joined_at: new Date().toISOString() };
+      writeLocalRequest(updatedReq);
+      return { room, memberStatus: 'pending', isNew: true };
+    }
+    return { room, memberStatus: localReq.status, isNew: false };
+  }
+
+  // 4. Create new pending membership
+  const newMemberId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  let inserted = false;
+  try {
+    const { data: ins, error: insErr } = await db
+      .from('room_members')
+      .insert({ room_id: room.id, user_id: userId, role: 'member', status: 'pending' })
+      .select('id, status')
+      .single();
+
+    if (!insErr && ins) {
+      inserted = true;
+      writeLocalRequest({
+        id: ins.id,
+        room_id: room.id,
+        trip_id: tripId,
+        user_id: userId,
+        status: 'pending',
+        role: 'member',
+        joined_at: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    console.warn('[joinRoom] Supabase insert failed, using local store:', err);
+  }
+
+  if (!inserted) {
+    writeLocalRequest({
+      id: newMemberId,
+      room_id: room.id,
+      trip_id: tripId,
+      user_id: userId,
+      status: 'pending',
+      role: 'member',
+      joined_at: new Date().toISOString(),
+    });
+  }
+
   return { room, memberStatus: 'pending', isNew: true };
+}
+
+export async function getRoomMemberStatus(inviteCode: string, userId: string) {
+  const db = getDatabase();
+  const { data: room, error } = await db
+    .from('rooms')
+    .select('id, trip_id, created_by, trips(id, title, from_place, to_place, days)')
+    .eq('invite_code', inviteCode.toUpperCase())
+    .single();
+
+  if (error || !room) throw new Error('Room not found');
+
+  const tripId = (room.trips as unknown as { id: string } | null)?.id || room.trip_id;
+
+  if (room.created_by === userId) {
+    return { status: 'owner', tripId, room };
+  }
+
+  const { data: existing } = await db
+    .from('room_members')
+    .select('id, status, role')
+    .eq('room_id', room.id)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing?.status) {
+    return { status: existing.status, memberId: existing.id, tripId, room };
+  }
+
+  const localReq = getLocalRequestByRoomAndUser(room.id, userId);
+  if (localReq?.status) {
+    return { status: localReq.status, memberId: localReq.id, tripId, room };
+  }
+
+  return { status: 'none', tripId, room };
 }
 
 export async function getRoomPreview(inviteCode: string) {
@@ -452,16 +571,62 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
   const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).single();
   if (!room) throw new Error('Room not found');
 
-  const { data: members, error } = await db
-    .from('room_members')
-    .select('id, user_id, role, status, joined_at, users(full_name, email, avatar_url)')
-    .eq('room_id', room.id)
-    .eq('status', 'pending');
+  let dbMembers: Array<{
+    id: string;
+    user_id: string;
+    role: string;
+    status: string;
+    joined_at: string;
+    users?: { full_name: string; email: string; avatar_url?: string | null } | null;
+  }> = [];
 
-  if (error) throw new Error(error.message);
+  try {
+    const { data: members, error } = await db
+      .from('room_members')
+      .select('id, user_id, role, status, joined_at, users(full_name, email, avatar_url)')
+      .eq('room_id', room.id)
+      .eq('status', 'pending');
+    if (!error && members) {
+      dbMembers = members as unknown as typeof dbMembers;
+    }
+  } catch (err) {
+    console.warn('[getPendingRequests] Supabase fetch error, will merge local store:', err);
+  }
+
+  // Merge local requests
+  const localReqs = getLocalRequestsForRoom(room.id).filter((r) => r.status === 'pending');
+  const seenUserIds = new Set(dbMembers.map((m) => m.user_id));
+  const seenMemberIds = new Set(dbMembers.map((m) => m.id));
+
+  for (const lr of localReqs) {
+    if (!seenUserIds.has(lr.user_id) && !seenMemberIds.has(lr.id)) {
+      dbMembers.push({
+        id: lr.id,
+        user_id: lr.user_id,
+        role: lr.role,
+        status: lr.status,
+        joined_at: lr.joined_at,
+        users: lr.users ?? null,
+      });
+      seenUserIds.add(lr.user_id);
+      seenMemberIds.add(lr.id);
+    }
+  }
+
+  // Ensure all members have user name/email info
+  for (const m of dbMembers) {
+    if (!m.users?.full_name || !m.users?.email) {
+      try {
+        const { data: u } = await db.from('users').select('full_name, email, avatar_url').eq('id', m.user_id).maybeSingle();
+        if (u) {
+          m.users = { full_name: u.full_name || 'Rider', email: u.email || '', avatar_url: u.avatar_url };
+        }
+      } catch { /* silent */ }
+    }
+  }
 
   // Enrich with rider profiles
-  const userIds = (members ?? []).map((m) => m.user_id);
+  const userIds = dbMembers.map((m) => m.user_id);
   let profilesMap: Record<string, Record<string, unknown>> = {};
   if (userIds.length > 0) {
     try {
@@ -479,24 +644,18 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
             profilesMap[uid] = localProfiles[uid];
           }
         }
-        const { data: logs } = await db
-          .from('audit_logs')
-          .select('user_id, details')
-          .eq('action', 'RIDER_PROFILE')
-          .in('user_id', userIds)
-          .order('created_at', { ascending: false });
-        if (logs) {
-          for (const l of logs) {
-            if (!profilesMap[l.user_id] && l.details) {
-              profilesMap[l.user_id] = l.details as Record<string, unknown>;
-            }
-          }
+      }
+    } catch {
+      const localProfiles = readLocalProfiles();
+      for (const uid of userIds) {
+        if (localProfiles[uid]) {
+          profilesMap[uid] = localProfiles[uid];
         }
       }
-    } catch { /* silent */ }
+    }
   }
 
-  return (members ?? []).map((m) => ({
+  return dbMembers.map((m) => ({
     ...m,
     profile: profilesMap[m.user_id] ?? null,
   }));
@@ -505,22 +664,92 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
 export async function respondToRequest(roomMemberId: string, action: 'approved' | 'rejected', ownerId: string) {
   const db = getDatabase();
 
+  // Try DB first
   const { data: member } = await db
     .from('room_members')
-    .select('id, rooms(trip_id)')
+    .select('id, user_id, room_id, rooms(trip_id)')
     .eq('id', roomMemberId)
-    .single();
+    .maybeSingle();
 
-  if (!member) throw new Error('Request not found');
+  if (member) {
+    const tripId = (member.rooms as unknown as { trip_id: string } | null)?.trip_id;
+    if (tripId) {
+      const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
+      if (!trip) throw new Error('Not authorized');
+    }
+    await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
+    updateLocalRequestStatus(roomMemberId, action);
+    return;
+  }
 
-  const tripId = (member.rooms as unknown as { trip_id: string } | null)?.trip_id;
-  if (!tripId) throw new Error('Request not found');
+  // If not found in DB room_members, check local store
+  const allLocal = readLocalRequests();
+  const localTarget = allLocal[roomMemberId] || Object.values(allLocal).find((r) => r.id === roomMemberId || r.user_id === roomMemberId);
+  if (!localTarget) throw new Error('Request not found');
 
-  const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
+  const { data: trip } = await db.from('trips').select('id').eq('id', localTarget.trip_id).eq('user_id', ownerId).maybeSingle();
   if (!trip) throw new Error('Not authorized');
 
-  const { error } = await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
-  if (error) throw new Error(error.message);
+  updateLocalRequestStatus(localTarget.id, action);
+
+  // If approved, try inserting into room_members in DB as approved
+  if (action === 'approved') {
+    try {
+      await db.from('room_members').upsert({
+        room_id: localTarget.room_id,
+        user_id: localTarget.user_id,
+        role: 'member',
+        status: 'approved',
+      });
+    } catch { /* silent fallback */ }
+  }
+}
+
+export async function getPendingRequestsCount(userId: string): Promise<Record<string, number>> {
+  const db = getDatabase();
+  const counts: Record<string, number> = {};
+
+  try {
+    const { data: trips } = await db.from('trips').select('id, rooms(id)').eq('user_id', userId);
+    if (!trips || trips.length === 0) return counts;
+
+    const roomToTrip: Record<string, string> = {};
+    const roomIds: string[] = [];
+
+    for (const t of trips) {
+      counts[t.id] = 0;
+      const rms = (t.rooms as Array<{ id: string }>) || [];
+      for (const r of rms) {
+        roomToTrip[r.id] = t.id;
+        roomIds.push(r.id);
+      }
+    }
+
+    if (roomIds.length > 0) {
+      const { data: pendingMembers } = await db
+        .from('room_members')
+        .select('room_id')
+        .in('room_id', roomIds)
+        .eq('status', 'pending');
+
+      for (const pm of pendingMembers ?? []) {
+        const tid = roomToTrip[pm.room_id];
+        if (tid) counts[tid] = (counts[tid] || 0) + 1;
+      }
+    }
+
+    // Merge local requests
+    const allLocal = readLocalRequests();
+    for (const r of Object.values(allLocal)) {
+      if (r.status === 'pending' && r.trip_id && counts[r.trip_id] !== undefined) {
+        counts[r.trip_id] = (counts[r.trip_id] || 0) + 1;
+      }
+    }
+  } catch (err) {
+    console.warn('[getPendingRequestsCount] error:', err);
+  }
+
+  return counts;
 }
 
 export async function removeMember(tripId: string, roomMemberId: string, currentUserId: string) {
