@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import MobileBottomNav from './MobileBottomNav';
+import JoinConvoyModal from './JoinConvoyModal';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -9,19 +11,10 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
 
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleJoinSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteCode.trim()) return;
-    const clean = inviteCode.trim().toUpperCase();
-    setShowJoinModal(false);
-    navigate(`/join/${clean}`);
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -125,124 +118,14 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation Bar (Fixed at bottom for thumb ergonomics on phone screens - 3 core tabs with Vector SVGs) */}
-      <div className="mobile-bottom-nav">
-        <Link
-          to="/dashboard"
-          className={`mobile-nav-item ${isActive('/dashboard') ? 'active' : ''}`}
-        >
-          <span className="mobile-nav-icon-wrap">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={isActive('/dashboard') ? '2.4' : '1.8'}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
-              <line x1="9" y1="3" x2="9" y2="18" />
-              <line x1="15" y1="6" x2="15" y2="21" />
-            </svg>
-          </span>
-          <span>Expeditions</span>
-        </Link>
-        <Link
-          to="/trips/new"
-          className={`mobile-nav-item ${isActive('/trips/new') ? 'active' : ''}`}
-        >
-          <span className="mobile-nav-icon-wrap">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={isActive('/trips/new') ? '2.4' : '1.8'}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="6" cy="19" r="3" />
-              <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" />
-              <circle cx="18" cy="5" r="3" />
-            </svg>
-          </span>
-          <span>Plan Trip</span>
-        </Link>
-        <Link
-          to="/profile"
-          className={`mobile-nav-item ${isActive('/profile') ? 'active' : ''}`}
-        >
-          <span className="mobile-nav-icon-wrap">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={isActive('/profile') ? '2.4' : '1.8'}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" fill={isActive('/profile') ? 'currentColor' : 'none'} />
-            </svg>
-          </span>
-          <span>Profile</span>
-        </Link>
-      </div>
+      {/* Reusable Mobile Bottom Navigation Bar */}
+      <MobileBottomNav />
 
-      {/* Join Convoy Modal */}
-      {showJoinModal && (
-        <div style={styles.modalBackdrop}>
-          <div style={styles.modalCard}>
-            <div style={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24 }}>🔑</span>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
-                  Join Convoy Expedition
-                </h3>
-              </div>
-              <button onClick={() => setShowJoinModal(false)} style={styles.closeBtn}>✕</button>
-            </div>
-            <p style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-              Enter the invite code shared by your convoy leader:
-            </p>
-            <form onSubmit={handleJoinSubmit}>
-              <input
-                type="text"
-                placeholder="e.g. TRP89X"
-                value={inviteCode}
-                onChange={e => setInviteCode(e.target.value.toUpperCase())}
-                maxLength={12}
-                autoFocus
-                style={styles.codeInput}
-              />
-              <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowJoinModal(false)}
-                  style={styles.btnCancel}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!inviteCode.trim()}
-                  style={{
-                    ...styles.btnSubmit,
-                    opacity: inviteCode.trim() ? 1 : 0.5,
-                  }}
-                >
-                  Join Trip →
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Reusable Join Convoy Modal */}
+      <JoinConvoyModal
+        isOpen={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+      />
     </>
   );
 }
@@ -376,76 +259,5 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'all 0.2s',
     flexShrink: 0,
-  },
-  modalBackdrop: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(15, 23, 42, 0.75)',
-    backdropFilter: 'blur(6px)',
-    WebkitBackdropFilter: 'blur(6px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: 16,
-  },
-  modalCard: {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border-card)',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 420,
-    boxShadow: 'var(--card-shadow)',
-  },
-  modalHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  closeBtn: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--text-secondary)',
-    fontSize: 20,
-    cursor: 'pointer',
-  },
-  codeInput: {
-    width: '100%',
-    padding: '12px 16px',
-    background: 'var(--bg-subtle)',
-    border: '1px solid var(--border-input)',
-    borderRadius: 10,
-    color: 'var(--text-primary)',
-    fontSize: 20,
-    fontWeight: 800,
-    letterSpacing: 3,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
-  btnCancel: {
-    flex: 1,
-    padding: '11px',
-    background: 'var(--bg-subtle)',
-    color: 'var(--text-secondary)',
-    border: '1px solid var(--border-card)',
-    borderRadius: 8,
-    fontWeight: 600,
-    fontSize: 14,
-    cursor: 'pointer',
-  },
-  btnSubmit: {
-    flex: 1,
-    padding: '11px',
-    background: 'var(--btn-primary-bg)',
-    color: 'var(--btn-primary-text)',
-    border: 'none',
-    borderRadius: 8,
-    fontWeight: 700,
-    fontSize: 14,
-    cursor: 'pointer',
   },
 };
