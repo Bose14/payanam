@@ -13,22 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm run install:all
 
       - name: Type check
-        run: pnpm turbo run type-check --filter=api
+        run: npm run --prefix apps/api type-check
 
       - name: Build
-        run: pnpm turbo run build --filter=api
+        run: npm run --prefix apps/api build
 
       - name: Deploy to Render
         run: |
