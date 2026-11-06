@@ -268,12 +268,16 @@ html, body {
   [data-netlify-badge],
   .netlify-badge,
   #netlify-badge,
+  [id*="netlify"],
+  [class*="netlify"],
   div[class*="netlify"],
-  iframe[src*="netlify"] {
-    bottom: calc(68px + env(safe-area-inset-bottom, 8px)) !important;
+  iframe[src*="netlify"],
+  iframe[title*="Netlify"] {
+    bottom: calc(76px + env(safe-area-inset-bottom, 12px)) !important;
     right: 12px !important;
     transform: scale(0.85);
     transform-origin: bottom right;
+    z-index: 9998 !important;
   }
 
   .mobile-nav-item {

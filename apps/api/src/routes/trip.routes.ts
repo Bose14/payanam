@@ -10,6 +10,7 @@ import {
   respondToRequestHandler,
   getApprovedMembersHandler,
   updateItineraryHandler,
+  addStopHandler,
   deleteTripHandler,
   getAllTripParticipantsHandler,
   removeMemberHandler,
@@ -33,6 +34,7 @@ router.get('/', getUserTripsHandler);
 router.get('/pending-counts', getPendingRequestsCountHandler);
 router.get('/:id', getTripByIdHandler);
 router.put('/:id/itinerary', updateItineraryHandler);
+router.post('/:id/stops', addStopHandler);
 router.delete('/:id', deleteTripHandler);
 router.get('/:id/requests', getPendingRequestsHandler);
 router.put('/:id/requests/:memberId', respondToRequestHandler);

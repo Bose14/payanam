@@ -1,4 +1,5 @@
 import { getDatabase } from '../config/database';
+import { assertUserTripMembership } from './trip.service';
 
 interface AddExpenseData {
   title: string;
@@ -10,22 +11,9 @@ interface AddExpenseData {
   custom_splits?: Array<{ user_id: string; amount: number }>;
 }
 
-async function verifyMember(db: ReturnType<typeof getDatabase>, tripId: string, userId: string) {
-  const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
-  if (!trip) throw new Error('Trip not found');
-  if (trip.user_id === userId) return;
-
-  const { data: room } = await db.from('rooms').select('id').eq('trip_id', tripId).maybeSingle();
-  if (!room) throw new Error('Not authorized');
-
-  const { data: member } = await db
-    .from('room_members')
-    .select('status')
-    .eq('room_id', room.id)
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (!member || member.status !== 'approved') throw new Error('Not authorized');
+async function verifyMember(_db: ReturnType<typeof getDatabase>, tripId: string, userId: string) {
+  const auth = await assertUserTripMembership(tripId, userId);
+  if (auth.status !== 'approved') throw new Error('Not authorized');
 }
 
 export async function addExpense(tripId: string, userId: string, data: AddExpenseData) {

@@ -153,6 +153,19 @@ export const tripService = {
     return response.data;
   },
 
+  addStop: async (tripId: string, stop: {
+    place: string;
+    item_type?: string;
+    description?: string;
+    day_number?: number;
+    order_index?: number;
+    lat?: number | null;
+    lng?: number | null;
+  }) => {
+    const response = await api.post(`/api/trips/${tripId}/stops`, stop);
+    return response.data.data;
+  },
+
   deleteTrip: async (tripId: string) => {
     const response = await api.delete(`/api/trips/${tripId}`);
     return response.data;

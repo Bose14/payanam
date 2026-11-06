@@ -5,8 +5,17 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { rideService } from '../services/api';
+import { rideService, tripService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import {
+  NavigationAppModal,
+  CaptainAnnouncementModal,
+  QuickStatusDrawer,
+  PinStopModal,
+  StopArrivalTracker,
+} from '../components';
+import type { PinnedStopData } from '../components/PinStopModal';
+import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 
 const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 
@@ -130,6 +139,44 @@ function makeStopIcon() {
   });
 }
 
+function makePinnedStopIcon(type: string) {
+  const icon = type === 'fuel_stop' ? '⛽' : type === 'meal' ? '🍽️' : type === 'rest' ? '☕' : '📍';
+  return L.divIcon({
+    className: '',
+    iconAnchor: [20, 20],
+    iconSize: [40, 40],
+    html: `<div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:0;background:#f59e0b;opacity:0.35;border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+      <div style="width:34px;height:34px;background:#f59e0b;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 10px rgba(0,0,0,0.5);">
+        ${icon}
+      </div>
+    </div>`,
+  });
+}
+
+function playAlertChime(type: 'urgent' | 'chime' = 'chime') {
+  try {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type === 'urgent' ? 'sawtooth' : 'sine';
+    osc.frequency.setValueAtTime(type === 'urgent' ? 784 : 587.33, ctx.currentTime);
+    osc.frequency.setValueAtTime(type === 'urgent' ? 880 : 880, ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  } catch { /* silent */ }
+}
+
 interface RiderLocation {
   user_id: string; user_name: string; lat: number; lng: number;
   speed_kmh: number; heading?: number; quick_status: string; updated_at: string;
@@ -142,7 +189,7 @@ interface RideMessage {
 
 interface ItineraryStop {
   id: string; place: string; lat: number | null; lng: number | null;
-  day_number: number; order_index: number;
+  day_number: number; order_index: number; item_type?: string; description?: string;
 }
 
 interface Session {
@@ -194,7 +241,7 @@ export default function RidePage() {
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
   const [tab, setTab] = useState<TabType>('map');
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showStatusDrawer, setShowStatusDrawer] = useState(false);
   const [myStatus, setMyStatus] = useState('');
   const [sosActive, setSosActive] = useState(false);
   const [newMsgCount, setNewMsgCount] = useState(0);
@@ -205,6 +252,22 @@ export default function RidePage() {
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [backgroundWarning, setBackgroundWarning] = useState(false);
+
+  // High Priority Stops & Communication State
+  const [pinnedStop, setPinnedStop] = useState<PinnedStopData | null>(null);
+  const [ridersArrival, setRidersArrival] = useState<Record<string, RiderArrivalInfo>>({});
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [activeAnnouncement, setActiveAnnouncement] = useState<{
+    title: string;
+    message: string;
+    icon: string;
+    urgency: string;
+    timestamp: string;
+  } | null>(null);
+  const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [showNavModal, setShowNavModal] = useState(false);
+  const [toast, setToast] = useState('');
 
   const watchIdRef = useRef<number | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -321,6 +384,14 @@ export default function RidePage() {
         const speedKmh = speed != null ? speed * 3.6 : 0;
         const hdg = heading ?? 0;
         if (heading != null) setMyHeading(heading);
+
+        // Auto-arrival detection when within 250m of pinned stop
+        if (pinnedStop) {
+          const distKm = haversineKm(lat, lng, pinnedStop.lat, pinnedStop.lng);
+          if (distKm < 0.25 && user?.id && ridersArrival[user.id]?.status !== 'arrived') {
+            handleToggleMyArrival(true);
+          }
+        }
         // Instant broadcast — zero DB write, real-time for all riders
         channelRef.current?.send({
           type: 'broadcast', event: 'location',
@@ -353,7 +424,35 @@ export default function RidePage() {
 
     // One-time REST fetch: current rider positions + message history
     rideService.getAllLocations(sessionId).then((d) => setRiders(d.locations ?? [])).catch(() => {});
-    rideService.getMessages(sessionId).then((d) => setMessages(d.messages ?? [])).catch(() => {});
+    rideService.getMessages(sessionId).then((d) => {
+      const msgs = d.messages ?? [];
+      setMessages(msgs);
+      // Restore latest pinned stop from message history
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const m = msgs[i];
+        if (m.message_type === 'stop_pin') {
+          try {
+            if (m.message.startsWith('{')) {
+              const parsed = JSON.parse(m.message);
+              if (parsed.stop) setPinnedStop(parsed.stop);
+            } else if (m.message.includes('📍 Pinned Target Stop:')) {
+              const stopName = m.message.replace('📍 Pinned Target Stop:', '').trim();
+              const foundInItin = (session?.itinerary ?? []).find(s => s.place === stopName && s.lat && s.lng);
+              if (foundInItin) {
+                setPinnedStop({
+                  id: foundInItin.id,
+                  name: foundInItin.place,
+                  lat: foundInItin.lat!,
+                  lng: foundInItin.lng!,
+                  type: 'stop',
+                });
+              }
+            }
+          } catch { /* silent */ }
+          break;
+        }
+      }
+    }).catch(() => {});
 
     // Supabase Broadcast channel — real-time, no DB writes for locations
     const channel = supabase.channel(`ride:${sessionId}`, {
@@ -388,6 +487,36 @@ export default function RidePage() {
         setRiders((prev) => prev.map((r) =>
           r.user_id === payload.userId ? { ...r, quick_status: payload.quickStatus } : r
         ));
+      })
+      .on('broadcast', { event: 'stop_pin' }, ({ payload }) => {
+        setPinnedStop(payload.stop);
+        setRidersArrival({});
+        if (payload.stop) {
+          playAlertChime('chime');
+          setToast(`📍 Convoy Target Stop: ${payload.stop.name}`);
+          setTimeout(() => setToast(''), 3500);
+        }
+      })
+      .on('broadcast', { event: 'stop_arrival' }, ({ payload }) => {
+        setRidersArrival((prev) => ({
+          ...prev,
+          [payload.userId]: {
+            userId: payload.userId,
+            userName: payload.userName,
+            status: payload.status,
+            arrivedAt: payload.arrivedAt,
+            distanceKm: payload.distanceKm,
+          },
+        }));
+        if (payload.status === 'arrived') {
+          playAlertChime('chime');
+          setToast(`🏁 ${payload.userName} arrived at stop!`);
+          setTimeout(() => setToast(''), 3500);
+        }
+      })
+      .on('broadcast', { event: 'announcement' }, ({ payload }) => {
+        setActiveAnnouncement(payload);
+        playAlertChime('urgent');
       })
       .subscribe();
 
@@ -431,7 +560,7 @@ export default function RidePage() {
   const pickStatus = useCallback(async (value: string) => {
     if (!sessionId) return;
     setMyStatus(value);
-    setShowStatusPicker(false);
+    setShowStatusDrawer(false);
     await rideService.updateQuickStatus(sessionId, value).catch(() => {});
     // Broadcast status change so others see rider dot badge update instantly
     channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: value } });
@@ -441,6 +570,149 @@ export default function RidePage() {
       channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
     }
   }, [sessionId, userName, user?.id]);
+
+  const handlePinStop = useCallback(async (stop: PinnedStopData, addToItinerary?: boolean) => {
+    if (!sessionId || !session) return;
+    setPinnedStop(stop);
+    setRidersArrival({});
+    playAlertChime('chime');
+    setToast(`📍 Convoy Target Stop: ${stop.name}`);
+    setTimeout(() => setToast(''), 3500);
+
+    // If user asked to add to itinerary permanently
+    if (addToItinerary && session.trip_id) {
+      try {
+        await tripService.addStop(session.trip_id, {
+          place: stop.name,
+          item_type: stop.type,
+          description: stop.description || 'Pinned during live ride',
+          lat: stop.lat,
+          lng: stop.lng,
+        });
+        setToast(`✓ Added ${stop.name} to trip itinerary!`);
+        setTimeout(() => setToast(''), 3500);
+      } catch (err) {
+        console.warn('Failed to add stop to itinerary:', err);
+      }
+    }
+
+    // Broadcast to real-time channel
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'stop_pin',
+      payload: { stop, pinnedBy: userName },
+    });
+
+    // Also persist as a ride message
+    await rideService.sendMessage(sessionId, {
+      message: `📍 Pinned Target Stop: ${stop.name}`,
+      messageType: 'stop_pin',
+      userName,
+    }).catch(() => null);
+  }, [sessionId, session, userName]);
+
+  const handleClearPin = useCallback(async () => {
+    if (!sessionId) return;
+    setPinnedStop(null);
+    setRidersArrival({});
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'stop_pin',
+      payload: { stop: null, pinnedBy: userName },
+    });
+    setToast('Target stop cleared');
+    setTimeout(() => setToast(''), 2500);
+  }, [sessionId, userName]);
+
+  const handleToggleMyArrival = useCallback(async (isArrived: boolean) => {
+    if (!sessionId || !user || !pinnedStop) return;
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const distKm = myPosRef.current ? haversineKm(myPosRef.current.lat, myPosRef.current.lng, pinnedStop.lat, pinnedStop.lng) : undefined;
+    const arrivalPayload: RiderArrivalInfo = {
+      userId: user.id,
+      userName,
+      status: isArrived ? 'arrived' : 'en_route',
+      arrivedAt: isArrived ? timeStr : undefined,
+      distanceKm: distKm,
+    };
+
+    setRidersArrival((prev) => ({ ...prev, [user.id]: arrivalPayload }));
+
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'stop_arrival',
+      payload: { ...arrivalPayload, stopName: pinnedStop.name },
+    });
+
+    if (isArrived) {
+      playAlertChime('chime');
+      setToast(`🏁 Marked as arrived at ${pinnedStop.name}!`);
+      setTimeout(() => setToast(''), 3500);
+      await rideService.sendMessage(sessionId, {
+        message: `🏁 I have arrived at ${pinnedStop.name}!`,
+        messageType: 'stop_arrival',
+        userName,
+      }).catch(() => null);
+    }
+  }, [sessionId, user, userName, pinnedStop]);
+
+  const handleSendAnnouncement = useCallback(async (announcement: {
+    title: string;
+    message: string;
+    urgency: string;
+    icon: string;
+  }) => {
+    if (!sessionId) return;
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const payload = { ...announcement, timestamp: timeStr, senderName: userName };
+
+    setActiveAnnouncement(payload);
+    playAlertChime('urgent');
+
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'announcement',
+      payload,
+    });
+
+    await rideService.sendMessage(sessionId, {
+      message: `${announcement.icon} ${announcement.title}: ${announcement.message}`,
+      messageType: 'announcement',
+      userName,
+    }).catch(() => null);
+
+    setToast(`📢 Announcement broadcasted to all riders!`);
+    setTimeout(() => setToast(''), 3500);
+  }, [sessionId, userName]);
+
+  const handleShareCurrentLocation = useCallback(async () => {
+    if (!myLat || !myLng || !sessionId) {
+      setToast('GPS position not ready yet.');
+      setTimeout(() => setToast(''), 2500);
+      return;
+    }
+    const locName = `Location (${myLat.toFixed(4)}, ${myLng.toFixed(4)})`;
+    const content = `📍 Shared Location: ${locName} [${myLat.toFixed(6)},${myLng.toFixed(6)}]`;
+    const result = await rideService.sendMessage(sessionId, {
+      message: content,
+      messageType: 'location_share',
+      userName,
+    }).catch(() => null);
+
+    const msg: RideMessage = result?.message ?? {
+      id: Date.now().toString(),
+      user_id: user?.id || '',
+      user_name: userName,
+      message: content,
+      message_type: 'location_share',
+      created_at: new Date().toISOString(),
+    };
+
+    channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
+    setMessages((prev) => [...prev, msg]);
+    setToast('📍 Location shared with convoy!');
+    setTimeout(() => setToast(''), 2500);
+  }, [myLat, myLng, sessionId, userName, user?.id]);
 
   const handleEndRide = useCallback(async () => {
     if (!sessionId || !window.confirm('End the ride for everyone?')) return;
@@ -495,29 +767,160 @@ export default function RidePage() {
       )}
 
       {/* Header */}
-      <div style={{ background: '#1f2937', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexShrink: 0, marginTop: sosActive ? 48 : 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+      <div style={{ background: '#1f2937', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexShrink: 0, marginTop: sosActive ? 48 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
           <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 18, cursor: 'pointer', padding: 0, flexShrink: 0 }}>←</button>
           <div style={{ minWidth: 0 }}>
             <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               🏍️ {session?.trips?.title ?? 'Live Ride'}
             </p>
-            <p style={{ color: '#10b981', fontSize: 12, margin: 0, fontWeight: 600 }}>
+            <p style={{ color: '#10b981', fontSize: 11, margin: 0, fontWeight: 600 }}>
               ● LIVE · {riders.length} rider{riders.length !== 1 ? 's' : ''}
-              {!wakeLockActive && <span style={{ color: '#f59e0b', marginLeft: 8 }}>· Keep screen on</span>}
+              {!wakeLockActive && <span style={{ color: '#f59e0b', marginLeft: 6 }}>· Screen on</span>}
             </p>
           </div>
         </div>
-        {isLead ? (
-          <button onClick={handleEndRide} disabled={endingRide} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-            {endingRide ? '...' : '⏹ End Ride'}
+
+        {/* Quick actions for Captain & Riders */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => setShowPinModal(true)}
+            style={{
+              background: pinnedStop ? 'rgba(245, 158, 11, 0.2)' : '#374151',
+              border: pinnedStop ? '1px solid #f59e0b' : '1px solid #4b5563',
+              color: pinnedStop ? '#fbbf24' : '#fff',
+              borderRadius: 8,
+              padding: '6px 10px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+            title="Set convoy regroup target stop"
+          >
+            <span>{pinnedStop ? '📍 Target' : '📌 Pin Stop'}</span>
           </button>
-        ) : (
-          <button onClick={() => navigate(-1)} style={{ background: '#374151', color: '#9ca3af', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-            Leave
-          </button>
-        )}
+
+          {isLead && (
+            <button
+              type="button"
+              onClick={() => setShowAnnouncementModal(true)}
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                border: 'none',
+                color: '#111827',
+                borderRadius: 8,
+                padding: '6px 10px',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+              title="Broadcast alert to all riders"
+            >
+              <span>📢 Broadcast</span>
+            </button>
+          )}
+
+          {isLead ? (
+            <button onClick={handleEndRide} disabled={endingRide} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+              {endingRide ? '...' : '⏹ End'}
+            </button>
+          ) : (
+            <button onClick={() => navigate(-1)} style={{ background: '#374151', color: '#9ca3af', border: 'none', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+              Leave
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Floating HUD Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: 60,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          background: 'rgba(17, 24, 39, 0.95)',
+          border: '1px solid #f59e0b',
+          color: '#fff',
+          padding: '8px 16px',
+          borderRadius: 20,
+          fontSize: 13,
+          fontWeight: 700,
+          boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+          animation: 'fadeIn 0.2s ease-out',
+          whiteSpace: 'nowrap',
+        }}>
+          {toast}
+        </div>
+      )}
+
+      {/* Captain Announcement Top Banner */}
+      {activeAnnouncement && (
+        <div style={{
+          background: activeAnnouncement.urgency === 'high' ? 'linear-gradient(135deg, #991b1b, #b91c1c)' : 'linear-gradient(135deg, #b45309, #d97706)',
+          color: '#fff',
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flexShrink: 0,
+          borderBottom: '2px solid rgba(255,255,255,0.2)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+        }}>
+          <span style={{ fontSize: 22, flexShrink: 0 }}>{activeAnnouncement.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: '#fef08a' }}>
+              📢 CAPTAIN ANNOUNCEMENT ({activeAnnouncement.timestamp})
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {activeAnnouncement.title}: {activeAnnouncement.message}
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveAnnouncement(null)}
+            style={{
+              background: 'rgba(255,255,255,0.25)',
+              border: 'none',
+              color: '#fff',
+              borderRadius: 6,
+              padding: '3px 8px',
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Stop Arrival & ETA Tracker Bar */}
+      {pinnedStop && (
+        <StopArrivalTracker
+          pinnedStop={pinnedStop}
+          ridersArrival={ridersArrival}
+          currentUserId={user?.id}
+          myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+          mySpeedKmh={myPosRef.current ? 0 : 0}
+          onToggleMyArrival={handleToggleMyArrival}
+          onOpenNavigation={(target) => {
+            setNavTarget(target);
+            setShowNavModal(true);
+          }}
+          onChangePin={() => setShowPinModal(true)}
+          onClearPin={handleClearPin}
+          isLeader={isLead}
+        />
+      )}
 
       {/* Background warning banner */}
       {backgroundWarning && (
@@ -565,6 +968,13 @@ export default function RidePage() {
           {itineraryStops.map((stop) => (
             <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
           ))}
+          {/* Pinned target stop marker with pulsating alert */}
+          {pinnedStop && (
+            <Marker
+              position={[pinnedStop.lat, pinnedStop.lng]}
+              icon={makePinnedStopIcon(pinnedStop.type)}
+            />
+          )}
           {/* My navigation arrow — rotates with heading */}
           {riders.filter((r) => r.user_id === user?.id).map((r) => (
             <Marker
@@ -587,29 +997,123 @@ export default function RidePage() {
       {/* Chat panel */}
       {tab === 'chat' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {messages.length === 0 && <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40, fontSize: 14 }}>No messages yet. Say hi! 👋</p>}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {messages.length === 0 && <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40, fontSize: 14 }}>No messages yet. Say hi or share a stop! 👋</p>}
             {messages.map((m) => {
               const isMe = m.user_id === user?.id;
               const isSos = m.message_type === 'sos';
               const isStatus = m.message_type === 'status';
-              if (isStatus) return (
-                <div key={m.id} style={{ textAlign: 'center' }}>
-                  <span style={{ fontSize: 12, color: '#6b7280', background: '#1f2937', padding: '3px 10px', borderRadius: 12 }}>
-                    {m.user_name}: {m.message}
-                  </span>
-                </div>
-              );
+              const isAnnouncement = m.message_type === 'announcement';
+              const isStopPin = m.message_type === 'stop_pin';
+              const isStopArrival = m.message_type === 'stop_arrival';
+              const isLocationShare = m.message_type === 'location_share' || m.message.includes('[') && m.message.includes(']');
+
+              if (isStatus || isStopArrival) {
+                return (
+                  <div key={m.id} style={{ textAlign: 'center', margin: '2px 0' }}>
+                    <span style={{
+                      fontSize: 12,
+                      color: isStopArrival ? '#34d399' : '#9ca3af',
+                      background: isStopArrival ? 'rgba(16, 185, 129, 0.15)' : '#1f2937',
+                      border: isStopArrival ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #374151',
+                      padding: '3px 12px',
+                      borderRadius: 14,
+                      fontWeight: 600,
+                    }}>
+                      {m.message}
+                    </span>
+                  </div>
+                );
+              }
+
+              if (isAnnouncement) {
+                return (
+                  <div key={m.id} style={{
+                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))',
+                    border: '1px solid #f59e0b',
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    margin: '4px 0',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>
+                      <span>📢</span>
+                      <span>Captain Broadcast · {m.user_name}</span>
+                    </div>
+                    <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                      {m.message}
+                    </div>
+                  </div>
+                );
+              }
+
+              // Check if message has location coordinates [lat,lng]
+              const coordMatch = m.message.match(/\[([0-9.-]+),\s*([0-9.-]+)\]/);
+              const hasCoords = !!coordMatch;
+              const parsedLat = coordMatch ? parseFloat(coordMatch[1]) : 0;
+              const parsedLng = coordMatch ? parseFloat(coordMatch[2]) : 0;
+
               return (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                  {!isMe && <span style={{ fontSize: 11, color: '#6b7280', marginBottom: 2 }}>{m.user_name}</span>}
+                  {!isMe && <span style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2, fontWeight: 600 }}>{m.user_name}</span>}
                   <div style={{
-                    maxWidth: '75%', padding: '9px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    background: isSos ? '#dc2626' : isMe ? '#3b82f6' : '#374151',
+                    maxWidth: '82%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    background: isSos ? '#dc2626' : isStopPin ? '#1e3a8a' : isMe ? '#2563eb' : '#374151',
                     color: '#fff', fontSize: 14, fontWeight: isSos ? 700 : 400,
-                    border: isSos ? '2px solid #fca5a5' : 'none',
+                    border: isSos ? '2px solid #fca5a5' : isStopPin ? '1px solid #60a5fa' : 'none',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                   }}>
-                    {m.message}
+                    <div>{m.message}</div>
+
+                    {/* Interactive Actions for Location / Stop Messages */}
+                    {(isLocationShare || hasCoords) && parsedLat !== 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNavTarget({ name: `${m.user_name}'s Shared Location`, lat: parsedLat, lng: parsedLng });
+                            setShowNavModal(true);
+                          }}
+                          style={styles.chatActionBtn}
+                        >
+                          🧭 Navigate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePinStop({
+                            name: `${m.user_name}'s Shared Stop`,
+                            lat: parsedLat,
+                            lng: parsedLng,
+                            type: 'stop',
+                          }, false)}
+                          style={{ ...styles.chatActionBtn, background: '#f59e0b', color: '#111827' }}
+                        >
+                          📍 Pin Stop
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!session?.trip_id) return;
+                            try {
+                              await tripService.addStop(session.trip_id, {
+                                place: `Stop shared by ${m.user_name}`,
+                                item_type: 'stop',
+                                lat: parsedLat,
+                                lng: parsedLng,
+                                description: m.message,
+                              });
+                              setToast('✓ Added to trip itinerary!');
+                              setTimeout(() => setToast(''), 3000);
+                            } catch {
+                              setToast('Failed to add stop');
+                              setTimeout(() => setToast(''), 2500);
+                            }
+                          }}
+                          style={{ ...styles.chatActionBtn, background: '#10b981', color: '#fff' }}
+                        >
+                          ➕ Add to Plan
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <span style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -619,12 +1123,41 @@ export default function RidePage() {
             })}
             <div ref={chatBottomRef} />
           </div>
-          <div style={{ padding: '10px 12px', background: '#1f2937', display: 'flex', gap: 8, borderTop: '1px solid #374151' }}>
+
+          {/* Quick Chat Actions (Location Share & Stop Suggest) */}
+          <div style={{ padding: '6px 12px', background: '#111827', display: 'flex', gap: 8, borderTop: '1px solid #374151', overflowX: 'auto' }}>
+            <button
+              type="button"
+              onClick={handleShareCurrentLocation}
+              style={styles.chatQuickPill}
+            >
+              📍 Share My GPS Location
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPinModal(true)}
+              style={styles.chatQuickPill}
+            >
+              📌 Suggest / Pin Stop
+            </button>
+            {isLead && (
+              <button
+                type="button"
+                onClick={() => setShowAnnouncementModal(true)}
+                style={{ ...styles.chatQuickPill, borderColor: '#f59e0b', color: '#fbbf24' }}
+              >
+                📢 Broadcast Alert
+              </button>
+            )}
+          </div>
+
+          {/* Message Input */}
+          <div style={{ padding: '8px 12px', background: '#1f2937', display: 'flex', gap: 8, borderTop: '1px solid #374151' }}>
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-              placeholder="Message the group..."
+              placeholder="Message convoy or mention a stop..."
               style={{ flex: 1, background: '#374151', border: 'none', borderRadius: 20, padding: '10px 16px', color: '#fff', fontSize: 14, outline: 'none' }}
             />
             <button onClick={sendChat} disabled={sending || !chatInput.trim()} style={{ background: '#3b82f6', border: 'none', borderRadius: 20, padding: '10px 18px', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: sending || !chatInput.trim() ? 0.5 : 1 }}>
@@ -675,6 +1208,45 @@ export default function RidePage() {
       {/* Nav / Directions panel */}
       {tab === 'nav' && (
         <div style={{ flex: 1, overflowY: 'auto', background: '#111827' }}>
+          {/* Quick Launch External Navigation Apps */}
+          <div style={{ padding: '12px 16px', background: '#1f2937', borderBottom: '1px solid #374151', display: 'flex', gap: 10 }}>
+            <button
+              onClick={() => {
+                if (pinnedStop) {
+                  setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng });
+                  setShowNavModal(true);
+                } else if (session?.trips?.to_lat && session?.trips?.to_lng) {
+                  setNavTarget({ name: session.trips.to_place, lat: session.trips.to_lat, lng: session.trips.to_lng });
+                  setShowNavModal(true);
+                } else if (itineraryStops[0]?.lat && itineraryStops[0]?.lng) {
+                  setNavTarget({ name: itineraryStops[0].place, lat: itineraryStops[0].lat!, lng: itineraryStops[0].lng! });
+                  setShowNavModal(true);
+                } else {
+                  setToast('Pin a stop or choose a waypoint to navigate');
+                  setTimeout(() => setToast(''), 2500);
+                }
+              }}
+              style={{
+                flex: 1,
+                padding: '12px 14px',
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 10,
+                fontWeight: 800,
+                fontSize: 14,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              }}
+            >
+              <span>🧭 Open in Google Maps (Bike Nav) / Apple / Waze</span>
+            </button>
+          </div>
+
           {/* Route summary bar */}
           {navSteps.length > 0 && (() => {
             const totalDist = navSteps.reduce((a, s) => a + s.distance, 0);
@@ -718,26 +1290,12 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Quick status picker overlay */}
-      {showStatusPicker && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 500, display: 'flex', alignItems: 'flex-end' }} onClick={() => setShowStatusPicker(false)}>
-          <div style={{ background: '#1f2937', width: '100%', borderRadius: '16px 16px 0 0', padding: '20px 16px 32px' }} onClick={(e) => e.stopPropagation()}>
-            <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, margin: '0 0 16px' }}>⚡ Quick Status</p>
-            {QUICK_STATUS_OPTIONS.map((opt) => (
-              <button key={opt.value} onClick={() => pickStatus(opt.value)} style={{ display: 'block', width: '100%', textAlign: 'left', background: myStatus === opt.value ? '#374151' : 'none', border: 'none', color: '#fff', fontSize: 15, padding: '12px 16px', cursor: 'pointer', borderRadius: 8, marginBottom: 4 }}>
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Bottom tab bar */}
       <div style={{ background: '#1f2937', borderTop: '1px solid #374151', display: 'flex', flexShrink: 0 }}>
         <button onClick={sendSOS} style={{ flex: 1, padding: '14px 8px', background: '#dc2626', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ fontSize: 22 }}>🆘</span>SOS
         </button>
-        <button onClick={() => setShowStatusPicker(true)} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: myStatus ? '#f59e0b' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+        <button onClick={() => setShowStatusDrawer(true)} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: myStatus ? '#f59e0b' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ fontSize: 22 }}>⚡</span>{myStatus ? 'Status ●' : 'Status'}
         </button>
         <button onClick={() => setTab(tab === 'chat' ? 'map' : 'chat')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'chat' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
@@ -765,6 +1323,37 @@ export default function RidePage() {
           Map
         </button>
       </div>
+
+      {/* One-Tap Rider Status Drawer */}
+      <QuickStatusDrawer
+        isOpen={showStatusDrawer}
+        onClose={() => setShowStatusDrawer(false)}
+        currentStatus={myStatus}
+        onSelectStatus={pickStatus}
+      />
+
+      {/* Target Pin Stop Modal */}
+      <PinStopModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
+        plannedStops={session?.itinerary ?? []}
+        currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
+        onPinStop={handlePinStop}
+      />
+
+      {/* Captain Broadcast Announcement Modal */}
+      <CaptainAnnouncementModal
+        isOpen={showAnnouncementModal}
+        onClose={() => setShowAnnouncementModal(false)}
+        onSendAnnouncement={handleSendAnnouncement}
+      />
+
+      {/* External Navigation Launcher Modal (Google Maps / Apple Maps / Waze) */}
+      <NavigationAppModal
+        isOpen={showNavModal}
+        onClose={() => setShowNavModal(false)}
+        target={navTarget}
+      />
     </div>
   );
 }
@@ -772,4 +1361,32 @@ export default function RidePage() {
 const s: Record<string, React.CSSProperties> = {
   fullCenter: { height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111827', gap: 8 },
   btnWhite: { marginTop: 16, padding: '10px 24px', background: '#fff', color: '#111827', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
+};
+
+const styles: Record<string, React.CSSProperties> = {
+  chatActionBtn: {
+    padding: '4px 8px',
+    background: '#374151',
+    border: 'none',
+    borderRadius: 6,
+    color: '#60a5fa',
+    fontSize: 11,
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chatQuickPill: {
+    padding: '6px 12px',
+    background: '#1f2937',
+    border: '1px solid #374151',
+    borderRadius: 14,
+    color: '#9ca3af',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  },
 };
