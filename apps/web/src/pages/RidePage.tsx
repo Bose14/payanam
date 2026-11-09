@@ -856,7 +856,7 @@ export default function RidePage() {
   const isLead = session?.started_by === user?.id;
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#111827', fontFamily: 'system-ui, sans-serif', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#0f172a', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
       {/* SOS Banner */}
       {sosActive && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#dc2626', color: '#fff', padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: 15, animation: 'pulse 1s infinite' }}>
@@ -865,95 +865,188 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ background: '#1f2937', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexShrink: 0, marginTop: sosActive ? 48 : 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 18, cursor: 'pointer', padding: 0, flexShrink: 0 }}>←</button>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              🏍️ {session?.trips?.title ?? 'Live Ride'}
-            </p>
-            <p style={{ color: '#10b981', fontSize: 11, margin: 0, fontWeight: 600 }}>
-              ● LIVE · {riders.length} rider{riders.length !== 1 ? 's' : ''}
-              {!wakeLockActive && <span style={{ color: '#f59e0b', marginLeft: 6 }}>· Screen on</span>}
-            </p>
+      {/* Header — Sleek, uncrowded, modern cockpit styling for all screen sizes */}
+      <div style={{
+        backgroundColor: '#0f172a',
+        padding: '10px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        flexShrink: 0,
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        marginTop: sosActive ? 48 : 0,
+      }}>
+        {/* Left: Round Back button + Title & Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              backgroundColor: '#1e293b',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
+              fontSize: 18,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+            title="Leave Ride Screen"
+          >
+            ←
+          </button>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 style={{
+              color: '#ffffff',
+              fontWeight: 800,
+              fontSize: 15,
+              margin: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              letterSpacing: -0.3,
+            }}>
+              {session?.trips?.title ?? 'Group Ride'}
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
+              <span style={{
+                color: '#10b981',
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: 0.3,
+              }}>
+                ● LIVE · {riders.length} {riders.length === 1 ? 'rider' : 'riders'}
+              </span>
+              {staleRiders.length > 0 && (
+                <span style={{
+                  color: '#f59e0b',
+                  fontSize: 11,
+                  fontWeight: 700,
+                }}>
+                  · ⚠️ {staleRiders.length} stale
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Quick actions for Captain & Riders */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        {/* Right: Quick Action Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {/* Quick SOS Trigger Pill */}
           <button
             type="button"
-            onClick={() => setShowPinModal(true)}
+            onClick={sendSOS}
             style={{
-              background: pinnedStop ? 'rgba(245, 158, 11, 0.2)' : '#374151',
-              border: pinnedStop ? '1px solid #f59e0b' : '1px solid #4b5563',
-              color: pinnedStop ? '#fbbf24' : '#fff',
-              borderRadius: 8,
               padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1.5px solid #ef4444',
+              color: '#fca5a5',
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 900,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 4,
             }}
-            title="Set convoy regroup target stop"
+            title="Emergency Convoy SOS"
           >
-            <span>{pinnedStop ? '📍 Target' : '📌 Pin Stop'}</span>
+            <span>🚨</span>
+            <span>SOS</span>
           </button>
 
+          {/* Nearby Amenities */}
           <button
             type="button"
             onClick={() => setShowNearbyHelp(true)}
             style={{
-              background: '#1f2937',
-              border: '1px solid #374151',
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              backgroundColor: '#1e293b',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               color: '#34d399',
-              borderRadius: 8,
-              padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
+              fontSize: 15,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              justifyContent: 'center',
             }}
-            title="Verified amenities along route (Fuel, Repair, Food, Rest)"
+            title="Verified Nearby Help (Fuel, Repair, Food, Rest)"
           >
-            <span>🛠️ Nearby</span>
+            🛠️
           </button>
 
+          {/* Captain Broadcast Alert */}
           {isLead && (
             <button
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                border: 'none',
-                color: '#111827',
-                borderRadius: 8,
-                padding: '6px 10px',
-                fontSize: 12,
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                border: '1.5px solid #f59e0b',
+                color: '#fbbf24',
+                fontSize: 15,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Broadcast alert to all riders"
+            >
+              📢
+            </button>
+          )}
+
+          {/* End / Leave Ride */}
+          {isLead ? (
+            <button
+              onClick={handleEndRide}
+              disabled={endingRide}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                border: '1px solid #dc2626',
+                color: '#fca5a5',
+                fontSize: 13,
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                justifyContent: 'center',
               }}
-              title="Broadcast alert to all riders"
+              title="End ride for everyone"
             >
-              <span>📢 Broadcast</span>
-            </button>
-          )}
-
-          {isLead ? (
-            <button onClick={handleEndRide} disabled={endingRide} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-              {endingRide ? '...' : '⏹ End'}
+              {endingRide ? '...' : '⏹'}
             </button>
           ) : (
-            <button onClick={() => navigate(-1)} style={{ background: '#374151', color: '#9ca3af', border: 'none', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-              Leave
+            <button
+              onClick={() => navigate(-1)}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                backgroundColor: '#1e293b',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#94a3b8',
+                fontSize: 14,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Leave Ride Screen"
+            >
+              🚪
             </button>
           )}
         </div>
@@ -1146,19 +1239,20 @@ export default function RidePage() {
               top: 12,
               left: 12,
               zIndex: 1000,
-              background: 'rgba(17, 24, 39, 0.88)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid #374151',
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
               color: '#ffffff',
-              borderRadius: 20,
-              padding: '6px 12px',
+              borderRadius: 24,
+              padding: '7px 14px',
               fontSize: 12,
               fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
             }}
             title="Toggle split roster and map view"
           >
@@ -1169,7 +1263,24 @@ export default function RidePage() {
           {!following && myLat && myLng && (
             <button
               onClick={() => { setFollowing(true); setFocusTarget(null); }}
-              style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 1000, background: '#1f2937', border: '2px solid #f59e0b', color: '#f59e0b', borderRadius: '50%', width: 44, height: 44, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+              style={{
+                position: 'absolute',
+                bottom: 16,
+                right: 16,
+                zIndex: 1000,
+                backgroundColor: '#1e293b',
+                border: '2px solid #f59e0b',
+                color: '#f59e0b',
+                borderRadius: '50%',
+                width: 46,
+                height: 46,
+                fontSize: 20,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+              }}
               title="Re-center on me"
             >
               📍
@@ -1178,7 +1289,22 @@ export default function RidePage() {
 
           {/* Wake lock indicator */}
           {wakeLockActive && (
-            <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 999, background: 'rgba(16,185,129,0.9)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 8 }}>
+            <div style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 999,
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(52, 211, 153, 0.35)',
+              color: '#34d399',
+              fontSize: 11,
+              fontWeight: 800,
+              padding: '6px 10px',
+              borderRadius: 20,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}>
               🔆 Screen on
             </div>
           )}
@@ -1226,11 +1352,12 @@ export default function RidePage() {
 
         {/* In Split View: Alert Banner + Rider Roster (Mockup Screen 1) */}
         {splitView && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#111827' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#0f172a' }}>
             {/* Stale Riders Warning Banner */}
             <StaleRidersAlertBanner
               staleCount={staleRiders.length}
               staleRiderNames={staleRiders.map((r) => r.userName)}
+              onClick={() => setTab('riders')}
             />
 
             {/* Rider Roster List */}
@@ -1455,7 +1582,7 @@ export default function RidePage() {
 
       {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', background: '#111827' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#0f172a' }}>
           {/* Stale Riders Warning Banner */}
           <StaleRidersAlertBanner
             staleCount={staleRiders.length}
@@ -1575,37 +1702,202 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Bottom tab bar */}
-      <div style={{ background: '#1f2937', borderTop: '1px solid #374151', display: 'flex', flexShrink: 0 }}>
-        <button onClick={sendSOS} style={{ flex: 1, padding: '14px 8px', background: '#dc2626', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>🆘</span>SOS
+      {/* Bottom tab bar — Sleek, thumb-friendly navigation designed for all ages */}
+      <div style={{
+        backgroundColor: '#0f172a',
+        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        padding: '6px 4px 8px',
+        flexShrink: 0,
+        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.45)',
+      }}>
+        {/* Tab 1: Map Tracking */}
+        <button
+          type="button"
+          onClick={() => setTab('map')}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            padding: '4px 2px',
+            color: tab === 'map' ? '#f59e0b' : '#94a3b8',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>🗺️</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: tab === 'map' ? 900 : 600,
+            letterSpacing: 0.3,
+          }}>
+            Map
+          </span>
+          {tab === 'map' && (
+            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
+          )}
         </button>
-        <button onClick={() => setShowTellGroupSheet(true)} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: myStatus ? '#f59e0b' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>⚡</span>{myStatus ? 'Status ●' : 'Status'}
+
+        {/* Tab 2: Tell Group / Status Presets */}
+        <button
+          type="button"
+          onClick={() => setShowTellGroupSheet(true)}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            padding: '4px 2px',
+            color: myStatus ? '#f59e0b' : '#94a3b8',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>⚡</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: myStatus ? 900 : 600,
+            letterSpacing: 0.3,
+          }}>
+            {myStatus ? 'Status ●' : 'Presets'}
+          </span>
         </button>
-        <button onClick={() => setTab(tab === 'chat' ? 'map' : 'chat')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'chat' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
-          <span style={{ fontSize: 22 }}>💬</span>
-          Chat
+
+        {/* Tab 3: Trip Chat */}
+        <button
+          type="button"
+          onClick={() => setTab(tab === 'chat' ? 'map' : 'chat')}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            padding: '4px 2px',
+            color: tab === 'chat' ? '#f59e0b' : '#94a3b8',
+            position: 'relative',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>💬</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: tab === 'chat' ? 900 : 600,
+            letterSpacing: 0.3,
+          }}>
+            Chat
+          </span>
           {newMsgCount > 0 && tab !== 'chat' && (
-            <span style={{ position: 'absolute', top: 8, right: '20%', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{
+              position: 'absolute',
+              top: 2,
+              right: '25%',
+              backgroundColor: '#ef4444',
+              color: '#ffffff',
+              fontSize: 10,
+              fontWeight: 900,
+              width: 17,
+              height: 17,
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+            }}>
               {newMsgCount > 9 ? '9+' : newMsgCount}
             </span>
           )}
-        </button>
-        <button onClick={() => setTab(tab === 'riders' ? 'map' : 'riders')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'riders' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>👥</span>
-          Riders
-        </button>
-        <button onClick={() => setTab(tab === 'nav' ? 'map' : 'nav')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'nav' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
-          <span style={{ fontSize: 22 }}>🧭</span>
-          Nav
-          {navSteps.length > 0 && tab !== 'nav' && (
-            <span style={{ position: 'absolute', top: 8, right: '18%', width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
+          {tab === 'chat' && (
+            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
           )}
         </button>
-        <button onClick={() => setTab('map')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'map' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>🗺️</span>
-          Map
+
+        {/* Tab 4: Convoy Roster */}
+        <button
+          type="button"
+          onClick={() => setTab(tab === 'riders' ? 'map' : 'riders')}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            padding: '4px 2px',
+            color: tab === 'riders' ? '#f59e0b' : '#94a3b8',
+            position: 'relative',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>👥</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: tab === 'riders' ? 900 : 600,
+            letterSpacing: 0.3,
+          }}>
+            Convoy
+          </span>
+          {staleRiders.length > 0 && tab !== 'riders' && (
+            <span style={{
+              position: 'absolute',
+              top: 3,
+              right: '24%',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: '#f59e0b',
+              boxShadow: '0 0 6px #f59e0b',
+            }} />
+          )}
+          {tab === 'riders' && (
+            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
+          )}
+        </button>
+
+        {/* Tab 5: External Nav / Turns */}
+        <button
+          type="button"
+          onClick={() => setTab(tab === 'nav' ? 'map' : 'nav')}
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 2,
+            padding: '4px 2px',
+            color: tab === 'nav' ? '#f59e0b' : '#94a3b8',
+            position: 'relative',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>🧭</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: tab === 'nav' ? 900 : 600,
+            letterSpacing: 0.3,
+          }}>
+            Nav
+          </span>
+          {tab === 'nav' && (
+            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
+          )}
         </button>
       </div>
 
