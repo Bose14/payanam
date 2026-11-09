@@ -101,11 +101,11 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 // Navigation arrow for the current user — rotates with heading
 function makeMyNavIcon(color: string, heading: number, status: string, isStale: boolean = false) {
-  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#FFFFFF;color:#1C1917;border:1.5px solid #1C1917;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700;">${status}</div>` : '';
-  const fill = isStale ? '#FFFFFF' : '#E5A900';
-  const stroke = isStale ? color : '#FFFFFF';
-  const opacity = isStale ? '0.75' : '1';
-  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="#E5A900" stroke="white" stroke-width="2.5" opacity="0.3"/>`;
+  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#F1EFEA;border:1.5px solid #2A2E35;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:800;box-shadow:0 3px 8px rgba(0,0,0,0.4);">${status}</div>` : '';
+  const fill = isStale ? '#1B1E23' : '#F0C23A';
+  const stroke = isStale ? color : '#111316';
+  const opacity = isStale ? '0.8' : '1';
+  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="#F0C23A" stroke="#111316" stroke-width="2" opacity="0.3"/>`;
 
   return L.divIcon({
     className: '',
@@ -116,7 +116,7 @@ function makeMyNavIcon(color: string, heading: number, status: string, isStale: 
         <svg width="44" height="44" viewBox="0 0 44 44">
           ${ringAura}
           <polygon points="22,4 34,38 22,30 10,38" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
-          <circle cx="22" cy="22" r="5" fill="#1C1917"/>
+          <circle cx="22" cy="22" r="5" fill="#111316"/>
         </svg>
       </div>
       ${badge}
@@ -856,11 +856,11 @@ export default function RidePage() {
   const isLead = session?.started_by === user?.id;
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#EFECE6', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
-      {/* Dynamic Warm Style for Map & Elements */}
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#111316', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
+      {/* Dynamic Dark Style for Map & Elements */}
       <style>{`
         .warm-map-container .leaflet-tile-pane {
-          filter: sepia(0.2) saturate(0.9) brightness(0.98);
+          filter: brightness(0.9) contrast(1.1);
         }
         .warm-map-container .leaflet-control-attribution {
           display: none;
@@ -875,9 +875,9 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Header — Editorial Nordic Warm Style matching Mockup Screen 1 */}
+      {/* Header — Matte Obsidian Dark matching Mockup */}
       <div style={{
-        backgroundColor: '#EFECE6',
+        backgroundColor: '#111316',
         padding: '14px 18px 8px',
         display: 'flex',
         alignItems: 'center',
@@ -893,7 +893,7 @@ export default function RidePage() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#1C1917',
+              color: '#F1EFEA',
               fontSize: 22,
               cursor: 'pointer',
               padding: 0,
@@ -906,7 +906,7 @@ export default function RidePage() {
           </button>
           <div style={{ minWidth: 0 }}>
             <h1 style={{
-              color: '#1C1917',
+              color: '#F1EFEA',
               fontWeight: 900,
               fontSize: 24,
               margin: 0,
@@ -923,7 +923,7 @@ export default function RidePage() {
         {/* Right: Subtitle & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <span style={{
-            color: '#78716C',
+            color: '#9D9C9A',
             fontSize: 13,
             fontWeight: 600,
             whiteSpace: 'nowrap',
@@ -939,8 +939,8 @@ export default function RidePage() {
               width: 34,
               height: 34,
               borderRadius: '50%',
-              backgroundColor: '#FFFFFF',
-              border: '1.5px solid #E2DED6',
+              backgroundColor: '#1B1E23',
+              border: '1.5px solid #2A2E35',
               fontSize: 14,
               cursor: 'pointer',
               display: 'flex',
@@ -961,8 +961,8 @@ export default function RidePage() {
                 width: 34,
                 height: 34,
                 borderRadius: '50%',
-                backgroundColor: '#FFFFFF',
-                border: '1.5px solid #E2DED6',
+                backgroundColor: '#1B1E23',
+                border: '1.5px solid #2A2E35',
                 fontSize: 14,
                 cursor: 'pointer',
                 display: 'flex',
@@ -981,9 +981,9 @@ export default function RidePage() {
             onClick={sendSOS}
             style={{
               padding: '5px 10px',
-              backgroundColor: '#FEE2E2',
-              border: '1px solid #FCA5A5',
-              color: '#B91C1C',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1.5px solid #EF4444',
+              color: '#EF4444',
               borderRadius: 16,
               fontSize: 11,
               fontWeight: 900,
@@ -1004,9 +1004,9 @@ export default function RidePage() {
                 width: 34,
                 height: 34,
                 borderRadius: '50%',
-                backgroundColor: '#FFFFFF',
-                border: '1.5px solid #E2DED6',
-                color: '#DC2626',
+                backgroundColor: '#1B1E23',
+                border: '1.5px solid #2A2E35',
+                color: '#EF4444',
                 fontSize: 13,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -1116,91 +1116,110 @@ export default function RidePage() {
       )}
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
-      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'flex' : 'none', flexDirection: 'column', position: 'relative', backgroundColor: '#EFECE6' }}>
+      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'flex' : 'none', flexDirection: 'column', position: 'relative', backgroundColor: '#111316' }}>
         {/* Map Section (Card style matching Mockup Screen 1) */}
         <div className="warm-map-container" style={{
           height: splitView ? '40%' : '100%',
-          margin: splitView ? '2px 14px 6px' : '0',
+          margin: splitView ? '4px 16px 8px' : '0',
           borderRadius: splitView ? 20 : 0,
-          border: splitView ? '1.5px solid #E2DED6' : 'none',
+          border: splitView ? '1.5px solid #2A2E35' : 'none',
           position: 'relative',
           overflow: 'hidden',
           transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           flexShrink: 0,
-          backgroundColor: '#FFFFFF',
-          boxShadow: splitView ? '0 4px 14px rgba(28, 25, 23, 0.05)' : 'none',
+          backgroundColor: '#1B1E23',
+          boxShadow: splitView ? '0 4px 20px rgba(0, 0, 0, 0.35)' : 'none',
         }}>
           {gpsError && (
             <div style={{
               position: 'absolute',
               inset: 0,
               zIndex: 2000,
-              backgroundColor: 'rgba(28, 25, 23, 0.75)',
-              backdropFilter: 'blur(4px)',
+              backgroundColor: '#111316',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 20,
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '24px 20px 28px',
+              boxSizing: 'border-box',
             }}>
-              <div style={{
-                backgroundColor: '#FFFFFF',
-                borderRadius: 24,
-                padding: '24px 20px',
-                maxWidth: 340,
-                width: '100%',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-                textAlign: 'left',
-                color: '#1C1917',
-              }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: '#D97706', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
-                  STEP 2 OF 3
+              <div>
+                {/* Status Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#9D9C9A', fontSize: 13, fontWeight: 700, marginBottom: 28 }}>
+                  <span>9:41</span>
+                  <span>5G</span>
                 </div>
-                <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 8px', color: '#1C1917' }}>
-                  Live trip tracking
-                </h3>
-                <p style={{ fontSize: 13, color: '#78716C', lineHeight: 1.5, margin: '0 0 20px' }}>
-                  We use your location only while a trip is active, so your group can see where you are.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGpsError('');
-                      navigator.geolocation?.getCurrentPosition(
-                        () => setGpsError(''),
-                        (err) => setGpsError(err.message || 'GPS permission needed')
-                      );
-                    }}
-                    style={{
-                      padding: '13px',
-                      backgroundColor: '#E5A900',
-                      color: '#1C1917',
-                      border: 'none',
-                      borderRadius: 14,
-                      fontWeight: 900,
-                      fontSize: 14,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Allow location
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGpsError('')}
-                    style={{
-                      padding: '12px',
-                      backgroundColor: '#FFFFFF',
-                      color: '#1C1917',
-                      border: '1.5px solid #E2DED6',
-                      borderRadius: 14,
-                      fontWeight: 700,
-                      fontSize: 13,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Not now
-                  </button>
+
+                {/* Brand Header matching mockup: ■ PAYANAM */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
+                  <div style={{ width: 12, height: 12, backgroundColor: '#F0C23A', borderRadius: 2 }} />
+                  <span style={{ color: '#F1EFEA', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
                 </div>
+
+                {/* Step Card matching mockup */}
+                <div style={{
+                  backgroundColor: '#1B1E23',
+                  border: '1.5px solid #2A2E35',
+                  borderRadius: 20,
+                  padding: '22px 20px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                    STEP 2 OF 3
+                  </div>
+                  <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: '#F1EFEA', letterSpacing: -0.3 }}>
+                    Live trip tracking
+                  </h3>
+                  <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.45, margin: 0 }}>
+                    We use your location only while a trip is active, so your group can see where you are.
+                  </p>
+                </div>
+              </div>
+
+              {/* Fixed Bottom Buttons matching mockup */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGpsError('');
+                    navigator.geolocation?.getCurrentPosition(
+                      () => setGpsError(''),
+                      (err) => setGpsError(err.message || 'GPS permission needed')
+                    );
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    backgroundColor: '#F0C23A',
+                    color: '#111316',
+                    border: 'none',
+                    borderRadius: 14,
+                    fontWeight: 900,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(240, 194, 58, 0.25)',
+                    textAlign: 'center',
+                  }}
+                >
+                  Allow location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGpsError('')}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    backgroundColor: '#1B1E23',
+                    color: '#F1EFEA',
+                    border: '1.5px solid #2A2E35',
+                    borderRadius: 14,
+                    fontWeight: 800,
+                    fontSize: 15,
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                  }}
+                >
+                  Not now
+                </button>
               </div>
             </div>
           )}
@@ -1214,18 +1233,18 @@ export default function RidePage() {
               top: 10,
               left: 10,
               zIndex: 1000,
-              backgroundColor: '#FFFFFF',
-              border: '1.5px solid #E2DED6',
-              color: '#1C1917',
+              backgroundColor: '#1B1E23',
+              border: '1.5px solid #2A2E35',
+              color: '#F1EFEA',
               borderRadius: 20,
-              padding: '6px 12px',
+              padding: '6px 14px',
               fontSize: 11,
               fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              boxShadow: '0 2px 8px rgba(28, 25, 23, 0.08)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
             }}
             title="Toggle split roster and map view"
           >
@@ -1241,9 +1260,9 @@ export default function RidePage() {
                 bottom: 12,
                 right: 12,
                 zIndex: 1000,
-                backgroundColor: '#FFFFFF',
-                border: '2px solid #E5A900',
-                color: '#E5A900',
+                backgroundColor: '#1B1E23',
+                border: '2px solid #F0C23A',
+                color: '#F0C23A',
                 borderRadius: '50%',
                 width: 38,
                 height: 38,
@@ -1252,7 +1271,7 @@ export default function RidePage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 2px 8px rgba(28, 25, 23, 0.12)',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
               }}
               title="Re-center on me"
             >
@@ -1267,14 +1286,14 @@ export default function RidePage() {
               top: 10,
               right: 10,
               zIndex: 999,
-              backgroundColor: '#FFFFFF',
-              border: '1.5px solid #059669',
-              color: '#059669',
+              backgroundColor: '#1B1E23',
+              border: '1.5px solid #10B981',
+              color: '#10B981',
               fontSize: 11,
               fontWeight: 800,
               padding: '5px 10px',
               borderRadius: 20,
-              boxShadow: '0 2px 6px rgba(28, 25, 23, 0.06)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
             }}>
               🔆 Screen on
             </div>
@@ -1282,15 +1301,15 @@ export default function RidePage() {
 
           <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="© OpenStreetMap"
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution="&copy; OpenStreetMap &copy; CARTO"
             />
             {myLat && myLng && (
               <MapFollow lat={myLat} lng={myLng} following={following} focusTarget={focusTarget} onDrag={() => { setFollowing(false); setFocusTarget(null); }} />
             )}
             {/* Road-following route (OSRM): Amber dashed route line matching mockup */}
             {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
-              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#E5A900" weight={5} dashArray="8, 8" opacity={0.95} />
+              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#F0C23A" weight={5} dashArray="8, 8" opacity={0.95} />
             )}
             {/* Itinerary stop markers */}
             {itineraryStops.map((stop) => (
@@ -1323,7 +1342,7 @@ export default function RidePage() {
 
         {/* In Split View: Alert Banner + Rider Roster (Mockup Screen 1) */}
         {splitView && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
             {/* Stale Riders Warning Banner */}
             <StaleRidersAlertBanner
               staleCount={staleRiders.length}
@@ -1332,18 +1351,18 @@ export default function RidePage() {
             />
 
             {/* Rider Roster List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 6px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 2px 8px' }}>
-                <span style={{ fontSize: 11, fontWeight: 900, color: '#78716C', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
                   Convoy Roster ({ridersWithFreshness.length})
                 </span>
-                <span style={{ fontSize: 11, color: '#059669', fontWeight: 800 }}>
+                <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>
                   ● {ridersWithFreshness.filter(r => r.freshness.isLive).length} LIVE
                 </span>
               </div>
 
               {ridersWithFreshness.length === 0 && (
-                <p style={{ color: '#78716C', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+                <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
                   Waiting for riders to join and share GPS...
                 </p>
               )}
@@ -1373,21 +1392,21 @@ export default function RidePage() {
 
       {/* Plan Tab (Mockup Screen 7: Trip detail · itinerary) */}
       {tab === 'plan' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6', padding: '12px 16px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316', padding: '12px 16px' }}>
           {/* Top Subheader Filter Tabs */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            <span style={{ backgroundColor: '#1C1917', color: '#FFFFFF', padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
+            <span style={{ backgroundColor: '#F0C23A', color: '#111316', padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
               ITINERARY
             </span>
-            <span style={{ color: '#78716C', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
+            <span style={{ color: '#9D9C9A', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
               PEOPLE
             </span>
-            <span style={{ color: '#78716C', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
+            <span style={{ color: '#9D9C9A', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
               MONEY
             </span>
             <button
               onClick={() => setShowNearbyHelp(true)}
-              style={{ background: 'none', border: 'none', color: '#059669', padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#F0C23A', padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
             >
               HELP ↗
             </button>
@@ -1395,49 +1414,49 @@ export default function RidePage() {
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Itinerary Section Card */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: 18, border: '1.5px solid #E2DED6', padding: '16px 18px' }}>
-              <div style={{ fontSize: 11, fontWeight: 900, color: '#78716C', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+            <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
                 DAY 2 · HUBLI TO MANGALURU
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>07:30 Start from Hubli</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>07:30 Start from Hubli</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>10:30 Sagar Highway Dhaba</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#059669', border: '1px solid #059669', padding: '2px 6px', borderRadius: 4 }}>FROM CHAT</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>10:30 Sagar Highway Dhaba</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', border: '1px solid #10B981', padding: '2px 6px', borderRadius: 4 }}>FROM CHAT</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>13:00 Lunch, Udupi</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#D97706', border: '1px solid #D97706', padding: '2px 6px', borderRadius: 4 }}>PROPOSED</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>13:00 Lunch, Udupi</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#F0C23A', border: '1px solid #F0C23A', padding: '2px 6px', borderRadius: 4 }}>PROPOSED</span>
                 </div>
               </div>
             </div>
 
             {/* Propose Card */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: 18, border: '1.5px solid #E2DED6', padding: '14px 16px' }}>
+            <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#E7E5E4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#22262D', color: '#F1EFEA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, border: '1px solid #3A3F47' }}>
                   MR
                 </div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1C1917' }}>Meera proposed</div>
-                  <div style={{ fontSize: 12, color: '#78716C' }}>Lunch at 13:30 instead</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#F1EFEA' }}>Meera proposed</div>
+                  <div style={{ fontSize: 12, color: '#9D9C9A' }}>Lunch at 13:30 instead</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   type="button"
                   onClick={() => { setToast('Proposal accepted'); setTimeout(() => setToast(''), 2500); }}
-                  style={{ flex: 1, padding: '10px', backgroundColor: '#E5A900', color: '#1C1917', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '10px', backgroundColor: '#F0C23A', color: '#111316', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
                 >
                   Accept
                 </button>
                 <button
                   type="button"
                   onClick={() => { setToast('Proposal declined'); setTimeout(() => setToast(''), 2500); }}
-                  style={{ flex: 1, padding: '10px', backgroundColor: '#FFFFFF', color: '#1C1917', border: '1.5px solid #E2DED6', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '10px', backgroundColor: '#1B1E23', color: '#F1EFEA', border: '1.5px solid #2A2E35', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
                 >
                   Decline
                 </button>
@@ -1448,7 +1467,7 @@ export default function RidePage() {
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
             >
               🛠️ View route-cached amenities (fuel, repair, food)
             </button>
@@ -1458,49 +1477,49 @@ export default function RidePage() {
 
       {/* Discover tab (Mockup Screen 8: Discover search) */}
       {tab === 'discover' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6', padding: '12px 16px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316', padding: '12px 16px' }}>
           {/* Search box */}
           <input
             type="text"
             readOnly
             value="Search: Bengaluru to Kasaragod"
-            style={{ width: '100%', padding: '12px 16px', borderRadius: 16, border: '1.5px solid #E2DED6', backgroundColor: '#FFFFFF', color: '#1C1917', fontSize: 14, fontWeight: 600, outline: 'none', marginBottom: 12 }}
+            style={{ width: '100%', padding: '12px 16px', borderRadius: 16, border: '1.5px solid #2A2E35', backgroundColor: '#1B1E23', color: '#F1EFEA', fontSize: 14, fontWeight: 600, outline: 'none', marginBottom: 12 }}
           />
 
           {/* Tags */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#059669', border: '1.5px solid #059669', padding: '3px 8px', borderRadius: 6 }}>TWISTY</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#78716C', border: '1.5px solid #E2DED6', padding: '3px 8px', borderRadius: 6 }}>3-5 DAYS</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#78716C', border: '1.5px solid #E2DED6', padding: '3px 8px', borderRadius: 6 }}>MIXED</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981', border: '1.5px solid #10B981', padding: '3px 8px', borderRadius: 6 }}>TWISTY</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', border: '1.5px solid #2A2E35', padding: '3px 8px', borderRadius: 6 }}>3-5 DAYS</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', border: '1.5px solid #2A2E35', padding: '3px 8px', borderRadius: 6 }}>MIXED</span>
           </div>
 
           {/* Route cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, overflowY: 'auto' }}>
-            <div style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 18, padding: '16px 18px' }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#1C1917' }}>Bengaluru to Kasaragod, 3 days</div>
-              <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>by Arjun · 412 copies · 4.7 from riders who finished</div>
-              <div style={{ fontSize: 12, color: '#78716C', marginTop: 2 }}>Stops: fuel 5 · food 9 · rest 2</div>
+            <div style={{ backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 18, padding: '16px 18px' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA' }}>Bengaluru to Kasaragod, 3 days</div>
+              <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 4 }}>by Arjun · 412 copies · 4.7 from riders who finished</div>
+              <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 2 }}>Stops: fuel 5 · food 9 · rest 2</div>
               <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
                 <button
                   type="button"
                   onClick={() => { setToast('Route copied to trips'); setTimeout(() => setToast(''), 2500); }}
-                  style={{ padding: '9px 16px', backgroundColor: '#E5A900', color: '#1C1917', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '9px 16px', backgroundColor: '#F0C23A', color: '#111316', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
                 >
                   Copy to my trips
                 </button>
                 <button
                   type="button"
                   onClick={() => setTab('chat')}
-                  style={{ padding: '9px 16px', backgroundColor: '#FFFFFF', color: '#1C1917', border: '1.5px solid #E2DED6', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '9px 16px', backgroundColor: '#1B1E23', color: '#F1EFEA', border: '1.5px solid #2A2E35', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
                 >
                   Message
                 </button>
               </div>
             </div>
 
-            <div style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 18, padding: '16px 18px' }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#1C1917' }}>Coorg loop, 2 days</div>
-              <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>by Meera · 128 copies</div>
+            <div style={{ backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 18, padding: '16px 18px' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA' }}>Coorg loop, 2 days</div>
+              <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 4 }}>by Meera · 128 copies</div>
             </div>
           </div>
         </div>
@@ -1508,12 +1527,12 @@ export default function RidePage() {
 
       {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards) */}
       {tab === 'chat' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
-                <p style={{ color: '#1C1917', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
-                <p style={{ color: '#78716C', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
+                <p style={{ color: '#F1EFEA', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
+                <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
               </div>
             )}
             {messages.map((m) => {
@@ -1527,9 +1546,9 @@ export default function RidePage() {
                   <div key={m.id} style={{ textAlign: 'center', margin: '2px 0' }}>
                     <span style={{
                       fontSize: 11,
-                      color: isStopArrival ? '#059669' : '#78716C',
-                      background: isStopArrival ? '#ECFDF5' : '#FFFFFF',
-                      border: isStopArrival ? '1.5px solid #059669' : '1.5px solid #E2DED6',
+                      color: isStopArrival ? '#10B981' : '#9D9C9A',
+                      background: isStopArrival ? 'rgba(16, 185, 129, 0.15)' : '#1B1E23',
+                      border: isStopArrival ? '1.5px solid #10B981' : '1.5px solid #2A2E35',
                       padding: '3px 12px',
                       borderRadius: 14,
                       fontWeight: 700,
@@ -1543,17 +1562,17 @@ export default function RidePage() {
               if (isAnnouncement) {
                 return (
                   <div key={m.id} style={{
-                    background: '#FFFDF7',
-                    border: '1.5px solid #F59E0B',
+                    background: 'rgba(240, 194, 58, 0.08)',
+                    border: '1.5px solid #F0C23A',
                     borderRadius: 16,
                     padding: '12px 14px',
                     margin: '4px 0',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: '#B45309', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: '#F0C23A', textTransform: 'uppercase' }}>
                       <span>📢</span>
                       <span>Captain Announcement · {m.user_name}</span>
                     </div>
-                    <div style={{ color: '#1C1917', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ color: '#F1EFEA', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
                       {m.message}
                     </div>
                   </div>
@@ -1570,7 +1589,7 @@ export default function RidePage() {
               return (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                   {!isMe && (
-                    <span style={{ fontSize: 12, color: '#78716C', marginBottom: 4, fontWeight: 700 }}>
+                    <span style={{ fontSize: 12, color: '#9D9C9A', marginBottom: 4, fontWeight: 700 }}>
                       {m.user_name}
                     </span>
                   )}
@@ -1578,10 +1597,10 @@ export default function RidePage() {
                     maxWidth: '85%',
                     padding: '12px 16px',
                     borderRadius: 20,
-                    background: isMe ? '#FEF3C7' : '#FFFFFF',
-                    color: '#1C1917',
-                    border: isMe ? '1px solid #FDE68A' : '1.5px solid #E2DED6',
-                    boxShadow: '0 2px 6px rgba(28, 25, 23, 0.04)',
+                    background: isMe ? '#22262D' : '#1B1E23',
+                    color: '#F1EFEA',
+                    border: isMe ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                   }}>
                     <div style={{ fontSize: 14, lineHeight: 1.4 }}>{m.message}</div>
 
@@ -1590,18 +1609,18 @@ export default function RidePage() {
                       <div style={{
                         marginTop: 10,
                         padding: '12px 14px',
-                        backgroundColor: '#F5F3EF',
-                        border: '1.5px dashed #D1C7B7',
+                        backgroundColor: '#111316',
+                        border: '1.5px dashed #3A3F47',
                         borderRadius: 14,
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 8,
                       }}>
                         <div>
-                          <div style={{ fontSize: 14, fontWeight: 900, color: '#1C1917' }}>
+                          <div style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA' }}>
                             {pinnedStop?.name ?? 'Sagar Highway Dhaba'}
                           </div>
-                          <div style={{ fontSize: 11, color: '#78716C', marginTop: 2 }}>
+                          <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>
                             Shared {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · open in maps
                           </div>
                         </div>
@@ -1624,8 +1643,8 @@ export default function RidePage() {
                           style={{
                             width: '100%',
                             padding: '10px',
-                            backgroundColor: '#E5A900',
-                            color: '#1C1917',
+                            backgroundColor: '#F0C23A',
+                            color: '#111316',
                             border: 'none',
                             borderRadius: 10,
                             fontWeight: 900,
@@ -1638,7 +1657,7 @@ export default function RidePage() {
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 10, color: '#A8A29E', marginTop: 3 }}>
+                  <span style={{ fontSize: 10, color: '#9D9C9A', marginTop: 3 }}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -1648,38 +1667,38 @@ export default function RidePage() {
           </div>
 
           {/* Quick Chat Pill Row */}
-          <div style={{ padding: '6px 14px', background: '#EFECE6', display: 'flex', gap: 8, borderTop: '1px solid #E2DED6', overflowX: 'auto' }}>
+          <div style={{ padding: '6px 14px', background: '#111316', display: 'flex', gap: 8, borderTop: '1px solid #2A2E35', overflowX: 'auto' }}>
             <button
               type="button"
               onClick={handleShareCurrentLocation}
-              style={{ padding: '6px 12px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               📍 Share GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
-              style={{ padding: '6px 12px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               📌 Propose Stop
             </button>
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '6px 12px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               🛠️ Nearby Amenities
             </button>
           </div>
 
           {/* Message Input matching mockup */}
-          <div style={{ padding: '8px 14px 10px', background: '#EFECE6', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ padding: '8px 14px 10px', background: '#111316', display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
               placeholder="Message the trip group..."
-              style={{ flex: 1, background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 24, padding: '11px 18px', color: '#1C1917', fontSize: 14, outline: 'none' }}
+              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: '#F1EFEA', fontSize: 14, outline: 'none' }}
             />
             <button
               onClick={sendChat}
@@ -1688,8 +1707,8 @@ export default function RidePage() {
                 width: 44,
                 height: 44,
                 borderRadius: '50%',
-                backgroundColor: '#E5A900',
-                color: '#1C1917',
+                backgroundColor: '#F0C23A',
+                color: '#111316',
                 border: 'none',
                 fontWeight: 900,
                 fontSize: 16,
@@ -1708,7 +1727,7 @@ export default function RidePage() {
 
       {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#EFECE6' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#111316' }}>
           {/* Stale Riders Warning Banner */}
           <StaleRidersAlertBanner
             staleCount={staleRiders.length}
@@ -1716,16 +1735,16 @@ export default function RidePage() {
           />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 2px 10px' }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: '#78716C', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
               Convoy Roster ({ridersWithFreshness.length})
             </span>
-            <span style={{ fontSize: 11, color: '#059669', fontWeight: 800 }}>
+            <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>
               ● {ridersWithFreshness.filter((r) => r.freshness.isLive).length} LIVE
             </span>
           </div>
 
           {ridersWithFreshness.length === 0 && (
-            <p style={{ color: '#78716C', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
+            <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
               No riders online yet. Positions will appear here when riders connect.
             </p>
           )}
@@ -1745,9 +1764,9 @@ export default function RidePage() {
 
       {/* Nav / Directions panel */}
       {tab === 'nav' && (
-        <div style={{ flex: 1, overflowY: 'auto', background: '#EFECE6', padding: '12px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: '#111316', padding: '12px 16px' }}>
           {/* Quick Launch External Navigation Apps */}
-          <div style={{ padding: '12px 16px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
+          <div style={{ padding: '12px 16px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
             <button
               onClick={() => {
                 if (pinnedStop) {
@@ -1767,8 +1786,8 @@ export default function RidePage() {
               style={{
                 flex: 1,
                 padding: '12px 14px',
-                background: '#E5A900',
-                color: '#1C1917',
+                background: '#F0C23A',
+                color: '#111316',
                 border: 'none',
                 borderRadius: 12,
                 fontWeight: 900,
@@ -1791,18 +1810,18 @@ export default function RidePage() {
             const hrs = Math.floor(totalSecs / 3600);
             const mins = Math.round((totalSecs % 3600) / 60);
             return (
-              <div style={{ background: '#FFFFFF', padding: '14px 18px', border: '1.5px solid #E2DED6', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
+              <div style={{ background: '#1B1E23', padding: '14px 18px', border: '1.5px solid #2A2E35', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
                 <div>
-                  <p style={{ color: '#1C1917', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
-                  <p style={{ color: '#78716C', fontSize: 11, margin: 0 }}>total distance</p>
+                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
+                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>total distance</p>
                 </div>
                 <div>
-                  <p style={{ color: '#1C1917', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
-                  <p style={{ color: '#78716C', fontSize: 11, margin: 0 }}>est. riding time</p>
+                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
+                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>est. riding time</p>
                 </div>
                 <div>
-                  <p style={{ color: '#1C1917', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
-                  <p style={{ color: '#78716C', fontSize: 11, margin: 0 }}>turns</p>
+                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
+                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>turns</p>
                 </div>
               </div>
             );
@@ -1810,17 +1829,17 @@ export default function RidePage() {
           {navSteps.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 16px' }}>
               <p style={{ fontSize: 32 }}>🗺️</p>
-              <p style={{ color: '#78716C', fontSize: 14 }}>Fetching route directions…</p>
+              <p style={{ color: '#9D9C9A', fontSize: 14 }}>Fetching route directions…</p>
             </div>
           )}
           {navSteps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #E2DED6', background: i === 0 ? '#FFFDF7' : 'transparent' }}>
-              <div style={{ width: 36, height: 36, background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #2A2E35', background: i === 0 ? 'rgba(240, 194, 58, 0.08)' : 'transparent' }}>
+              <div style={{ width: 36, height: 36, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                 {stepIcon(step.instruction)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: '#1C1917', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
-                <p style={{ color: '#78716C', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
+                <p style={{ color: '#F1EFEA', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
+                <p style={{ color: '#9D9C9A', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
               </div>
             </div>
           ))}
@@ -1829,8 +1848,8 @@ export default function RidePage() {
 
       {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
       <div style={{
-        backgroundColor: '#EFECE6',
-        borderTop: '1.5px solid #E2DED6',
+        backgroundColor: '#111316',
+        borderTop: '1.5px solid #2A2E35',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -1987,8 +2006,8 @@ const s: Record<string, React.CSSProperties> = {
 
 const styles: Record<string, React.CSSProperties> = {
   activeNavPill: {
-    backgroundColor: '#E5A900',
-    color: '#1C1917',
+    backgroundColor: '#F0C23A',
+    color: '#111316',
     fontWeight: 900,
     fontSize: 13,
     letterSpacing: 0.5,
@@ -1996,11 +2015,12 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '8px 18px',
     border: 'none',
     cursor: 'pointer',
+    boxShadow: '0 2px 10px rgba(240, 194, 58, 0.25)',
     transition: 'all 0.15s ease',
   },
   inactiveNavBtn: {
     backgroundColor: 'transparent',
-    color: '#78716C',
+    color: '#9D9C9A',
     fontWeight: 800,
     fontSize: 13,
     letterSpacing: 0.5,
@@ -2016,14 +2036,14 @@ const styles: Record<string, React.CSSProperties> = {
     width: 7,
     height: 7,
     borderRadius: '50%',
-    backgroundColor: '#E5A900',
+    backgroundColor: '#F0C23A',
   },
   chatActionBtn: {
     padding: '4px 8px',
-    background: '#374151',
-    border: 'none',
+    background: '#1B1E23',
+    border: '1px solid #2A2E35',
     borderRadius: 6,
-    color: '#60a5fa',
+    color: '#F0C23A',
     fontSize: 11,
     fontWeight: 700,
     cursor: 'pointer',
@@ -2033,10 +2053,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   chatQuickPill: {
     padding: '6px 12px',
-    background: '#1f2937',
-    border: '1px solid #374151',
+    background: '#1B1E23',
+    border: '1px solid #2A2E35',
     borderRadius: 14,
-    color: '#9ca3af',
+    color: '#9D9C9A',
     fontSize: 12,
     fontWeight: 700,
     cursor: 'pointer',

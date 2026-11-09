@@ -60,24 +60,24 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
 
   if (quickStatus && quickStatus.toLowerCase().includes('behind')) {
     badgeLabel = 'BEHIND';
-    badgeColor = '#D97706';
-    badgeBorder = '#D97706';
-    badgeBg = '#FFFBEB';
+    badgeColor = '#F0C23A';
+    badgeBorder = '#F0C23A';
+    badgeBg = 'rgba(240, 194, 58, 0.12)';
   } else if (freshness.isStale && !quickStatus) {
     badgeLabel = 'STALE';
-    badgeColor = '#D97706';
-    badgeBorder = '#D97706';
-    badgeBg = '#FFFBEB';
+    badgeColor = '#F0C23A';
+    badgeBorder = '#F0C23A';
+    badgeBg = 'rgba(240, 194, 58, 0.12)';
   } else if (freshness.isLive) {
     badgeLabel = 'LIVE';
-    badgeColor = '#059669';
-    badgeBorder = '#059669';
-    badgeBg = '#ECFDF5';
+    badgeColor = '#10B981';
+    badgeBorder = '#10B981';
+    badgeBg = 'rgba(16, 185, 129, 0.12)';
   } else if (freshness.isUnknown) {
     badgeLabel = 'UNKNOWN';
-    badgeColor = '#78716C';
-    badgeBorder = '#78716C';
-    badgeBg = '#F5F5F4';
+    badgeColor = '#9D9C9A';
+    badgeBorder = '#9D9C9A';
+    badgeBg = 'rgba(157, 156, 154, 0.12)';
   }
 
   return (
@@ -85,7 +85,7 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
       onClick={() => onClick && onClick(rider)}
       style={{
         ...styles.rowCard,
-        borderColor: isMe ? '#E5A900' : '#E2DED6',
+        borderColor: isMe ? '#F0C23A' : '#2A2E35',
         opacity: freshness.isUnknown ? 0.8 : 1,
       }}
     >
@@ -93,9 +93,9 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
       <div
         style={{
           ...styles.avatar,
-          background: freshness.isLive ? '#E7E5E4' : '#FFFFFF',
-          color: freshness.isLive ? '#1C1917' : color,
-          border: freshness.isLive ? '2px solid #D6D3D1' : `2.5px ${freshness.isStale ? 'dashed' : 'solid'} ${color}`,
+          background: freshness.isLive ? '#22262D' : '#111316',
+          color: freshness.isLive ? '#F1EFEA' : color,
+          border: freshness.isLive ? '2px solid #3A3F47' : `2.5px ${freshness.isStale ? 'dashed' : 'solid'} ${color}`,
         }}
       >
         {initial}
@@ -132,13 +132,13 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
         {!isMe && (
           <div style={styles.distanceText}>
             {freshness.isUnknown ? (
-              <span style={{ color: '#78716C', fontSize: 11, fontWeight: 500 }}>Position stale</span>
+              <span style={{ color: '#9D9C9A', fontSize: 11, fontWeight: 500 }}>Position stale</span>
             ) : distanceKm != null ? (
-              <span style={{ color: freshness.isLive ? '#059669' : '#D97706', fontWeight: 700 }}>
+              <span style={{ color: freshness.isLive ? '#10B981' : '#F0C23A', fontWeight: 700 }}>
                 {distanceKm.toFixed(1)} km
               </span>
             ) : (
-              <span style={{ color: '#A8A29E' }}>--</span>
+              <span style={{ color: '#9D9C9A' }}>--</span>
             )}
           </div>
         )}
@@ -153,13 +153,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 12,
     padding: '12px 14px',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1E23',
     borderRadius: 18,
     marginBottom: 8,
-    border: '1.5px solid #E2DED6',
+    border: '1.5px solid #2A2E35',
     cursor: 'pointer',
     transition: 'transform 0.15s ease, background-color 0.15s ease',
-    boxShadow: '0 2px 8px rgba(28, 25, 23, 0.04)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
   },
   avatar: {
     width: 44,
@@ -180,7 +180,7 @@ const styles: Record<string, React.CSSProperties> = {
   name: {
     fontWeight: 800,
     fontSize: 15,
-    color: '#1C1917',
+    color: '#F1EFEA',
     letterSpacing: -0.2,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -189,7 +189,7 @@ const styles: Record<string, React.CSSProperties> = {
   youTag: {
     fontSize: 12,
     fontWeight: 600,
-    color: '#78716C',
+    color: '#9D9C9A',
   },
   crownTag: {
     fontSize: 14,
@@ -197,7 +197,7 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     margin: '2px 0 0',
     fontSize: 12,
-    color: '#78716C',
+    color: '#9D9C9A',
     fontWeight: 500,
     whiteSpace: 'nowrap',
     overflow: 'hidden',

@@ -135,14 +135,14 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           <div
             style={{
               ...styles.statCard,
-              borderColor: staleRider ? '#F59E0B' : '#E2DED6',
-              background: staleRider ? '#FFFDF7' : '#F5F3EF',
+              borderColor: staleRider ? '#F0C23A' : '#2A2E35',
+              background: staleRider ? 'rgba(240, 194, 58, 0.08)' : '#111316',
             }}
           >
             <span
               style={{
                 ...styles.statVal,
-                color: staleRider ? '#B45309' : '#1C1917',
+                color: staleRider ? '#F0C23A' : '#F1EFEA',
               }}
             >
               {leftCardDisplay}
@@ -155,7 +155,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             <span
               style={{
                 ...styles.statVal,
-                color: myEtaDisplay === 'Unknown' ? '#78716C' : isMeArrived ? '#059669' : '#1C1917',
+                color: myEtaDisplay === 'Unknown' ? '#9D9C9A' : isMeArrived ? '#10B981' : '#F1EFEA',
               }}
             >
               {myEtaDisplay}
@@ -191,7 +191,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           {/* Row 3: UNKNOWN (Stale riders) */}
           <div style={{ ...styles.arrivalRow, borderBottom: 'none' }}>
             <span style={styles.badgeUnknown}>UNKNOWN</span>
-            <span style={{ ...styles.arrivalNames, color: '#78716C' }}>
+            <span style={{ ...styles.arrivalNames, color: '#9D9C9A' }}>
               {unknownRiders.length > 0
                 ? unknownRiders.join(', ')
                 : 'All positions live'}
@@ -206,8 +206,8 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             onClick={() => onToggleMyArrival(!isMeArrived)}
             style={{
               ...styles.primaryBtn,
-              background: isMeArrived ? '#10b981' : 'var(--accent-gold, #f59e0b)',
-              color: isMeArrived ? '#ffffff' : '#000000',
+              background: isMeArrived ? '#10B981' : '#F0C23A',
+              color: isMeArrived ? '#FFFFFF' : '#111316',
             }}
           >
             {isMeArrived ? '✓ I am here' : "I'm here"}
@@ -240,9 +240,9 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    backdropFilter: 'blur(4px)',
-    WebkitBackdropFilter: 'blur(4px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(5px)',
+    WebkitBackdropFilter: 'blur(5px)',
     zIndex: 9999,
     display: 'flex',
     alignItems: 'flex-end',
@@ -251,12 +251,12 @@ const styles: Record<string, React.CSSProperties> = {
   sheet: {
     width: '100%',
     maxWidth: 540,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1E23',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1.5px solid #E2DED6',
+    borderTop: '1.5px solid #2A2E35',
     padding: '12px 20px 28px',
-    boxShadow: '0 -10px 40px rgba(28, 25, 23, 0.15)',
+    boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.5)',
     animation: 'slideUp 0.25s ease-out',
     maxHeight: '90vh',
     overflowY: 'auto',
@@ -271,7 +271,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#D6D3D1',
+    backgroundColor: '#3A3F47',
   },
   header: {
     marginBottom: 16,
@@ -279,7 +279,7 @@ const styles: Record<string, React.CSSProperties> = {
   pretitle: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#78716C',
+    color: '#9D9C9A',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -293,7 +293,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 22,
     fontWeight: 900,
-    color: '#1C1917',
+    color: '#F1EFEA',
     margin: 0,
     lineHeight: 1.2,
   },
@@ -302,14 +302,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 999,
     fontSize: 11,
     fontWeight: 800,
-    border: '1.5px solid #059669',
-    color: '#059669',
-    background: '#ECFDF5',
+    border: '1.5px solid #10B981',
+    color: '#10B981',
+    background: 'rgba(16, 185, 129, 0.15)',
     letterSpacing: 0.5,
   },
   stopMeta: {
     fontSize: 13,
-    color: '#78716C',
+    color: '#9D9C9A',
     margin: '6px 0 0',
   },
   statCardsGrid: {
@@ -321,8 +321,8 @@ const styles: Record<string, React.CSSProperties> = {
   statCard: {
     padding: '16px 14px',
     borderRadius: 16,
-    border: '1.5px solid #E2DED6',
-    backgroundColor: '#F5F3EF',
+    border: '1.5px solid #2A2E35',
+    backgroundColor: '#111316',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -338,14 +338,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statSub: {
     fontSize: 12,
-    color: '#78716C',
+    color: '#9D9C9A',
     fontWeight: 600,
     marginTop: 6,
     lineHeight: 1.2,
   },
   arrivalsSection: {
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #E2DED6',
+    backgroundColor: '#111316',
+    border: '1.5px solid #2A2E35',
     borderRadius: 18,
     padding: '14px 16px',
     marginBottom: 20,
@@ -353,7 +353,7 @@ const styles: Record<string, React.CSSProperties> = {
   sectionHeader: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#78716C',
+    color: '#9D9C9A',
     letterSpacing: 1,
     margin: '0 0 12px',
     textTransform: 'uppercase',
@@ -363,14 +363,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 12,
     padding: '8px 0',
-    borderBottom: '1px solid #E2DED6',
+    borderBottom: '1px solid #2A2E35',
   },
   badgeHere: {
     padding: '3px 8px',
     borderRadius: 999,
-    background: '#ECFDF5',
-    color: '#059669',
-    border: '1.5px solid #059669',
+    background: 'rgba(16, 185, 129, 0.15)',
+    color: '#10B981',
+    border: '1.5px solid #10B981',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -380,9 +380,9 @@ const styles: Record<string, React.CSSProperties> = {
   badgeETA: {
     padding: '3px 8px',
     borderRadius: 999,
-    background: '#FFFBEB',
-    color: '#D97706',
-    border: '1.5px solid #D97706',
+    background: 'rgba(240, 194, 58, 0.15)',
+    color: '#F0C23A',
+    border: '1.5px solid #F0C23A',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -392,9 +392,9 @@ const styles: Record<string, React.CSSProperties> = {
   badgeUnknown: {
     padding: '3px 8px',
     borderRadius: 999,
-    background: '#F5F5F4',
-    color: '#78716C',
-    border: '1.5px solid #78716C',
+    background: 'rgba(157, 156, 154, 0.15)',
+    color: '#9D9C9A',
+    border: '1.5px solid #9D9C9A',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -403,7 +403,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   arrivalNames: {
     fontSize: 13,
-    color: '#1C1917',
+    color: '#F1EFEA',
     fontWeight: 600,
     flex: 1,
   },
@@ -420,9 +420,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     fontSize: 16,
     cursor: 'pointer',
-    backgroundColor: '#E5A900',
-    color: '#1C1917',
-    boxShadow: '0 4px 14px rgba(229, 169, 0, 0.35)',
+    backgroundColor: '#F0C23A',
+    color: '#111316',
+    boxShadow: '0 4px 14px rgba(240, 194, 58, 0.25)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -431,9 +431,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '13px 20px',
     borderRadius: 14,
-    border: '1.5px solid #E2DED6',
-    backgroundColor: '#FFFFFF',
-    color: '#1C1917',
+    border: '1.5px solid #2A2E35',
+    backgroundColor: '#1B1E23',
+    color: '#F1EFEA',
     fontWeight: 800,
     fontSize: 14,
     cursor: 'pointer',
@@ -445,7 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
   changeBtn: {
     background: 'none',
     border: 'none',
-    color: '#78716C',
+    color: '#9D9C9A',
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',

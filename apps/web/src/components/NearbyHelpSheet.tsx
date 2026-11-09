@@ -162,9 +162,9 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                 }}
                 style={{
                   ...styles.filterPill,
-                  backgroundColor: isActive ? '#1C1917' : '#FFFFFF',
-                  color: isActive ? '#FFFFFF' : '#78716C',
-                  borderColor: isActive ? '#1C1917' : '#E2DED6',
+                  backgroundColor: isActive ? '#F0C23A' : '#111316',
+                  color: isActive ? '#111316' : '#9D9C9A',
+                  borderColor: isActive ? '#F0C23A' : '#2A2E35',
                 }}
               >
                 {cat}
@@ -186,8 +186,8 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                 onClick={() => setSelectedId(item.id)}
                 style={{
                   ...styles.itemCard,
-                  borderColor: isSelected ? '#E5A900' : '#E2DED6',
-                  backgroundColor: isSelected ? '#FFFDF7' : '#FFFFFF',
+                  borderColor: isSelected ? '#F0C23A' : '#2A2E35',
+                  backgroundColor: isSelected ? 'rgba(240, 194, 58, 0.08)' : '#1B1E23',
                 }}
               >
                 <div style={styles.itemCategoryBadge}>
@@ -203,9 +203,9 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                     <span
                       style={{
                         ...styles.verifiedBadge,
-                        color: isOld ? '#78716C' : '#059669',
-                        backgroundColor: isOld ? '#F5F5F4' : '#ECFDF5',
-                        borderColor: isOld ? '#78716C' : '#059669',
+                        color: isOld ? '#9D9C9A' : '#10B981',
+                        backgroundColor: isOld ? 'rgba(157, 156, 154, 0.12)' : 'rgba(16, 185, 129, 0.15)',
+                        borderColor: isOld ? '#2A2E35' : '#10B981',
                       }}
                     >
                       {verifiedLabel}
@@ -261,8 +261,8 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    backdropFilter: 'blur(3px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(5px)',
     zIndex: 9999,
     display: 'flex',
     flexDirection: 'column',
@@ -270,15 +270,16 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'fadeIn 0.2s ease-out',
   },
   sheet: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#1B1E23',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    borderTop: '1.5px solid #2A2E35',
     padding: '12px 18px 24px',
     maxHeight: '85vh',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 -8px 30px rgba(0, 0, 0, 0.3)',
-    color: '#111827',
+    boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.5)',
+    color: '#F1EFEA',
   },
   handleWrap: {
     width: '100%',
@@ -291,7 +292,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 3,
-    backgroundColor: '#d1d5db',
+    backgroundColor: '#3A3F47',
   },
   headerRow: {
     display: 'flex',
@@ -304,18 +305,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     letterSpacing: -0.5,
     margin: 0,
-    color: '#1C1917',
+    color: '#F1EFEA',
   },
   subtitle: {
     fontSize: 12,
-    color: '#78716C',
+    color: '#9D9C9A',
     marginTop: 2,
     display: 'block',
   },
   alongRouteBadge: {
     fontSize: 12,
     fontWeight: 600,
-    color: '#78716C',
+    color: '#9D9C9A',
   },
   filterRow: {
     display: 'flex',
@@ -357,25 +358,25 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #E2DED6',
+    backgroundColor: '#111316',
+    border: '1.5px solid #2A2E35',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 900,
     fontSize: 10,
-    color: '#1C1917',
+    color: '#F1EFEA',
     letterSpacing: 0.5,
     flexShrink: 0,
   },
   itemName: {
     fontSize: 15,
     fontWeight: 800,
-    color: '#1C1917',
+    color: '#F1EFEA',
   },
   itemSubtitle: {
     fontSize: 12,
-    color: '#78716C',
+    color: '#9D9C9A',
     marginTop: 2,
   },
   verifiedBadge: {
@@ -399,15 +400,15 @@ const styles: Record<string, React.CSSProperties> = {
     width: 18,
     height: 18,
     borderRadius: '50%',
-    backgroundColor: '#E5A900',
-    border: '3px solid #FFFFFF',
-    boxShadow: '0 0 0 2px #E5A900',
+    backgroundColor: '#F0C23A',
+    border: '3px solid #1B1E23',
+    boxShadow: '0 0 0 2px #F0C23A',
   },
   radioUnselected: {
     width: 16,
     height: 16,
     borderRadius: '50%',
-    border: '2px solid #D6D3D1',
+    border: '2px solid #3A3F47',
   },
   cacheNote: {
     marginTop: 12,
@@ -416,7 +417,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 6,
     fontSize: 12,
-    color: '#78716C',
+    color: '#9D9C9A',
   },
   actionRow: {
     display: 'flex',
@@ -426,22 +427,22 @@ const styles: Record<string, React.CSSProperties> = {
   btnPrimary: {
     width: '100%',
     padding: '13px 18px',
-    backgroundColor: '#E5A900',
-    color: '#1C1917',
+    backgroundColor: '#F0C23A',
+    color: '#111316',
     border: 'none',
-    borderRadius: 12,
+    borderRadius: 14,
     fontSize: 15,
     fontWeight: 900,
     cursor: 'pointer',
-    boxShadow: '0 3px 10px rgba(229, 169, 0, 0.35)',
+    boxShadow: '0 3px 12px rgba(240, 194, 58, 0.25)',
   },
   btnSecondary: {
     width: '100%',
-    padding: '10px 18px',
-    backgroundColor: '#FFFFFF',
-    color: '#1C1917',
-    border: '1.5px solid #E2DED6',
-    borderRadius: 12,
+    padding: '12px 18px',
+    backgroundColor: '#1B1E23',
+    color: '#F1EFEA',
+    border: '1.5px solid #2A2E35',
+    borderRadius: 14,
     fontSize: 13,
     fontWeight: 800,
     cursor: 'pointer',

@@ -82,9 +82,9 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                 onClick={() => handleRiderPresetClick(p.label)}
                 style={{
                   ...styles.presetBtn,
-                  backgroundColor: isSelected ? '#E5A900' : '#FFFFFF',
-                  color: '#1C1917',
-                  borderColor: isSelected ? '#E5A900' : '#E2DED6',
+                  backgroundColor: isSelected ? '#F0C23A' : '#1B1E23',
+                  color: isSelected ? '#111316' : '#F1EFEA',
+                  borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                 }}
               >
                 <span style={styles.btnLabel}>{p.label}</span>
@@ -110,9 +110,9 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                     onClick={() => handleCaptainAnnouncementClick(cp.label)}
                     style={{
                       ...styles.presetBtn,
-                      backgroundColor: isSelected ? '#E5A900' : '#FFFFFF',
-                      color: '#1C1917',
-                      borderColor: isSelected ? '#E5A900' : '#E2DED6',
+                      backgroundColor: isSelected ? '#F0C23A' : '#1B1E23',
+                      color: isSelected ? '#111316' : '#F1EFEA',
+                      borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                     }}
                   >
                     <span style={styles.btnLabel}>{cp.label}</span>
@@ -140,9 +140,9 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(28, 25, 23, 0.45)',
-    backdropFilter: 'blur(4px)',
-    WebkitBackdropFilter: 'blur(4px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(5px)',
+    WebkitBackdropFilter: 'blur(5px)',
     zIndex: 9999,
     display: 'flex',
     alignItems: 'flex-end',
@@ -151,12 +151,12 @@ const styles: Record<string, React.CSSProperties> = {
   sheet: {
     width: '100%',
     maxWidth: 540,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1B1E23',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1.5px solid #E2DED6',
+    borderTop: '1.5px solid #2A2E35',
     padding: '12px 20px 24px',
-    boxShadow: '0 -10px 40px rgba(28, 25, 23, 0.15)',
+    boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.5)',
     animation: 'slideUp 0.25s ease-out',
     maxHeight: '90vh',
     overflowY: 'auto',
@@ -171,7 +171,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#D6D3D1',
+    backgroundColor: '#3A3F47',
   },
   header: {
     marginBottom: 16,
@@ -184,12 +184,12 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 24,
     fontWeight: 900,
-    color: '#1C1917',
+    color: '#F1EFEA',
     margin: 0,
   },
   subtitle: {
     fontSize: 12,
-    color: '#78716C',
+    color: '#9D9C9A',
     fontWeight: 500,
   },
   grid: {
@@ -201,7 +201,7 @@ const styles: Record<string, React.CSSProperties> = {
   presetBtn: {
     padding: '16px 14px',
     borderRadius: 14,
-    border: '1.5px solid #E2DED6',
+    border: '1.5px solid #2A2E35',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -209,7 +209,7 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     transition: 'all 0.15s ease',
     minHeight: 56,
-    boxShadow: '0 2px 4px rgba(28, 25, 23, 0.03)',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
   },
   btnLabel: {
     fontWeight: 700,
@@ -219,9 +219,9 @@ const styles: Record<string, React.CSSProperties> = {
   captainSection: {
     marginTop: 4,
     padding: '14px 14px 4px',
-    backgroundColor: '#F5F3EF',
+    backgroundColor: '#111316',
     borderRadius: 18,
-    border: '1.5px solid #E2DED6',
+    border: '1.5px solid #2A2E35',
     marginBottom: 16,
   },
   captainHeader: {
@@ -230,16 +230,16 @@ const styles: Record<string, React.CSSProperties> = {
   captainTitle: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#78716C',
+    color: '#9D9C9A',
     letterSpacing: 1,
   },
   closeBtn: {
     width: '100%',
     padding: '14px',
     borderRadius: 14,
-    border: '1.5px solid #E2DED6',
-    backgroundColor: '#FFFFFF',
-    color: '#1C1917',
+    border: '1.5px solid #2A2E35',
+    backgroundColor: '#1B1E23',
+    color: '#F1EFEA',
     fontWeight: 800,
     fontSize: 15,
     cursor: 'pointer',
