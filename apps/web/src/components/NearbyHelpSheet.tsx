@@ -143,7 +143,6 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
         <div style={styles.headerRow}>
           <div>
             <h2 style={styles.title}>Nearby help</h2>
-            <span style={styles.subtitle}>Verified amenities along route</span>
           </div>
           <span style={styles.alongRouteBadge}>Along route</span>
         </div>
@@ -163,15 +162,11 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                 }}
                 style={{
                   ...styles.filterPill,
-                  backgroundColor: isActive ? '#1f2937' : '#ffffff',
-                  color: isActive ? '#ffffff' : '#374151',
-                  borderColor: isActive ? '#1f2937' : '#e5e7eb',
+                  backgroundColor: isActive ? '#1C1917' : '#FFFFFF',
+                  color: isActive ? '#FFFFFF' : '#78716C',
+                  borderColor: isActive ? '#1C1917' : '#E2DED6',
                 }}
               >
-                {cat === 'FUEL' && '⛽ '}
-                {cat === 'REPAIR' && '🔧 '}
-                {cat === 'FOOD' && '🍽️ '}
-                {cat === 'REST' && '☕ '}
                 {cat}
               </button>
             );
@@ -191,8 +186,8 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                 onClick={() => setSelectedId(item.id)}
                 style={{
                   ...styles.itemCard,
-                  borderColor: isSelected ? 'var(--accent-gold, #f59e0b)' : '#e5e7eb',
-                  backgroundColor: isSelected ? '#fefce8' : '#ffffff',
+                  borderColor: isSelected ? '#E5A900' : '#E2DED6',
+                  backgroundColor: isSelected ? '#FFFDF7' : '#FFFFFF',
                 }}
               >
                 <div style={styles.itemCategoryBadge}>
@@ -208,9 +203,9 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                     <span
                       style={{
                         ...styles.verifiedBadge,
-                        color: isOld ? '#6b7280' : '#059669',
-                        backgroundColor: isOld ? '#f3f4f6' : '#ecfdf5',
-                        borderColor: isOld ? '#d1d5db' : '#a7f3d0',
+                        color: isOld ? '#78716C' : '#059669',
+                        backgroundColor: isOld ? '#F5F5F4' : '#ECFDF5',
+                        borderColor: isOld ? '#78716C' : '#059669',
                       }}
                     >
                       {verifiedLabel}
@@ -309,23 +304,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     letterSpacing: -0.5,
     margin: 0,
-    color: '#111827',
+    color: '#1C1917',
   },
   subtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#78716C',
     marginTop: 2,
     display: 'block',
   },
   alongRouteBadge: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: '#4b5563',
-    backgroundColor: '#f3f4f6',
-    padding: '4px 8px',
-    borderRadius: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#78716C',
   },
   filterRow: {
     display: 'flex',
@@ -339,7 +329,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 20,
     fontSize: 12,
     fontWeight: 800,
-    border: '1px solid',
+    border: '1.5px solid',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     transition: 'all 0.15s ease',
@@ -355,7 +345,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   itemCard: {
     border: '1.5px solid',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: '12px 14px',
     display: 'flex',
     alignItems: 'center',
@@ -364,37 +354,37 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.15s ease',
   },
   itemCategoryBadge: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 10,
-    backgroundColor: '#f3f4f6',
-    border: '1px solid #e5e7eb',
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #E2DED6',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 900,
     fontSize: 10,
-    color: '#374151',
+    color: '#1C1917',
     letterSpacing: 0.5,
     flexShrink: 0,
   },
   itemName: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 800,
-    color: '#111827',
+    color: '#1C1917',
   },
   itemSubtitle: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#78716C',
     marginTop: 2,
   },
   verifiedBadge: {
     display: 'inline-block',
     fontSize: 10,
     fontWeight: 800,
-    padding: '2px 6px',
-    borderRadius: 4,
-    border: '1px solid',
+    padding: '2px 8px',
+    borderRadius: 999,
+    border: '1.5px solid',
     letterSpacing: 0.4,
   },
   radioIndicator: {
@@ -409,15 +399,15 @@ const styles: Record<string, React.CSSProperties> = {
     width: 18,
     height: 18,
     borderRadius: '50%',
-    backgroundColor: 'var(--accent-gold, #f59e0b)',
-    border: '3px solid #ffffff',
-    boxShadow: '0 0 0 2px var(--accent-gold, #f59e0b)',
+    backgroundColor: '#E5A900',
+    border: '3px solid #FFFFFF',
+    boxShadow: '0 0 0 2px #E5A900',
   },
   radioUnselected: {
     width: 16,
     height: 16,
     borderRadius: '50%',
-    border: '2px solid #d1d5db',
+    border: '2px solid #D6D3D1',
   },
   cacheNote: {
     marginTop: 12,
@@ -426,8 +416,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 6,
     fontSize: 12,
-    color: '#6b7280',
-    fontStyle: 'italic',
+    color: '#78716C',
   },
   actionRow: {
     display: 'flex',
@@ -437,24 +426,24 @@ const styles: Record<string, React.CSSProperties> = {
   btnPrimary: {
     width: '100%',
     padding: '13px 18px',
-    backgroundColor: 'var(--accent-gold, #f59e0b)',
-    color: '#111827',
+    backgroundColor: '#E5A900',
+    color: '#1C1917',
     border: 'none',
     borderRadius: 12,
     fontSize: 15,
     fontWeight: 900,
     cursor: 'pointer',
-    boxShadow: '0 3px 10px rgba(245, 158, 11, 0.3)',
+    boxShadow: '0 3px 10px rgba(229, 169, 0, 0.35)',
   },
   btnSecondary: {
     width: '100%',
     padding: '10px 18px',
-    backgroundColor: '#f3f4f6',
-    color: '#374151',
-    border: '1px solid #d1d5db',
+    backgroundColor: '#FFFFFF',
+    color: '#1C1917',
+    border: '1.5px solid #E2DED6',
     borderRadius: 12,
     fontSize: 13,
-    fontWeight: 700,
+    fontWeight: 800,
     cursor: 'pointer',
   },
 };

@@ -101,11 +101,11 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 // Navigation arrow for the current user — rotates with heading
 function makeMyNavIcon(color: string, heading: number, status: string, isStale: boolean = false) {
-  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
-  const fill = isStale ? '#111827' : color;
-  const stroke = color;
+  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#FFFFFF;color:#1C1917;border:1.5px solid #1C1917;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:700;">${status}</div>` : '';
+  const fill = isStale ? '#FFFFFF' : '#E5A900';
+  const stroke = isStale ? color : '#FFFFFF';
   const opacity = isStale ? '0.75' : '1';
-  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="${color}" stroke="white" stroke-width="2.5" opacity="0.25"/>`;
+  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="#E5A900" stroke="white" stroke-width="2.5" opacity="0.3"/>`;
 
   return L.divIcon({
     className: '',
@@ -116,7 +116,7 @@ function makeMyNavIcon(color: string, heading: number, status: string, isStale: 
         <svg width="44" height="44" viewBox="0 0 44 44">
           ${ringAura}
           <polygon points="22,4 34,38 22,30 10,38" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
-          <circle cx="22" cy="22" r="5" fill="white"/>
+          <circle cx="22" cy="22" r="5" fill="#1C1917"/>
         </svg>
       </div>
       ${badge}
@@ -233,7 +233,7 @@ function MapFollow({
   return null;
 }
 
-type TabType = 'map' | 'chat' | 'riders' | 'nav';
+type TabType = 'map' | 'chat' | 'riders' | 'nav' | 'plan' | 'discover';
 
 export default function RidePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -856,121 +856,92 @@ export default function RidePage() {
   const isLead = session?.started_by === user?.id;
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#0f172a', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#EFECE6', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
+      {/* Dynamic Warm Style for Map & Elements */}
+      <style>{`
+        .warm-map-container .leaflet-tile-pane {
+          filter: sepia(0.2) saturate(0.9) brightness(0.98);
+        }
+        .warm-map-container .leaflet-control-attribution {
+          display: none;
+        }
+      `}</style>
+
       {/* SOS Banner */}
       {sosActive && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#dc2626', color: '#fff', padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: 15, animation: 'pulse 1s infinite' }}>
-          🆘 SOS ALERT — A rider needs help! Check the Riders tab.
-          <button onClick={() => setSosActive(false)} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontWeight: 600 }}>Dismiss</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#DC2626', color: '#FFFFFF', padding: '12px 16px', textAlign: 'center', fontWeight: 800, fontSize: 14 }}>
+          🆘 SOS ALERT — A rider needs help!
+          <button onClick={() => setSosActive(false)} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.25)', border: 'none', color: '#FFFFFF', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontWeight: 700 }}>Dismiss</button>
         </div>
       )}
 
-      {/* Header — Sleek, uncrowded, modern cockpit styling for all screen sizes */}
+      {/* Header — Editorial Nordic Warm Style matching Mockup Screen 1 */}
       <div style={{
-        backgroundColor: '#0f172a',
-        padding: '10px 14px',
+        backgroundColor: '#EFECE6',
+        padding: '14px 18px 8px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 10,
+        gap: 12,
         flexShrink: 0,
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         marginTop: sosActive ? 48 : 0,
       }}>
-        {/* Left: Round Back button + Title & Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+        {/* Left: Clean Minimal Back Arrow + Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           <button
             onClick={() => navigate(-1)}
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              backgroundColor: '#1e293b',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#ffffff',
-              fontSize: 18,
+              background: 'none',
+              border: 'none',
+              color: '#1C1917',
+              fontSize: 22,
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
+              padding: 0,
+              fontWeight: 800,
+              lineHeight: 1,
             }}
             title="Leave Ride Screen"
           >
             ←
           </button>
-          <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ minWidth: 0 }}>
             <h1 style={{
-              color: '#ffffff',
-              fontWeight: 800,
-              fontSize: 15,
+              color: '#1C1917',
+              fontWeight: 900,
+              fontSize: 24,
               margin: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              letterSpacing: -0.3,
+              letterSpacing: -0.5,
             }}>
-              {session?.trips?.title ?? 'Group Ride'}
+              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Plan' : tab === 'discover' ? 'Discover' : (session?.trips?.title ?? 'Group ride')}
             </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 1 }}>
-              <span style={{
-                color: '#10b981',
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: 0.3,
-              }}>
-                ● LIVE · {riders.length} {riders.length === 1 ? 'rider' : 'riders'}
-              </span>
-              {staleRiders.length > 0 && (
-                <span style={{
-                  color: '#f59e0b',
-                  fontSize: 11,
-                  fontWeight: 700,
-                }}>
-                  · ⚠️ {staleRiders.length} stale
-                </span>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* Right: Quick Action Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          {/* Quick SOS Trigger Pill */}
-          <button
-            type="button"
-            onClick={sendSOS}
-            style={{
-              padding: '6px 10px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1.5px solid #ef4444',
-              color: '#fca5a5',
-              borderRadius: 20,
-              fontSize: 11,
-              fontWeight: 900,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-            title="Emergency Convoy SOS"
-          >
-            <span>🚨</span>
-            <span>SOS</span>
-          </button>
+        {/* Right: Subtitle & Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <span style={{
+            color: '#78716C',
+            fontSize: 13,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+          }}>
+            {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : 'Day 2 · 62 km to go'}
+          </span>
 
-          {/* Nearby Amenities */}
+          {/* Quick Nearby Help */}
           <button
             type="button"
             onClick={() => setShowNearbyHelp(true)}
             style={{
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               borderRadius: '50%',
-              backgroundColor: '#1e293b',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#34d399',
-              fontSize: 15,
+              backgroundColor: '#FFFFFF',
+              border: '1.5px solid #E2DED6',
+              fontSize: 14,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -987,13 +958,12 @@ export default function RidePage() {
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 borderRadius: '50%',
-                backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                border: '1.5px solid #f59e0b',
-                color: '#fbbf24',
-                fontSize: 15,
+                backgroundColor: '#FFFFFF',
+                border: '1.5px solid #E2DED6',
+                fontSize: 14,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1005,18 +975,38 @@ export default function RidePage() {
             </button>
           )}
 
+          {/* Discreet Emergency SOS */}
+          <button
+            type="button"
+            onClick={sendSOS}
+            style={{
+              padding: '5px 10px',
+              backgroundColor: '#FEE2E2',
+              border: '1px solid #FCA5A5',
+              color: '#B91C1C',
+              borderRadius: 16,
+              fontSize: 11,
+              fontWeight: 900,
+              cursor: 'pointer',
+            }}
+            title="Emergency SOS"
+          >
+            SOS
+          </button>
+
           {/* End / Leave Ride */}
-          {isLead ? (
+          {isLead && (
             <button
+              type="button"
               onClick={handleEndRide}
               disabled={endingRide}
               style={{
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 borderRadius: '50%',
-                backgroundColor: 'rgba(220, 38, 38, 0.2)',
-                border: '1px solid #dc2626',
-                color: '#fca5a5',
+                backgroundColor: '#FFFFFF',
+                border: '1.5px solid #E2DED6',
+                color: '#DC2626',
                 fontSize: 13,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -1027,26 +1017,6 @@ export default function RidePage() {
               title="End ride for everyone"
             >
               {endingRide ? '...' : '⏹'}
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate(-1)}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                backgroundColor: '#1e293b',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#94a3b8',
-                fontSize: 14,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Leave Ride Screen"
-            >
-              🚪
             </button>
           )}
         </div>
@@ -1146,21 +1116,26 @@ export default function RidePage() {
       )}
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
-      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'flex' : 'none', flexDirection: 'column', position: 'relative' }}>
-        {/* Map Section (48% in split mode, 100% in full mode) */}
-        <div style={{
-          height: splitView ? '48%' : '100%',
+      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'flex' : 'none', flexDirection: 'column', position: 'relative', backgroundColor: '#EFECE6' }}>
+        {/* Map Section (Card style matching Mockup Screen 1) */}
+        <div className="warm-map-container" style={{
+          height: splitView ? '40%' : '100%',
+          margin: splitView ? '2px 14px 6px' : '0',
+          borderRadius: splitView ? 20 : 0,
+          border: splitView ? '1.5px solid #E2DED6' : 'none',
           position: 'relative',
           overflow: 'hidden',
           transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           flexShrink: 0,
+          backgroundColor: '#FFFFFF',
+          boxShadow: splitView ? '0 4px 14px rgba(28, 25, 23, 0.05)' : 'none',
         }}>
           {gpsError && (
             <div style={{
               position: 'absolute',
               inset: 0,
               zIndex: 2000,
-              backgroundColor: 'rgba(17, 24, 39, 0.88)',
+              backgroundColor: 'rgba(28, 25, 23, 0.75)',
               backdropFilter: 'blur(4px)',
               display: 'flex',
               alignItems: 'center',
@@ -1168,22 +1143,22 @@ export default function RidePage() {
               padding: 20,
             }}>
               <div style={{
-                backgroundColor: '#fdfbf7',
+                backgroundColor: '#FFFFFF',
                 borderRadius: 24,
                 padding: '24px 20px',
                 maxWidth: 340,
                 width: '100%',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
                 textAlign: 'left',
-                color: '#111827',
+                color: '#1C1917',
               }}>
-                <div style={{ fontSize: 11, fontWeight: 900, color: '#f59e0b', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#D97706', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
                   STEP 2 OF 3
                 </div>
-                <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 8px', color: '#111827' }}>
+                <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 8px', color: '#1C1917' }}>
                   Live trip tracking
                 </h3>
-                <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.5, margin: '0 0 20px' }}>
+                <p style={{ fontSize: 13, color: '#78716C', lineHeight: 1.5, margin: '0 0 20px' }}>
                   We use your location only while a trip is active, so your group can see where you are.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1198,8 +1173,8 @@ export default function RidePage() {
                     }}
                     style={{
                       padding: '13px',
-                      backgroundColor: 'var(--accent-gold, #f59e0b)',
-                      color: '#111827',
+                      backgroundColor: '#E5A900',
+                      color: '#1C1917',
                       border: 'none',
                       borderRadius: 14,
                       fontWeight: 900,
@@ -1214,9 +1189,9 @@ export default function RidePage() {
                     onClick={() => setGpsError('')}
                     style={{
                       padding: '12px',
-                      backgroundColor: '#ffffff',
-                      color: '#374151',
-                      border: '1.5px solid #d1d5db',
+                      backgroundColor: '#FFFFFF',
+                      color: '#1C1917',
+                      border: '1.5px solid #E2DED6',
                       borderRadius: 14,
                       fontWeight: 700,
                       fontSize: 13,
@@ -1236,23 +1211,21 @@ export default function RidePage() {
             onClick={() => setSplitView(!splitView)}
             style={{
               position: 'absolute',
-              top: 12,
-              left: 12,
+              top: 10,
+              left: 10,
               zIndex: 1000,
-              backgroundColor: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              color: '#ffffff',
-              borderRadius: 24,
-              padding: '7px 14px',
-              fontSize: 12,
+              backgroundColor: '#FFFFFF',
+              border: '1.5px solid #E2DED6',
+              color: '#1C1917',
+              borderRadius: 20,
+              padding: '6px 12px',
+              fontSize: 11,
               fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
+              gap: 5,
+              boxShadow: '0 2px 8px rgba(28, 25, 23, 0.08)',
             }}
             title="Toggle split roster and map view"
           >
@@ -1265,21 +1238,21 @@ export default function RidePage() {
               onClick={() => { setFollowing(true); setFocusTarget(null); }}
               style={{
                 position: 'absolute',
-                bottom: 16,
-                right: 16,
+                bottom: 12,
+                right: 12,
                 zIndex: 1000,
-                backgroundColor: '#1e293b',
-                border: '2px solid #f59e0b',
-                color: '#f59e0b',
+                backgroundColor: '#FFFFFF',
+                border: '2px solid #E5A900',
+                color: '#E5A900',
                 borderRadius: '50%',
-                width: 46,
-                height: 46,
-                fontSize: 20,
+                width: 38,
+                height: 38,
+                fontSize: 18,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                boxShadow: '0 2px 8px rgba(28, 25, 23, 0.12)',
               }}
               title="Re-center on me"
             >
@@ -1291,19 +1264,17 @@ export default function RidePage() {
           {wakeLockActive && (
             <div style={{
               position: 'absolute',
-              top: 12,
-              right: 12,
+              top: 10,
+              right: 10,
               zIndex: 999,
-              backgroundColor: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(52, 211, 153, 0.35)',
-              color: '#34d399',
+              backgroundColor: '#FFFFFF',
+              border: '1.5px solid #059669',
+              color: '#059669',
               fontSize: 11,
               fontWeight: 800,
-              padding: '6px 10px',
+              padding: '5px 10px',
               borderRadius: 20,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+              boxShadow: '0 2px 6px rgba(28, 25, 23, 0.06)',
             }}>
               🔆 Screen on
             </div>
@@ -1317,9 +1288,9 @@ export default function RidePage() {
             {myLat && myLng && (
               <MapFollow lat={myLat} lng={myLng} following={following} focusTarget={focusTarget} onDrag={() => { setFollowing(false); setFocusTarget(null); }} />
             )}
-            {/* Road-following route (OSRM), fallback to straight lines */}
+            {/* Road-following route (OSRM): Amber dashed route line matching mockup */}
             {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
-              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#3b82f6" weight={5} opacity={0.85} />
+              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#E5A900" weight={5} dashArray="8, 8" opacity={0.95} />
             )}
             {/* Itinerary stop markers */}
             {itineraryStops.map((stop) => (
@@ -1352,7 +1323,7 @@ export default function RidePage() {
 
         {/* In Split View: Alert Banner + Rider Roster (Mockup Screen 1) */}
         {splitView && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#0f172a' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6' }}>
             {/* Stale Riders Warning Banner */}
             <StaleRidersAlertBanner
               staleCount={staleRiders.length}
@@ -1361,18 +1332,18 @@ export default function RidePage() {
             />
 
             {/* Rider Roster List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '6px 14px 10px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 14px 6px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 2px 8px' }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 900, color: '#78716C', letterSpacing: 0.8, textTransform: 'uppercase' }}>
                   Convoy Roster ({ridersWithFreshness.length})
                 </span>
-                <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>
+                <span style={{ fontSize: 11, color: '#059669', fontWeight: 800 }}>
                   ● {ridersWithFreshness.filter(r => r.freshness.isLive).length} LIVE
                 </span>
               </div>
 
               {ridersWithFreshness.length === 0 && (
-                <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+                <p style={{ color: '#78716C', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
                   Waiting for riders to join and share GPS...
                 </p>
               )}
@@ -1400,31 +1371,168 @@ export default function RidePage() {
         />
       </div>
 
-      {/* Chat panel */}
+      {/* Plan Tab (Mockup Screen 7: Trip detail · itinerary) */}
+      {tab === 'plan' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6', padding: '12px 16px' }}>
+          {/* Top Subheader Filter Tabs */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <span style={{ backgroundColor: '#1C1917', color: '#FFFFFF', padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
+              ITINERARY
+            </span>
+            <span style={{ color: '#78716C', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
+              PEOPLE
+            </span>
+            <span style={{ color: '#78716C', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
+              MONEY
+            </span>
+            <button
+              onClick={() => setShowNearbyHelp(true)}
+              style={{ background: 'none', border: 'none', color: '#059669', padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+            >
+              HELP ↗
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Itinerary Section Card */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: 18, border: '1.5px solid #E2DED6', padding: '16px 18px' }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: '#78716C', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+                DAY 2 · HUBLI TO MANGALURU
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>07:30 Start from Hubli</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>10:30 Sagar Highway Dhaba</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#059669', border: '1px solid #059669', padding: '2px 6px', borderRadius: 4 }}>FROM CHAT</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#1C1917' }}>13:00 Lunch, Udupi</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#D97706', border: '1px solid #D97706', padding: '2px 6px', borderRadius: 4 }}>PROPOSED</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Propose Card */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: 18, border: '1.5px solid #E2DED6', padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#E7E5E4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>
+                  MR
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#1C1917' }}>Meera proposed</div>
+                  <div style={{ fontSize: 12, color: '#78716C' }}>Lunch at 13:30 instead</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => { setToast('Proposal accepted'); setTimeout(() => setToast(''), 2500); }}
+                  style={{ flex: 1, padding: '10px', backgroundColor: '#E5A900', color: '#1C1917', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Accept
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setToast('Proposal declined'); setTimeout(() => setToast(''), 2500); }}
+                  style={{ flex: 1, padding: '10px', backgroundColor: '#FFFFFF', color: '#1C1917', border: '1.5px solid #E2DED6', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Decline
+                </button>
+              </div>
+            </div>
+
+            {/* Amenities Shortcut */}
+            <button
+              type="button"
+              onClick={() => setShowNearbyHelp(true)}
+              style={{ padding: '14px', backgroundColor: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+            >
+              🛠️ View route-cached amenities (fuel, repair, food)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Discover tab (Mockup Screen 8: Discover search) */}
+      {tab === 'discover' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6', padding: '12px 16px' }}>
+          {/* Search box */}
+          <input
+            type="text"
+            readOnly
+            value="Search: Bengaluru to Kasaragod"
+            style={{ width: '100%', padding: '12px 16px', borderRadius: 16, border: '1.5px solid #E2DED6', backgroundColor: '#FFFFFF', color: '#1C1917', fontSize: 14, fontWeight: 600, outline: 'none', marginBottom: 12 }}
+          />
+
+          {/* Tags */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#059669', border: '1.5px solid #059669', padding: '3px 8px', borderRadius: 6 }}>TWISTY</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#78716C', border: '1.5px solid #E2DED6', padding: '3px 8px', borderRadius: 6 }}>3-5 DAYS</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#78716C', border: '1.5px solid #E2DED6', padding: '3px 8px', borderRadius: 6 }}>MIXED</span>
+          </div>
+
+          {/* Route cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, overflowY: 'auto' }}>
+            <div style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 18, padding: '16px 18px' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#1C1917' }}>Bengaluru to Kasaragod, 3 days</div>
+              <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>by Arjun · 412 copies · 4.7 from riders who finished</div>
+              <div style={{ fontSize: 12, color: '#78716C', marginTop: 2 }}>Stops: fuel 5 · food 9 · rest 2</div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => { setToast('Route copied to trips'); setTimeout(() => setToast(''), 2500); }}
+                  style={{ padding: '9px 16px', backgroundColor: '#E5A900', color: '#1C1917', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Copy to my trips
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTab('chat')}
+                  style={{ padding: '9px 16px', backgroundColor: '#FFFFFF', color: '#1C1917', border: '1.5px solid #E2DED6', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Message
+                </button>
+              </div>
+            </div>
+
+            <div style={{ backgroundColor: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 18, padding: '16px 18px' }}>
+              <div style={{ fontSize: 16, fontWeight: 900, color: '#1C1917' }}>Coorg loop, 2 days</div>
+              <div style={{ fontSize: 12, color: '#78716C', marginTop: 4 }}>by Meera · 128 copies</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards) */}
       {tab === 'chat' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {messages.length === 0 && <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40, fontSize: 14 }}>No messages yet. Say hi or share a stop! 👋</p>}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#EFECE6' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {messages.length === 0 && (
+              <div style={{ textAlign: 'center', marginTop: 40 }}>
+                <p style={{ color: '#1C1917', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
+                <p style={{ color: '#78716C', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
+              </div>
+            )}
             {messages.map((m) => {
               const isMe = m.user_id === user?.id;
-              const isSos = m.message_type === 'sos';
               const isStatus = m.message_type === 'status';
               const isAnnouncement = m.message_type === 'announcement';
-              const isStopPin = m.message_type === 'stop_pin';
               const isStopArrival = m.message_type === 'stop_arrival';
-              const isLocationShare = m.message_type === 'location_share' || m.message.includes('[') && m.message.includes(']');
 
               if (isStatus || isStopArrival) {
                 return (
                   <div key={m.id} style={{ textAlign: 'center', margin: '2px 0' }}>
                     <span style={{
-                      fontSize: 12,
-                      color: isStopArrival ? '#34d399' : '#9ca3af',
-                      background: isStopArrival ? 'rgba(16, 185, 129, 0.15)' : '#1f2937',
-                      border: isStopArrival ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #374151',
+                      fontSize: 11,
+                      color: isStopArrival ? '#059669' : '#78716C',
+                      background: isStopArrival ? '#ECFDF5' : '#FFFFFF',
+                      border: isStopArrival ? '1.5px solid #059669' : '1.5px solid #E2DED6',
                       padding: '3px 12px',
                       borderRadius: 14,
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}>
                       {m.message}
                     </span>
@@ -1435,93 +1543,102 @@ export default function RidePage() {
               if (isAnnouncement) {
                 return (
                   <div key={m.id} style={{
-                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))',
-                    border: '1px solid #f59e0b',
-                    borderRadius: 12,
-                    padding: '10px 14px',
+                    background: '#FFFDF7',
+                    border: '1.5px solid #F59E0B',
+                    borderRadius: 16,
+                    padding: '12px 14px',
                     margin: '4px 0',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: '#B45309', textTransform: 'uppercase' }}>
                       <span>📢</span>
-                      <span>Captain Broadcast · {m.user_name}</span>
+                      <span>Captain Announcement · {m.user_name}</span>
                     </div>
-                    <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ color: '#1C1917', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
                       {m.message}
                     </div>
                   </div>
                 );
               }
 
-              // Check if message has location coordinates [lat,lng]
+              // Check if message has location coordinates [lat,lng] or contains stop mention
               const coordMatch = m.message.match(/\[([0-9.-]+),\s*([0-9.-]+)\]/);
               const hasCoords = !!coordMatch;
               const parsedLat = coordMatch ? parseFloat(coordMatch[1]) : 0;
               const parsedLng = coordMatch ? parseFloat(coordMatch[2]) : 0;
+              const hasStopMention = m.message_type === 'location_share' || hasCoords || m.message_type === 'stop_pin';
 
               return (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                  {!isMe && <span style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2, fontWeight: 600 }}>{m.user_name}</span>}
+                  {!isMe && (
+                    <span style={{ fontSize: 12, color: '#78716C', marginBottom: 4, fontWeight: 700 }}>
+                      {m.user_name}
+                    </span>
+                  )}
                   <div style={{
-                    maxWidth: '82%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    background: isSos ? '#dc2626' : isStopPin ? '#1e3a8a' : isMe ? '#2563eb' : '#374151',
-                    color: '#fff', fontSize: 14, fontWeight: isSos ? 700 : 400,
-                    border: isSos ? '2px solid #fca5a5' : isStopPin ? '1px solid #60a5fa' : 'none',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    maxWidth: '85%',
+                    padding: '12px 16px',
+                    borderRadius: 20,
+                    background: isMe ? '#FEF3C7' : '#FFFFFF',
+                    color: '#1C1917',
+                    border: isMe ? '1px solid #FDE68A' : '1.5px solid #E2DED6',
+                    boxShadow: '0 2px 6px rgba(28, 25, 23, 0.04)',
                   }}>
-                    <div>{m.message}</div>
+                    <div style={{ fontSize: 14, lineHeight: 1.4 }}>{m.message}</div>
 
-                    {/* Interactive Actions for Location / Stop Messages */}
-                    {(isLocationShare || hasCoords) && parsedLat !== 0 && (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                    {/* Mockup Screen 4 Signature: Embedded Location Card with "Confirm as stop" Button */}
+                    {hasStopMention && (
+                      <div style={{
+                        marginTop: 10,
+                        padding: '12px 14px',
+                        backgroundColor: '#F5F3EF',
+                        border: '1.5px dashed #D1C7B7',
+                        borderRadius: 14,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 8,
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 900, color: '#1C1917' }}>
+                            {pinnedStop?.name ?? 'Sagar Highway Dhaba'}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#78716C', marginTop: 2 }}>
+                            Shared {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · open in maps
+                          </div>
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => {
-                            setNavTarget({ name: `${m.user_name}'s Shared Location`, lat: parsedLat, lng: parsedLng });
-                            setShowNavModal(true);
-                          }}
-                          style={styles.chatActionBtn}
-                        >
-                          🧭 Navigate
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handlePinStop({
-                            name: `${m.user_name}'s Shared Stop`,
-                            lat: parsedLat,
-                            lng: parsedLng,
-                            type: 'stop',
-                          }, false)}
-                          style={{ ...styles.chatActionBtn, background: '#f59e0b', color: '#111827' }}
-                        >
-                          📍 Pin Stop
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!session?.trip_id) return;
-                            try {
-                              await tripService.addStop(session.trip_id, {
-                                place: `Stop shared by ${m.user_name}`,
-                                item_type: 'stop',
+                            if (parsedLat !== 0) {
+                              handlePinStop({
+                                name: `${m.user_name}'s Shared Stop`,
                                 lat: parsedLat,
                                 lng: parsedLng,
-                                description: m.message,
-                              });
-                              setToast('✓ Added to trip itinerary!');
-                              setTimeout(() => setToast(''), 3000);
-                            } catch {
-                              setToast('Failed to add stop');
-                              setTimeout(() => setToast(''), 2500);
+                                type: 'stop',
+                              }, true);
+                            } else if (pinnedStop) {
+                              setToast('✓ Confirmed stop!');
+                              setTimeout(() => setToast(''), 2000);
                             }
                           }}
-                          style={{ ...styles.chatActionBtn, background: '#10b981', color: '#fff' }}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            backgroundColor: '#E5A900',
+                            color: '#1C1917',
+                            border: 'none',
+                            borderRadius: 10,
+                            fontWeight: 900,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                          }}
                         >
-                          ➕ Add to Plan
+                          Confirm as stop
                         </button>
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
+                  <span style={{ fontSize: 10, color: '#A8A29E', marginTop: 3 }}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -1530,50 +1647,59 @@ export default function RidePage() {
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Quick Chat Actions (Location Share & Stop Suggest) */}
-          <div style={{ padding: '6px 12px', background: '#111827', display: 'flex', gap: 8, borderTop: '1px solid #374151', overflowX: 'auto' }}>
+          {/* Quick Chat Pill Row */}
+          <div style={{ padding: '6px 14px', background: '#EFECE6', display: 'flex', gap: 8, borderTop: '1px solid #E2DED6', overflowX: 'auto' }}>
             <button
               type="button"
               onClick={handleShareCurrentLocation}
-              style={styles.chatQuickPill}
+              style={{ padding: '6px 12px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📍 Share My GPS Location
+              📍 Share GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
-              style={styles.chatQuickPill}
+              style={{ padding: '6px 12px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📌 Suggest / Pin Stop
+              📌 Propose Stop
             </button>
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ ...styles.chatQuickPill, borderColor: '#10b981', color: '#34d399' }}
+              style={{ padding: '6px 12px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 14, color: '#1C1917', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              🛠️ Nearby Help (Fuel/Repair)
+              🛠️ Nearby Amenities
             </button>
-            {isLead && (
-              <button
-                type="button"
-                onClick={() => setShowAnnouncementModal(true)}
-                style={{ ...styles.chatQuickPill, borderColor: '#f59e0b', color: '#fbbf24' }}
-              >
-                📢 Broadcast Alert
-              </button>
-            )}
           </div>
 
-          {/* Message Input */}
-          <div style={{ padding: '8px 12px', background: '#1f2937', display: 'flex', gap: 8, borderTop: '1px solid #374151' }}>
+          {/* Message Input matching mockup */}
+          <div style={{ padding: '8px 14px 10px', background: '#EFECE6', display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-              placeholder="Message convoy or mention a stop..."
-              style={{ flex: 1, background: '#374151', border: 'none', borderRadius: 20, padding: '10px 16px', color: '#fff', fontSize: 14, outline: 'none' }}
+              placeholder="Message the trip group..."
+              style={{ flex: 1, background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 24, padding: '11px 18px', color: '#1C1917', fontSize: 14, outline: 'none' }}
             />
-            <button onClick={sendChat} disabled={sending || !chatInput.trim()} style={{ background: '#3b82f6', border: 'none', borderRadius: 20, padding: '10px 18px', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: sending || !chatInput.trim() ? 0.5 : 1 }}>
+            <button
+              onClick={sendChat}
+              disabled={sending || !chatInput.trim()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                backgroundColor: '#E5A900',
+                color: '#1C1917',
+                border: 'none',
+                fontWeight: 900,
+                fontSize: 16,
+                cursor: 'pointer',
+                opacity: sending || !chatInput.trim() ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               ➤
             </button>
           </div>
@@ -1582,7 +1708,7 @@ export default function RidePage() {
 
       {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#0f172a' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#EFECE6' }}>
           {/* Stale Riders Warning Banner */}
           <StaleRidersAlertBanner
             staleCount={staleRiders.length}
@@ -1590,16 +1716,16 @@ export default function RidePage() {
           />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 2px 10px' }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: '#78716C', letterSpacing: 0.8, textTransform: 'uppercase' }}>
               Convoy Roster ({ridersWithFreshness.length})
             </span>
-            <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>
+            <span style={{ fontSize: 11, color: '#059669', fontWeight: 800 }}>
               ● {ridersWithFreshness.filter((r) => r.freshness.isLive).length} LIVE
             </span>
           </div>
 
           {ridersWithFreshness.length === 0 && (
-            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
+            <p style={{ color: '#78716C', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
               No riders online yet. Positions will appear here when riders connect.
             </p>
           )}
@@ -1619,9 +1745,9 @@ export default function RidePage() {
 
       {/* Nav / Directions panel */}
       {tab === 'nav' && (
-        <div style={{ flex: 1, overflowY: 'auto', background: '#111827' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: '#EFECE6', padding: '12px 16px' }}>
           {/* Quick Launch External Navigation Apps */}
-          <div style={{ padding: '12px 16px', background: '#1f2937', borderBottom: '1px solid #374151', display: 'flex', gap: 10 }}>
+          <div style={{ padding: '12px 16px', background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
             <button
               onClick={() => {
                 if (pinnedStop) {
@@ -1641,21 +1767,20 @@ export default function RidePage() {
               style={{
                 flex: 1,
                 padding: '12px 14px',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                color: '#fff',
+                background: '#E5A900',
+                color: '#1C1917',
                 border: 'none',
-                borderRadius: 10,
-                fontWeight: 800,
+                borderRadius: 12,
+                fontWeight: 900,
                 fontSize: 14,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
               }}
             >
-              <span>🧭 Open in Google Maps (Bike Nav) / Apple / Waze</span>
+              <span>🧭 Open in Navigation App (Google / Apple / Waze)</span>
             </button>
           </div>
 
@@ -1666,18 +1791,18 @@ export default function RidePage() {
             const hrs = Math.floor(totalSecs / 3600);
             const mins = Math.round((totalSecs % 3600) / 60);
             return (
-              <div style={{ background: '#1f2937', padding: '12px 16px', borderBottom: '1px solid #374151', display: 'flex', gap: 24 }}>
+              <div style={{ background: '#FFFFFF', padding: '14px 18px', border: '1.5px solid #E2DED6', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
-                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>total distance</p>
+                  <p style={{ color: '#1C1917', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
+                  <p style={{ color: '#78716C', fontSize: 11, margin: 0 }}>total distance</p>
                 </div>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
-                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>est. riding time</p>
+                  <p style={{ color: '#1C1917', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
+                  <p style={{ color: '#78716C', fontSize: 11, margin: 0 }}>est. riding time</p>
                 </div>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
-                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>turns</p>
+                  <p style={{ color: '#1C1917', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
+                  <p style={{ color: '#78716C', fontSize: 11, margin: 0 }}>turns</p>
                 </div>
               </div>
             );
@@ -1685,219 +1810,82 @@ export default function RidePage() {
           {navSteps.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 16px' }}>
               <p style={{ fontSize: 32 }}>🗺️</p>
-              <p style={{ color: '#9ca3af', fontSize: 14 }}>Fetching route directions…</p>
+              <p style={{ color: '#78716C', fontSize: 14 }}>Fetching route directions…</p>
             </div>
           )}
           {navSteps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #1f2937', background: i === 0 ? '#1e3a5f' : 'transparent' }}>
-              <div style={{ width: 36, height: 36, background: '#1f2937', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #E2DED6', background: i === 0 ? '#FFFDF7' : 'transparent' }}>
+              <div style={{ width: 36, height: 36, background: '#FFFFFF', border: '1.5px solid #E2DED6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                 {stepIcon(step.instruction)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: '#fff', fontSize: 14, fontWeight: i === 0 ? 700 : 400, margin: 0 }}>{step.instruction}</p>
-                <p style={{ color: '#6b7280', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
+                <p style={{ color: '#1C1917', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
+                <p style={{ color: '#78716C', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Bottom tab bar — Sleek, thumb-friendly navigation designed for all ages */}
+      {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
       <div style={{
-        backgroundColor: '#0f172a',
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+        backgroundColor: '#EFECE6',
+        borderTop: '1.5px solid #E2DED6',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-around',
-        padding: '6px 4px 8px',
+        justifyContent: 'space-between',
+        padding: '10px 18px 14px',
         flexShrink: 0,
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.45)',
       }}>
-        {/* Tab 1: Map Tracking */}
+        {/* Tab 1: RIDE */}
         <button
           type="button"
           onClick={() => setTab('map')}
+          style={tab === 'map' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          RIDE
+        </button>
+
+        {/* Tab 2: PLAN */}
+        <button
+          type="button"
+          onClick={() => setTab('plan')}
+          style={tab === 'plan' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          PLAN
+        </button>
+
+        {/* Tab 3: DISCOVER */}
+        <button
+          type="button"
+          onClick={() => setTab('discover')}
+          style={tab === 'discover' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          DISCOVER
+        </button>
+
+        {/* Tab 4: CHAT */}
+        <button
+          type="button"
+          onClick={() => setTab('chat')}
           style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            padding: '4px 2px',
-            color: tab === 'map' ? '#f59e0b' : '#94a3b8',
-            transition: 'all 0.15s ease',
+            ...(tab === 'chat' ? styles.activeNavPill : styles.inactiveNavBtn),
+            position: 'relative',
           }}
         >
-          <span style={{ fontSize: 20 }}>🗺️</span>
-          <span style={{
-            fontSize: 11,
-            fontWeight: tab === 'map' ? 900 : 600,
-            letterSpacing: 0.3,
-          }}>
-            Map
-          </span>
-          {tab === 'map' && (
-            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
+          CHAT
+          {newMsgCount > 0 && tab !== 'chat' && (
+            <span style={styles.chatUnreadDot} />
           )}
         </button>
 
-        {/* Tab 2: Tell Group / Status Presets */}
+        {/* Tab 5: ME */}
         <button
           type="button"
           onClick={() => setShowTellGroupSheet(true)}
-          style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            padding: '4px 2px',
-            color: myStatus ? '#f59e0b' : '#94a3b8',
-            transition: 'all 0.15s ease',
-          }}
+          style={styles.inactiveNavBtn}
         >
-          <span style={{ fontSize: 20 }}>⚡</span>
-          <span style={{
-            fontSize: 11,
-            fontWeight: myStatus ? 900 : 600,
-            letterSpacing: 0.3,
-          }}>
-            {myStatus ? 'Status ●' : 'Presets'}
-          </span>
-        </button>
-
-        {/* Tab 3: Trip Chat */}
-        <button
-          type="button"
-          onClick={() => setTab(tab === 'chat' ? 'map' : 'chat')}
-          style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            padding: '4px 2px',
-            color: tab === 'chat' ? '#f59e0b' : '#94a3b8',
-            position: 'relative',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ fontSize: 20 }}>💬</span>
-          <span style={{
-            fontSize: 11,
-            fontWeight: tab === 'chat' ? 900 : 600,
-            letterSpacing: 0.3,
-          }}>
-            Chat
-          </span>
-          {newMsgCount > 0 && tab !== 'chat' && (
-            <span style={{
-              position: 'absolute',
-              top: 2,
-              right: '25%',
-              backgroundColor: '#ef4444',
-              color: '#ffffff',
-              fontSize: 10,
-              fontWeight: 900,
-              width: 17,
-              height: 17,
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
-            }}>
-              {newMsgCount > 9 ? '9+' : newMsgCount}
-            </span>
-          )}
-          {tab === 'chat' && (
-            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
-          )}
-        </button>
-
-        {/* Tab 4: Convoy Roster */}
-        <button
-          type="button"
-          onClick={() => setTab(tab === 'riders' ? 'map' : 'riders')}
-          style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            padding: '4px 2px',
-            color: tab === 'riders' ? '#f59e0b' : '#94a3b8',
-            position: 'relative',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ fontSize: 20 }}>👥</span>
-          <span style={{
-            fontSize: 11,
-            fontWeight: tab === 'riders' ? 900 : 600,
-            letterSpacing: 0.3,
-          }}>
-            Convoy
-          </span>
-          {staleRiders.length > 0 && tab !== 'riders' && (
-            <span style={{
-              position: 'absolute',
-              top: 3,
-              right: '24%',
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: '#f59e0b',
-              boxShadow: '0 0 6px #f59e0b',
-            }} />
-          )}
-          {tab === 'riders' && (
-            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
-          )}
-        </button>
-
-        {/* Tab 5: External Nav / Turns */}
-        <button
-          type="button"
-          onClick={() => setTab(tab === 'nav' ? 'map' : 'nav')}
-          style={{
-            flex: 1,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 2,
-            padding: '4px 2px',
-            color: tab === 'nav' ? '#f59e0b' : '#94a3b8',
-            position: 'relative',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ fontSize: 20 }}>🧭</span>
-          <span style={{
-            fontSize: 11,
-            fontWeight: tab === 'nav' ? 900 : 600,
-            letterSpacing: 0.3,
-          }}>
-            Nav
-          </span>
-          {tab === 'nav' && (
-            <div style={{ width: 18, height: 2.5, backgroundColor: '#f59e0b', borderRadius: 2 }} />
-          )}
+          ME
         </button>
       </div>
 
@@ -1998,6 +1986,38 @@ const s: Record<string, React.CSSProperties> = {
 };
 
 const styles: Record<string, React.CSSProperties> = {
+  activeNavPill: {
+    backgroundColor: '#E5A900',
+    color: '#1C1917',
+    fontWeight: 900,
+    fontSize: 13,
+    letterSpacing: 0.5,
+    borderRadius: 999,
+    padding: '8px 18px',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  inactiveNavBtn: {
+    backgroundColor: 'transparent',
+    color: '#78716C',
+    fontWeight: 800,
+    fontSize: 13,
+    letterSpacing: 0.5,
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px 10px',
+    transition: 'all 0.15s ease',
+  },
+  chatUnreadDot: {
+    position: 'absolute',
+    top: 4,
+    right: 2,
+    width: 7,
+    height: 7,
+    borderRadius: '50%',
+    backgroundColor: '#E5A900',
+  },
   chatActionBtn: {
     padding: '4px 8px',
     background: '#374151',

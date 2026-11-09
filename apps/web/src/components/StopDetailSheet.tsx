@@ -135,14 +135,14 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           <div
             style={{
               ...styles.statCard,
-              borderColor: staleRider ? '#f59e0b' : '#374151',
-              background: staleRider ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-subtle, #1f2937)',
+              borderColor: staleRider ? '#F59E0B' : '#E2DED6',
+              background: staleRider ? '#FFFDF7' : '#F5F3EF',
             }}
           >
             <span
               style={{
                 ...styles.statVal,
-                color: staleRider ? '#f59e0b' : 'var(--text-primary, #ffffff)',
+                color: staleRider ? '#B45309' : '#1C1917',
               }}
             >
               {leftCardDisplay}
@@ -155,7 +155,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             <span
               style={{
                 ...styles.statVal,
-                color: myEtaDisplay === 'Unknown' ? '#9ca3af' : isMeArrived ? '#10b981' : 'var(--text-primary, #ffffff)',
+                color: myEtaDisplay === 'Unknown' ? '#78716C' : isMeArrived ? '#059669' : '#1C1917',
               }}
             >
               {myEtaDisplay}
@@ -189,9 +189,9 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           )}
 
           {/* Row 3: UNKNOWN (Stale riders) */}
-          <div style={styles.arrivalRow}>
+          <div style={{ ...styles.arrivalRow, borderBottom: 'none' }}>
             <span style={styles.badgeUnknown}>UNKNOWN</span>
-            <span style={{ ...styles.arrivalNames, color: '#9ca3af' }}>
+            <span style={{ ...styles.arrivalNames, color: '#78716C' }}>
               {unknownRiders.length > 0
                 ? unknownRiders.join(', ')
                 : 'All positions live'}
@@ -251,12 +251,12 @@ const styles: Record<string, React.CSSProperties> = {
   sheet: {
     width: '100%',
     maxWidth: 540,
-    backgroundColor: 'var(--bg-card, #111827)',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1px solid var(--border-card, #374151)',
+    borderTop: '1.5px solid #E2DED6',
     padding: '12px 20px 28px',
-    boxShadow: '0 -8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 -10px 40px rgba(28, 25, 23, 0.15)',
     animation: 'slideUp 0.25s ease-out',
     maxHeight: '90vh',
     overflowY: 'auto',
@@ -271,7 +271,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#4b5563',
+    backgroundColor: '#D6D3D1',
   },
   header: {
     marginBottom: 16,
@@ -279,7 +279,7 @@ const styles: Record<string, React.CSSProperties> = {
   pretitle: {
     fontSize: 11,
     fontWeight: 800,
-    color: 'var(--text-secondary, #9ca3af)',
+    color: '#78716C',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -293,7 +293,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 22,
     fontWeight: 900,
-    color: 'var(--text-primary, #ffffff)',
+    color: '#1C1917',
     margin: 0,
     lineHeight: 1.2,
   },
@@ -302,14 +302,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 999,
     fontSize: 11,
     fontWeight: 800,
-    border: '1.5px solid #10b981',
-    color: '#10b981',
-    background: 'rgba(16, 185, 129, 0.12)',
+    border: '1.5px solid #059669',
+    color: '#059669',
+    background: '#ECFDF5',
     letterSpacing: 0.5,
   },
   stopMeta: {
     fontSize: 13,
-    color: 'var(--text-secondary, #9ca3af)',
+    color: '#78716C',
     margin: '6px 0 0',
   },
   statCardsGrid: {
@@ -321,8 +321,8 @@ const styles: Record<string, React.CSSProperties> = {
   statCard: {
     padding: '16px 14px',
     borderRadius: 16,
-    border: '1.5px solid #374151',
-    backgroundColor: '#1f2937',
+    border: '1.5px solid #E2DED6',
+    backgroundColor: '#F5F3EF',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -338,22 +338,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statSub: {
     fontSize: 12,
-    color: 'var(--text-secondary, #9ca3af)',
+    color: '#78716C',
     fontWeight: 600,
     marginTop: 6,
     lineHeight: 1.2,
   },
   arrivalsSection: {
-    backgroundColor: '#1f2937',
-    border: '1px solid #374151',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #E2DED6',
+    borderRadius: 18,
     padding: '14px 16px',
     marginBottom: 20,
   },
   sectionHeader: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#9ca3af',
+    color: '#78716C',
     letterSpacing: 1,
     margin: '0 0 12px',
     textTransform: 'uppercase',
@@ -363,13 +363,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 12,
     padding: '8px 0',
-    borderBottom: '1px solid #2d3748',
+    borderBottom: '1px solid #E2DED6',
   },
   badgeHere: {
     padding: '3px 8px',
-    borderRadius: 6,
-    background: '#10b981',
-    color: '#064e3b',
+    borderRadius: 999,
+    background: '#ECFDF5',
+    color: '#059669',
+    border: '1.5px solid #059669',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -378,9 +379,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   badgeETA: {
     padding: '3px 8px',
-    borderRadius: 6,
-    background: '#f59e0b',
-    color: '#78350f',
+    borderRadius: 999,
+    background: '#FFFBEB',
+    color: '#D97706',
+    border: '1.5px solid #D97706',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -389,9 +391,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   badgeUnknown: {
     padding: '3px 8px',
-    borderRadius: 6,
-    background: '#4b5563',
-    color: '#d1d5db',
+    borderRadius: 999,
+    background: '#F5F5F4',
+    color: '#78716C',
+    border: '1.5px solid #78716C',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -400,7 +403,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   arrivalNames: {
     fontSize: 13,
-    color: '#ffffff',
+    color: '#1C1917',
     fontWeight: 600,
     flex: 1,
   },
@@ -417,7 +420,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     fontSize: 16,
     cursor: 'pointer',
-    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.3)',
+    backgroundColor: '#E5A900',
+    color: '#1C1917',
+    boxShadow: '0 4px 14px rgba(229, 169, 0, 0.35)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -426,9 +431,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '13px 20px',
     borderRadius: 14,
-    border: '1.5px solid #4b5563',
-    backgroundColor: 'transparent',
-    color: '#ffffff',
+    border: '1.5px solid #E2DED6',
+    backgroundColor: '#FFFFFF',
+    color: '#1C1917',
     fontWeight: 800,
     fontSize: 14,
     cursor: 'pointer',
@@ -440,7 +445,7 @@ const styles: Record<string, React.CSSProperties> = {
   changeBtn: {
     background: 'none',
     border: 'none',
-    color: '#9ca3af',
+    color: '#78716C',
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',

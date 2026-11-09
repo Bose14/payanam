@@ -65,8 +65,10 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
 
         {/* Header */}
         <div style={styles.header}>
-          <h2 style={styles.title}>Tell group</h2>
-          <span style={styles.subtitle}>Sends with your name and time · glove friendly</span>
+          <div style={styles.titleRow}>
+            <h2 style={styles.title}>Tell group</h2>
+            <span style={styles.subtitle}>Sends with your name and time</span>
+          </div>
         </div>
 
         {/* Rider Status Presets Grid */}
@@ -80,12 +82,11 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                 onClick={() => handleRiderPresetClick(p.label)}
                 style={{
                   ...styles.presetBtn,
-                  backgroundColor: isSelected ? 'var(--accent-gold, #f59e0b)' : '#1f2937',
-                  color: isSelected ? '#000000' : '#ffffff',
-                  borderColor: isSelected ? 'var(--accent-gold, #f59e0b)' : '#374151',
+                  backgroundColor: isSelected ? '#E5A900' : '#FFFFFF',
+                  color: '#1C1917',
+                  borderColor: isSelected ? '#E5A900' : '#E2DED6',
                 }}
               >
-                <span style={{ fontSize: 16 }}>{p.icon}</span>
                 <span style={styles.btnLabel}>{p.label}</span>
               </button>
             );
@@ -96,7 +97,6 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
         {isCaptain && (
           <div style={styles.captainSection}>
             <div style={styles.captainHeader}>
-              <span style={{ fontSize: 13 }}>👑</span>
               <span style={styles.captainTitle}>CAPTAIN ANNOUNCEMENTS</span>
             </div>
 
@@ -110,12 +110,11 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                     onClick={() => handleCaptainAnnouncementClick(cp.label)}
                     style={{
                       ...styles.presetBtn,
-                      backgroundColor: isSelected ? '#ef4444' : '#1f2937',
-                      color: isSelected ? '#ffffff' : '#fca5a5',
-                      borderColor: isSelected ? '#ef4444' : 'rgba(239, 68, 68, 0.4)',
+                      backgroundColor: isSelected ? '#E5A900' : '#FFFFFF',
+                      color: '#1C1917',
+                      borderColor: isSelected ? '#E5A900' : '#E2DED6',
                     }}
                   >
-                    <span style={{ fontSize: 16 }}>{cp.icon}</span>
                     <span style={styles.btnLabel}>{cp.label}</span>
                   </button>
                 );
@@ -141,7 +140,7 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: 'rgba(28, 25, 23, 0.45)',
     backdropFilter: 'blur(4px)',
     WebkitBackdropFilter: 'blur(4px)',
     zIndex: 9999,
@@ -152,12 +151,12 @@ const styles: Record<string, React.CSSProperties> = {
   sheet: {
     width: '100%',
     maxWidth: 540,
-    backgroundColor: 'var(--bg-card, #111827)',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1px solid var(--border-card, #374151)',
+    borderTop: '1.5px solid #E2DED6',
     padding: '12px 20px 24px',
-    boxShadow: '0 -8px 30px rgba(0, 0, 0, 0.5)',
+    boxShadow: '0 -10px 40px rgba(28, 25, 23, 0.15)',
     animation: 'slideUp 0.25s ease-out',
     maxHeight: '90vh',
     overflowY: 'auto',
@@ -172,74 +171,79 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#4b5563',
+    backgroundColor: '#D6D3D1',
   },
   header: {
     marginBottom: 16,
   },
+  titleRow: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: 12,
+  },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 900,
-    color: 'var(--text-primary, #ffffff)',
+    color: '#1C1917',
     margin: 0,
   },
   subtitle: {
     fontSize: 12,
-    color: 'var(--text-secondary, #9ca3af)',
-    marginTop: 4,
-    display: 'block',
+    color: '#78716C',
+    fontWeight: 500,
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
     gap: 10,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   presetBtn: {
     padding: '16px 14px',
     borderRadius: 14,
-    border: '1.5px solid #374151',
+    border: '1.5px solid #E2DED6',
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
     cursor: 'pointer',
-    textAlign: 'left',
+    textAlign: 'center',
     transition: 'all 0.15s ease',
     minHeight: 56,
+    boxShadow: '0 2px 4px rgba(28, 25, 23, 0.03)',
   },
   btnLabel: {
-    fontWeight: 800,
+    fontWeight: 700,
     fontSize: 14,
     lineHeight: 1.2,
   },
   captainSection: {
     marginTop: 4,
-    paddingTop: 14,
-    borderTop: '1px solid #374151',
+    padding: '14px 14px 4px',
+    backgroundColor: '#F5F3EF',
+    borderRadius: 18,
+    border: '1.5px solid #E2DED6',
+    marginBottom: 16,
   },
   captainHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   captainTitle: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#f87171',
+    color: '#78716C',
     letterSpacing: 1,
   },
   closeBtn: {
     width: '100%',
     padding: '14px',
     borderRadius: 14,
-    border: '1.5px solid #374151',
-    backgroundColor: '#1f2937',
-    color: '#ffffff',
+    border: '1.5px solid #E2DED6',
+    backgroundColor: '#FFFFFF',
+    color: '#1C1917',
     fontWeight: 800,
     fontSize: 15,
     cursor: 'pointer',
-    marginTop: 6,
+    marginTop: 4,
   },
 };
 

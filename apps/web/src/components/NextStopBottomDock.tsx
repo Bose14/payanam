@@ -22,264 +22,167 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
 }) => {
   if (!pinnedStop) {
     return (
-      <div style={styles.dock}>
-        {/* Subtle grab handle */}
-        <div style={styles.handleWrap} onClick={onPinNewStop}>
-          <div style={styles.handle} />
-        </div>
-
-        <div style={styles.unpinnedHeader} onClick={onPinNewStop}>
-          <div style={styles.iconCircle}>📌</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={styles.unpinnedTitle}>Convoy Regroup Point</div>
-            <div style={styles.unpinnedSub}>No target stop chosen · Tap to pin a stop</div>
+      <div style={styles.dockCard}>
+        <div style={styles.unpinnedInfo} onClick={onPinNewStop}>
+          <div>
+            <h4 style={styles.stopName}>No target stop pinned</h4>
+            <p style={styles.stopSub}>Choose a waypoint so your group shares a target</p>
           </div>
         </div>
 
-        {/* Action Buttons: 2 large glove-friendly targets */}
         <div style={styles.btnRow}>
           {onPinNewStop && (
             <button
               type="button"
               onClick={onPinNewStop}
-              style={styles.primaryBtn}
+              style={styles.btnWhite}
             >
-              <span>📌 Choose Target Stop</span>
+              📌 Choose stop
             </button>
           )}
           <button
             type="button"
             onClick={onOpenTellGroup}
-            style={styles.secondaryBtn}
+            style={styles.btnYellow}
           >
-            <span>⚡ Tell group</span>
+            Tell group
           </button>
         </div>
       </div>
     );
   }
 
-  // Type Icon helper
-  const stopIcon = pinnedStop.type === 'fuel_stop' ? '⛽' :
-                   pinnedStop.type === 'meal' ? '🍽️' :
-                   pinnedStop.type === 'rest' ? '☕' :
-                   pinnedStop.type === 'attraction' ? '📍' : '📌';
-
   return (
-    <div style={styles.dock}>
-      {/* Top Handle bar for tactile dragging feel */}
-      <div style={styles.handleWrap} onClick={onOpenDetail}>
-        <div style={styles.handle} />
+    <div style={styles.dockCard}>
+      {/* Top drag notch */}
+      <div style={styles.notchWrap} onClick={onOpenDetail}>
+        <div style={styles.notch} />
       </div>
 
-      <div style={styles.contentRow} onClick={onOpenDetail} title="Tap to inspect stop telemetry & ETAs">
-        <div style={styles.iconCirclePinned}>{stopIcon}</div>
-
-        {/* Left Side: Stop Name + Distance + Arrival count */}
-        <div style={styles.infoArea}>
-          <div style={styles.nameRow}>
-            <span style={styles.stopName}>{pinnedStop.name}</span>
-            <span style={styles.arrivedRatio}>
-              {arrivedCount} of {Math.max(totalCount, 1)} here
-            </span>
-          </div>
-          <div style={styles.subRow}>
-            <span style={styles.subText}>
-              Next stop{distanceKm != null ? ` · ${distanceKm.toFixed(1)} km` : ''}
-            </span>
-            <span style={styles.tapTip}>Tap for ETAs ›</span>
-          </div>
+      {/* Main Info Row (Mockup 1 Signature) */}
+      <div style={styles.infoRow} onClick={onOpenDetail}>
+        <div>
+          <h4 style={styles.stopName}>{pinnedStop.name}</h4>
+          <p style={styles.stopSub}>
+            Next stop{distanceKm != null ? ` · ${distanceKm.toFixed(1)} km` : ''}
+          </p>
+        </div>
+        <div style={styles.arrivalRatio}>
+          {arrivedCount} of {Math.max(totalCount, 1)} here
         </div>
       </div>
 
-      {/* Prominent Glove-Friendly Button */}
-      <div style={{ marginTop: 10 }}>
-        <button
-          type="button"
-          onClick={onOpenTellGroup}
-          style={styles.tellGroupLargeBtn}
-        >
-          <span>⚡ Tell group</span>
-          <span style={styles.tellGroupSubtext}>Send quick status · Glove friendly</span>
-        </button>
-      </div>
+      {/* Full-Width Signature Mustard Yellow Button */}
+      <button
+        type="button"
+        onClick={onOpenTellGroup}
+        style={styles.tellGroupBtn}
+      >
+        Tell group
+      </button>
     </div>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  dock: {
-    backgroundColor: '#1e293b',
-    borderTop: '1px solid rgba(255, 255, 255, 0.12)',
-    borderRadius: '24px 24px 0 0',
-    padding: '8px 16px 14px',
-    boxShadow: '0 -8px 25px rgba(0, 0, 0, 0.55)',
-    zIndex: 800,
+  dockCard: {
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #E2DED6',
+    borderRadius: 20,
+    margin: '6px 14px 10px',
+    padding: '12px 16px 14px',
+    boxShadow: '0 4px 18px rgba(28, 25, 23, 0.08)',
     flexShrink: 0,
-    color: '#ffffff',
+    zIndex: 800,
   },
-  handleWrap: {
+  notchWrap: {
     display: 'flex',
     justifyContent: 'center',
-    padding: '2px 0 8px',
+    paddingBottom: 8,
     cursor: 'pointer',
   },
-  handle: {
-    width: 40,
+  notch: {
+    width: 36,
     height: 4,
-    borderRadius: 999,
-    backgroundColor: '#64748b',
+    borderRadius: 2,
+    backgroundColor: '#D6D3D1',
   },
-  unpinnedHeader: {
+  infoRow: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 12,
+    cursor: 'pointer',
+    marginBottom: 10,
+  },
+  unpinnedInfo: {
     marginBottom: 10,
     cursor: 'pointer',
   },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: '50%',
-    backgroundColor: '#0f172a',
-    border: '1px solid #334155',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 18,
-    flexShrink: 0,
-  },
-  iconCirclePinned: {
-    width: 42,
-    height: 42,
-    borderRadius: '50%',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    border: '1.5px solid #f59e0b',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 20,
-    flexShrink: 0,
-  },
-  unpinnedTitle: {
-    fontSize: 15,
-    fontWeight: 800,
-    color: '#ffffff',
-    letterSpacing: -0.2,
-  },
-  unpinnedSub: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginTop: 1,
-  },
-  btnRow: {
-    display: 'flex',
-    gap: 10,
-  },
-  primaryBtn: {
-    flex: 1.4,
-    padding: '12px 14px',
-    backgroundColor: '#f59e0b',
-    color: '#0f172a',
-    border: 'none',
-    borderRadius: 14,
-    fontWeight: 900,
-    fontSize: 13,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)',
-  },
-  secondaryBtn: {
-    flex: 1,
-    padding: '12px 12px',
-    backgroundColor: '#334155',
-    color: '#ffffff',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-    borderRadius: 14,
-    fontWeight: 800,
-    fontSize: 13,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  contentRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    cursor: 'pointer',
-  },
-  infoArea: {
-    flex: 1,
-    minWidth: 0,
-  },
-  nameRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
   stopName: {
+    margin: 0,
     fontSize: 16,
     fontWeight: 900,
-    color: '#ffffff',
+    color: '#1C1917',
     letterSpacing: -0.3,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
-  arrivedRatio: {
-    fontSize: 11,
-    fontWeight: 800,
-    color: '#34d399',
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
-    padding: '2px 8px',
-    borderRadius: 999,
-    border: '1px solid rgba(52, 211, 153, 0.3)',
-    whiteSpace: 'nowrap',
-  },
-  subRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 2,
-  },
-  subText: {
+  stopSub: {
+    margin: '2px 0 0',
     fontSize: 12,
-    color: '#94a3b8',
     fontWeight: 600,
+    color: '#78716C',
   },
-  tapTip: {
-    fontSize: 11,
-    color: '#f59e0b',
-    fontWeight: 700,
+  arrivalRatio: {
+    fontSize: 13,
+    fontWeight: 800,
+    color: '#1C1917',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+    paddingTop: 1,
   },
-  tellGroupLargeBtn: {
+  tellGroupBtn: {
     width: '100%',
-    padding: '13px 18px',
-    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    color: '#0f172a',
+    padding: '12px 16px',
+    backgroundColor: '#E5A900',
+    color: '#1C1917',
     border: 'none',
-    borderRadius: 14,
-    fontWeight: 900,
+    borderRadius: 12,
     fontSize: 15,
+    fontWeight: 900,
     cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    boxShadow: '0 4px 15px rgba(245, 158, 11, 0.35)',
+    letterSpacing: -0.2,
+    boxShadow: '0 2px 8px rgba(229, 169, 0, 0.35)',
     transition: 'transform 0.1s ease',
   },
-  tellGroupSubtext: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: 'rgba(15, 23, 42, 0.75)',
-    marginLeft: 4,
+  btnRow: {
+    display: 'flex',
+    gap: 10,
+  },
+  btnWhite: {
+    flex: 1,
+    padding: '11px 14px',
+    backgroundColor: '#FFFFFF',
+    border: '1.5px solid #E2DED6',
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 800,
+    color: '#1C1917',
+    cursor: 'pointer',
+  },
+  btnYellow: {
+    flex: 1,
+    padding: '11px 14px',
+    backgroundColor: '#E5A900',
+    border: 'none',
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 900,
+    color: '#1C1917',
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(229, 169, 0, 0.35)',
   },
 };
 
