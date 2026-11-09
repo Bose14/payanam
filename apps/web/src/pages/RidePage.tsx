@@ -233,6 +233,26 @@ function MapFollow({
   return null;
 }
 
+function MapResizer({ splitView }: { splitView: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    // Invalidate size immediately and during CSS transition so tiles load across 100% of the canvas
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 50);
+    const t2 = setTimeout(() => map.invalidateSize(), 150);
+    const t3 = setTimeout(() => map.invalidateSize(), 300);
+    const t4 = setTimeout(() => map.invalidateSize(), 550);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [splitView, map]);
+
+  return null;
+}
+
 type TabType = 'map' | 'chat' | 'riders' | 'nav' | 'plan' | 'discover';
 
 export default function RidePage() {
@@ -859,8 +879,14 @@ export default function RidePage() {
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#111316', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
       {/* Dynamic Dark Style for Map & Elements */}
       <style>{`
+        .warm-map-container,
+        .leaflet-container {
+          background-color: #111316 !important;
+          width: 100%;
+          height: 100%;
+        }
         .warm-map-container .leaflet-tile-pane {
-          filter: brightness(0.9) contrast(1.1);
+          filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
         }
         .warm-map-container .leaflet-control-attribution {
           display: none;
@@ -1177,18 +1203,27 @@ export default function RidePage() {
       )}
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
-      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'flex' : 'none', flexDirection: 'column', position: 'relative', backgroundColor: '#111316' }}>
-        {/* Map Section (Card style matching Mockup Screen 1) */}
+      <div style={{
+        flex: tab === 'map' ? 1 : 0,
+        overflow: 'hidden',
+        display: tab === 'map' ? 'flex' : 'none',
+        flexDirection: 'column',
+        position: 'relative',
+        backgroundColor: '#111316',
+        minHeight: 0,
+      }}>
+        {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
         <div className="warm-map-container" style={{
-          height: splitView ? '40%' : '100%',
-          margin: splitView ? '4px 16px 8px' : '0',
+          flex: splitView ? '0 0 38%' : '1 1 auto',
+          height: splitView ? '38%' : '100%',
+          minHeight: 0,
+          margin: splitView ? '2px 16px 8px' : '0',
           borderRadius: splitView ? 20 : 0,
           border: splitView ? '1.5px solid #2A2E35' : 'none',
           position: 'relative',
           overflow: 'hidden',
-          transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          flexShrink: 0,
-          backgroundColor: '#1B1E23',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          backgroundColor: '#111316',
           boxShadow: splitView ? '0 4px 20px rgba(0, 0, 0, 0.35)' : 'none',
         }}>
           {gpsError && (
@@ -1318,7 +1353,7 @@ export default function RidePage() {
               onClick={() => { setFollowing(true); setFocusTarget(null); }}
               style={{
                 position: 'absolute',
-                bottom: 12,
+                bottom: splitView ? 12 : (pinnedStop ? 115 : 20),
                 right: 12,
                 zIndex: 1000,
                 backgroundColor: '#1B1E23',
@@ -1361,9 +1396,13 @@ export default function RidePage() {
           )}
 
           <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+            {/* Auto-invalidates size whenever splitView toggles so tiles cover 100% of screen */}
+            <MapResizer splitView={splitView} />
+
+            {/* Free OpenStreetMap tiles rendered in Dark Mode via CSS filter (zero watermarks / zero API keys) */}
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution="&copy; OpenStreetMap &copy; CARTO"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
             />
             {myLat && myLng && (
               <MapFollow lat={myLat} lng={myLng} following={following} focusTarget={focusTarget} onDrag={() => { setFollowing(false); setFocusTarget(null); }} />
@@ -1440,15 +1479,28 @@ export default function RidePage() {
         )}
 
         {/* Next Stop Bottom Dock (Screen 1 mockup signature) */}
-        <NextStopBottomDock
-          pinnedStop={pinnedStop}
-          distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
-          arrivedCount={arrivedCount}
-          totalCount={ridersWithFreshness.length}
-          onOpenDetail={() => setShowStopDetailSheet(true)}
-          onOpenTellGroup={() => setShowTellGroupSheet(true)}
-          onPinNewStop={() => setShowPinModal(true)}
-        />
+        {(splitView || pinnedStop) && (
+          <div style={splitView ? {} : {
+            position: 'absolute',
+            bottom: 6,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            pointerEvents: 'none',
+          }}>
+            <div style={{ pointerEvents: 'auto' }}>
+              <NextStopBottomDock
+                pinnedStop={pinnedStop}
+                distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+                arrivedCount={arrivedCount}
+                totalCount={ridersWithFreshness.length}
+                onOpenDetail={() => setShowStopDetailSheet(true)}
+                onOpenTellGroup={() => setShowTellGroupSheet(true)}
+                onPinNewStop={() => setShowPinModal(true)}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Plan Tab (Mockup Screen 7: Trip detail · itinerary) */}
