@@ -908,28 +908,30 @@ export default function RidePage() {
             <h1 style={{
               color: '#F1EFEA',
               fontWeight: 900,
-              fontSize: 24,
+              fontSize: 22,
               margin: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               letterSpacing: -0.5,
             }}>
-              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Plan' : tab === 'discover' ? 'Discover' : (session?.trips?.title ?? 'Group ride')}
+              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Itinerary & Plan' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : 'Group ride'}
             </h1>
           </div>
         </div>
 
         {/* Right: Subtitle & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <span style={{
-            color: '#9D9C9A',
-            fontSize: 13,
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-          }}>
-            {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : 'Day 2 · 62 km to go'}
-          </span>
+          {tab !== 'map' && (
+            <span style={{
+              color: '#9D9C9A',
+              fontSize: 13,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}>
+              {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : ''}
+            </span>
+          )}
 
           {/* Quick Nearby Help */}
           <button
@@ -1021,6 +1023,65 @@ export default function RidePage() {
           )}
         </div>
       </div>
+
+      {/* Dedicated Expedition Route Strip for Mobile Users View */}
+      {session?.trips?.title && tab === 'map' && (
+        <div style={{
+          backgroundColor: '#1B1E23',
+          border: '1.5px solid #2A2E35',
+          borderRadius: 14,
+          margin: '2px 16px 8px',
+          padding: '7px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              backgroundColor: 'rgba(240, 194, 58, 0.15)',
+              color: '#F0C23A',
+              fontSize: 12,
+              flexShrink: 0,
+            }}>
+              🗺️
+            </span>
+            <span style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: '#F1EFEA',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              letterSpacing: -0.2,
+            }}>
+              {session.trips.title}
+            </span>
+          </div>
+
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: '#9D9C9A',
+            backgroundColor: '#111316',
+            border: '1px solid #2A2E35',
+            padding: '2px 8px',
+            borderRadius: 999,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}>
+            Day 2 · 62 km to go
+          </span>
+        </div>
+      )}
 
       {/* Floating HUD Toast */}
       {toast && (
@@ -1415,6 +1476,14 @@ export default function RidePage() {
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Itinerary Section Card */}
             <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA', letterSpacing: -0.2 }}>
+                  {session?.trips?.title ?? 'Bengaluru to Kasaragod'}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#9D9C9A' }}>
+                  3 days · {ridersWithFreshness.length} riders
+                </span>
+              </div>
               <div style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
                 DAY 2 · HUBLI TO MANGALURU
               </div>
