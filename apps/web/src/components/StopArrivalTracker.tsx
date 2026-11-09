@@ -7,6 +7,8 @@ export interface RiderArrivalInfo {
   status: 'arrived' | 'en_route' | 'departed';
   arrivedAt?: string;
   distanceKm?: number | null;
+  isStale?: boolean;
+  ageLabel?: string;
 }
 
 interface StopArrivalTrackerProps {
@@ -15,6 +17,8 @@ interface StopArrivalTrackerProps {
   currentUserId?: string;
   myDistanceKm?: number | null;
   mySpeedKmh?: number;
+  isMyStale?: boolean;
+  myAgeLabel?: string;
   onToggleMyArrival: (isArrived: boolean) => void;
   onOpenNavigation: (stop: { name: string; lat: number; lng: number }) => void;
   onChangePin: () => void;
@@ -28,6 +32,8 @@ export default function StopArrivalTracker({
   currentUserId,
   myDistanceKm,
   mySpeedKmh = 0,
+  isMyStale = false,
+  myAgeLabel,
   onToggleMyArrival,
   onOpenNavigation,
   onChangePin,
@@ -70,6 +76,10 @@ export default function StopArrivalTracker({
               <span style={styles.badgeETA}>
                 {myDistanceKm != null && myDistanceKm < 0.2 ? (
                   '🎯 You are here!'
+                ) : isMyStale ? (
+                  <span style={{ color: '#f59e0b', fontWeight: 700 }}>
+                    ⚠️ Unknown · {myAgeLabel || 'position stale'}
+                  </span>
                 ) : (
                   <>
                     {myDistanceKm != null ? `${myDistanceKm.toFixed(1)} km` : ''}
@@ -161,8 +171,12 @@ export default function StopArrivalTracker({
                 >
                   <span style={{ fontSize: 13 }}>{isArrived ? '✓' : '⏳'}</span>
                   <span style={{ fontWeight: 600, color: '#fff', fontSize: 12 }}>{r.userName}</span>
-                  <span style={{ color: isArrived ? '#34d399' : '#9ca3af', fontSize: 11, marginLeft: 'auto' }}>
-                    {isArrived ? (r.arrivedAt || 'Arrived') : (r.distanceKm != null ? `${r.distanceKm.toFixed(1)} km` : 'En route')}
+                  <span style={{ color: isArrived ? '#34d399' : (r.isStale ? '#f59e0b' : '#9ca3af'), fontSize: 11, marginLeft: 'auto' }}>
+                    {isArrived
+                      ? (r.arrivedAt || 'Arrived')
+                      : r.isStale
+                      ? `Unknown (${r.ageLabel || 'stale'})`
+                      : (r.distanceKm != null ? `${r.distanceKm.toFixed(1)} km` : 'En route')}
                   </span>
                 </div>
               );

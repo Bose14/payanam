@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -13,9 +13,18 @@ import {
   QuickStatusDrawer,
   PinStopModal,
   StopArrivalTracker,
+  StaleRidersAlertBanner,
+  createRiderMarkerIcon,
+  RiderRosterRow,
+  StopDetailSheet,
+  NextStopBottomDock,
+  PresetsTellGroupSheet,
+  NearbyHelpSheet,
+  getFreshness,
 } from '../components';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
+import type { RiderRosterData } from '../components/RiderRosterRow';
 
 const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 
@@ -91,17 +100,22 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 // Navigation arrow for the current user — rotates with heading
-function makeMyNavIcon(color: string, heading: number, status: string) {
+function makeMyNavIcon(color: string, heading: number, status: string, isStale: boolean = false) {
   const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
+  const fill = isStale ? '#111827' : color;
+  const stroke = color;
+  const opacity = isStale ? '0.75' : '1';
+  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="${color}" stroke="white" stroke-width="2.5" opacity="0.25"/>`;
+
   return L.divIcon({
     className: '',
     iconAnchor: [24, 24],
     iconSize: [48, 48 + (status ? 24 : 0)],
-    html: `<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+    html: `<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;opacity:${opacity};">
       <div style="transform:rotate(${heading}deg);width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
         <svg width="44" height="44" viewBox="0 0 44 44">
-          <circle cx="22" cy="22" r="20" fill="${color}" stroke="white" stroke-width="2.5" opacity="0.25"/>
-          <polygon points="22,4 34,38 22,30 10,38" fill="${color}" stroke="white" stroke-width="2"/>
+          ${ringAura}
+          <polygon points="22,4 34,38 22,30 10,38" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
           <circle cx="22" cy="22" r="5" fill="white"/>
         </svg>
       </div>
@@ -110,16 +124,7 @@ function makeMyNavIcon(color: string, heading: number, status: string) {
   });
 }
 
-// Circle icon for other riders
-function makeRiderIcon(initial: string, color: string, status: string) {
-  const badge = status ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
-  return L.divIcon({
-    className: '',
-    iconAnchor: [18, 18],
-    iconSize: [36, 36 + (status ? 22 : 0)],
-    html: `<div style="position:relative;width:36px;height:36px;background:${color};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;border:2px solid #fff;">${initial}${badge}</div>`,
-  });
-}
+// Circle icon for other riders - replaced by createRiderMarkerIcon
 
 function makeStopIcon() {
   return L.divIcon({
@@ -194,16 +199,30 @@ interface Session {
 }
 
 // Continuously follows user position; stops following when user drags map
-function MapFollow({ lat, lng, following, onDrag }: { lat: number; lng: number; following: boolean; onDrag: () => void }) {
+function MapFollow({
+  lat,
+  lng,
+  following,
+  focusTarget,
+  onDrag,
+}: {
+  lat: number;
+  lng: number;
+  following: boolean;
+  focusTarget?: [number, number] | null;
+  onDrag: () => void;
+}) {
   const map = useMap();
   const onDragRef = useRef(onDrag);
   onDragRef.current = onDrag;
 
   useEffect(() => {
-    if (following) {
+    if (focusTarget) {
+      map.setView(focusTarget, Math.max(map.getZoom(), 17), { animate: true, duration: 0.6 });
+    } else if (following) {
       map.setView([lat, lng], Math.max(map.getZoom(), 17), { animate: true, duration: 0.6, easeLinearity: 0.4 });
     }
-  }, [lat, lng, following, map]);
+  }, [lat, lng, following, focusTarget, map]);
 
   useEffect(() => {
     const handler = () => onDragRef.current();
@@ -259,6 +278,21 @@ export default function RidePage() {
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
   const [toast, setToast] = useState('');
+
+  // Mobile Mockup UX & Last-seen State
+  const [splitView, setSplitView] = useState(true);
+  const [showStopDetailSheet, setShowStopDetailSheet] = useState(false);
+  const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
+  const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
+  const myLastUpdatedRef = useRef<string | null>(null);
+
+  // Auto-refresh interval (5s) for real-time age badges and hollow markers
+  const [, setTicker] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTicker((t) => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const watchIdRef = useRef<number | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -372,6 +406,7 @@ export default function RidePage() {
         const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
         setMyLat(lat); setMyLng(lng);
         myPosRef.current = { lat, lng };
+        myLastUpdatedRef.current = new Date().toISOString();
         const speedKmh = speed != null ? speed * 3.6 : 0;
         const hdg = heading ?? 0;
         if (heading != null) setMyHeading(heading);
@@ -720,9 +755,82 @@ export default function RidePage() {
     return RIDER_COLORS[idx >= 0 ? idx % RIDER_COLORS.length : 0];
   }, [riders, user]);
 
-  const distanceTo = useCallback((lat: number, lng: number) => {
-    if (!myPosRef.current) return null;
-    return haversineKm(myPosRef.current.lat, myPosRef.current.lng, lat, lng);
+  const myFreshness = getFreshness(myLastUpdatedRef.current ?? (myLat ? new Date().toISOString() : null));
+
+  // Compute freshness for all riders (Last-seen Engine)
+  const ridersWithFreshness: RiderRosterData[] = useMemo(() => {
+    return riders.map((r, i) => {
+      const isMe = r.user_id === user?.id;
+      const freshness = isMe ? myFreshness : getFreshness(r.updated_at);
+      const isCaptain = session?.started_by === r.user_id;
+      const dist = myLat && myLng && r.lat && r.lng ? haversineKm(myLat, myLng, Number(r.lat), Number(r.lng)) : null;
+      const color = RIDER_COLORS[i % RIDER_COLORS.length];
+
+      return {
+        userId: r.user_id,
+        userName: r.user_name || 'Rider',
+        isMe,
+        isCaptain,
+        lat: Number(r.lat),
+        lng: Number(r.lng),
+        speedKmh: r.speed_kmh,
+        heading: r.heading,
+        quickStatus: r.quick_status,
+        updatedAt: r.updated_at,
+        distanceKm: dist,
+        color,
+        freshness,
+      };
+    });
+  }, [riders, user?.id, myFreshness, session?.started_by, myLat, myLng]);
+
+  // Stale and unknown riders (for alert banner)
+  const staleRiders = useMemo(() => {
+    return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
+  }, [ridersWithFreshness]);
+
+  // Format riders for StopDetailSheet
+  const ridersForStopDetail = useMemo(() => {
+    return ridersWithFreshness.map((r) => {
+      const arrival = ridersArrival[r.userId];
+      return {
+        userId: r.userId,
+        userName: r.userName,
+        isMe: r.isMe,
+        freshness: r.freshness,
+        distanceKm: pinnedStop ? haversineKm(r.lat, r.lng, pinnedStop.lat, pinnedStop.lng) : null,
+        speedKmh: r.speedKmh,
+        arrivalStatus: arrival?.status ?? 'en_route',
+        arrivedAt: arrival?.arrivedAt,
+      };
+    });
+  }, [ridersWithFreshness, ridersArrival, pinnedStop]);
+
+  const arrivedCount = useMemo(() => {
+    return Object.values(ridersArrival).filter((r) => r.status === 'arrived').length;
+  }, [ridersArrival]);
+
+  const enrichedRidersArrival = useMemo(() => {
+    const result: Record<string, RiderArrivalInfo> = {};
+    for (const [uid, arrival] of Object.entries(ridersArrival)) {
+      const riderMeta = ridersWithFreshness.find((r) => r.userId === uid);
+      result[uid] = {
+        ...arrival,
+        isStale: riderMeta ? (riderMeta.freshness.isStale || riderMeta.freshness.isUnknown) : false,
+        ageLabel: riderMeta?.freshness.ageLabel,
+      };
+    }
+    return result;
+  }, [ridersArrival, ridersWithFreshness]);
+
+  const handleFocusRider = useCallback((rider: RiderRosterData) => {
+    setFocusTarget([rider.lat, rider.lng]);
+    setFollowing(false);
+    setToast(`Focused on ${rider.userName} (${rider.freshness.ageLabel})`);
+    setTimeout(() => {
+      setToast('');
+      setFocusTarget(null);
+    }, 2500);
   }, []);
 
   const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
@@ -793,6 +901,27 @@ export default function RidePage() {
             title="Set convoy regroup target stop"
           >
             <span>{pinnedStop ? '📍 Target' : '📌 Pin Stop'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowNearbyHelp(true)}
+            style={{
+              background: '#1f2937',
+              border: '1px solid #374151',
+              color: '#34d399',
+              borderRadius: 8,
+              padding: '6px 10px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+            title="Verified amenities along route (Fuel, Repair, Food, Rest)"
+          >
+            <span>🛠️ Nearby</span>
           </button>
 
           {isLead && (
@@ -898,10 +1027,12 @@ export default function RidePage() {
       {pinnedStop && (
         <StopArrivalTracker
           pinnedStop={pinnedStop}
-          ridersArrival={ridersArrival}
+          ridersArrival={enrichedRidersArrival}
           currentUserId={user?.id}
           myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
           mySpeedKmh={myPosRef.current ? 0 : 0}
+          isMyStale={myFreshness.isStale || myFreshness.isUnknown}
+          myAgeLabel={myFreshness.ageLabel}
           onToggleMyArrival={handleToggleMyArrival}
           onOpenNavigation={(target) => {
             setNavTarget(target);
@@ -921,68 +1052,225 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Map — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
-      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'block' : 'none', position: 'relative' }}>
-        {gpsError && (
-          <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 999, background: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-            📍 {gpsError}
-          </div>
-        )}
-        {/* Re-center button — appears when user pans away */}
-        {!following && myLat && myLng && (
+      {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
+      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'flex' : 'none', flexDirection: 'column', position: 'relative' }}>
+        {/* Map Section (48% in split mode, 100% in full mode) */}
+        <div style={{
+          height: splitView ? '48%' : '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          flexShrink: 0,
+        }}>
+          {gpsError && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 2000,
+              backgroundColor: 'rgba(17, 24, 39, 0.88)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 20,
+            }}>
+              <div style={{
+                backgroundColor: '#fdfbf7',
+                borderRadius: 24,
+                padding: '24px 20px',
+                maxWidth: 340,
+                width: '100%',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                textAlign: 'left',
+                color: '#111827',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#f59e0b', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>
+                  STEP 2 OF 3
+                </div>
+                <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 8px', color: '#111827' }}>
+                  Live trip tracking
+                </h3>
+                <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.5, margin: '0 0 20px' }}>
+                  We use your location only while a trip is active, so your group can see where you are.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGpsError('');
+                      navigator.geolocation?.getCurrentPosition(
+                        () => setGpsError(''),
+                        (err) => setGpsError(err.message || 'GPS permission needed')
+                      );
+                    }}
+                    style={{
+                      padding: '13px',
+                      backgroundColor: 'var(--accent-gold, #f59e0b)',
+                      color: '#111827',
+                      border: 'none',
+                      borderRadius: 14,
+                      fontWeight: 900,
+                      fontSize: 14,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Allow location
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGpsError('')}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                      border: '1.5px solid #d1d5db',
+                      borderRadius: 14,
+                      fontWeight: 700,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Not now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* View Mode Toggle: Map + Roster vs Full Map */}
           <button
-            onClick={() => setFollowing(true)}
-            style={{ position: 'absolute', bottom: 80, right: 16, zIndex: 1000, background: '#1f2937', border: '2px solid #3b82f6', color: '#3b82f6', borderRadius: '50%', width: 48, height: 48, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+            type="button"
+            onClick={() => setSplitView(!splitView)}
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 1000,
+              background: 'rgba(17, 24, 39, 0.88)',
+              backdropFilter: 'blur(8px)',
+              border: '1px solid #374151',
+              color: '#ffffff',
+              borderRadius: 20,
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            }}
+            title="Toggle split roster and map view"
           >
-            📍
+            <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
           </button>
-        )}
-        {/* Wake lock indicator */}
-        {wakeLockActive && (
-          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 999, background: 'rgba(16,185,129,0.9)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 8 }}>
-            🔆 Screen on
+
+          {/* Re-center button */}
+          {!following && myLat && myLng && (
+            <button
+              onClick={() => { setFollowing(true); setFocusTarget(null); }}
+              style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 1000, background: '#1f2937', border: '2px solid #f59e0b', color: '#f59e0b', borderRadius: '50%', width: 44, height: 44, fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
+              title="Re-center on me"
+            >
+              📍
+            </button>
+          )}
+
+          {/* Wake lock indicator */}
+          {wakeLockActive && (
+            <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 999, background: 'rgba(16,185,129,0.9)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 8 }}>
+              🔆 Screen on
+            </div>
+          )}
+
+          <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="© OpenStreetMap"
+            />
+            {myLat && myLng && (
+              <MapFollow lat={myLat} lng={myLng} following={following} focusTarget={focusTarget} onDrag={() => { setFollowing(false); setFocusTarget(null); }} />
+            )}
+            {/* Road-following route (OSRM), fallback to straight lines */}
+            {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
+              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#3b82f6" weight={5} opacity={0.85} />
+            )}
+            {/* Itinerary stop markers */}
+            {itineraryStops.map((stop) => (
+              <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
+            ))}
+            {/* Pinned target stop marker with pulsating alert */}
+            {pinnedStop && (
+              <Marker
+                position={[pinnedStop.lat, pinnedStop.lng]}
+                icon={makePinnedStopIcon(pinnedStop.type)}
+              />
+            )}
+            {/* My navigation arrow — rotates with heading and dims if stale */}
+            {myLat && myLng && (
+              <Marker
+                position={[myLat, myLng]}
+                icon={makeMyNavIcon(colorForUser(user?.id ?? ''), myHeading, myStatus, myFreshness.isStale)}
+              />
+            )}
+            {/* Other riders — dynamic Last-seen marker (solid if live, hollow if stale/unknown) */}
+            {ridersWithFreshness.filter((r) => !r.isMe).map((r) => (
+              <Marker
+                key={r.userId}
+                position={[r.lat, r.lng]}
+                icon={createRiderMarkerIcon(r.userName, r.color, r.quickStatus ?? '', r.freshness, r.isCaptain)}
+              />
+            ))}
+          </MapContainer>
+        </div>
+
+        {/* In Split View: Alert Banner + Rider Roster (Mockup Screen 1) */}
+        {splitView && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#111827' }}>
+            {/* Stale Riders Warning Banner */}
+            <StaleRidersAlertBanner
+              staleCount={staleRiders.length}
+              staleRiderNames={staleRiders.map((r) => r.userName)}
+            />
+
+            {/* Rider Roster List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '6px 14px 10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 2px 8px' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                  Convoy Roster ({ridersWithFreshness.length})
+                </span>
+                <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>
+                  ● {ridersWithFreshness.filter(r => r.freshness.isLive).length} LIVE
+                </span>
+              </div>
+
+              {ridersWithFreshness.length === 0 && (
+                <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+                  Waiting for riders to join and share GPS...
+                </p>
+              )}
+
+              {ridersWithFreshness.map((rider) => (
+                <RiderRosterRow
+                  key={rider.userId}
+                  rider={rider}
+                  onClick={handleFocusRider}
+                />
+              ))}
+            </div>
           </div>
         )}
-        <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="© OpenStreetMap"
-          />
-          {myLat && myLng && (
-            <MapFollow lat={myLat} lng={myLng} following={following} onDrag={() => setFollowing(false)} />
-          )}
-          {/* Road-following route (OSRM), fallback to straight lines */}
-          {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
-            <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#3b82f6" weight={5} opacity={0.85} />
-          )}
-          {/* Itinerary stop markers */}
-          {itineraryStops.map((stop) => (
-            <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
-          ))}
-          {/* Pinned target stop marker with pulsating alert */}
-          {pinnedStop && (
-            <Marker
-              position={[pinnedStop.lat, pinnedStop.lng]}
-              icon={makePinnedStopIcon(pinnedStop.type)}
-            />
-          )}
-          {/* My navigation arrow — rotates with heading */}
-          {riders.filter((r) => r.user_id === user?.id).map((r) => (
-            <Marker
-              key={r.user_id}
-              position={[Number(r.lat), Number(r.lng)]}
-              icon={makeMyNavIcon(colorForUser(r.user_id), myHeading, myStatus)}
-            />
-          ))}
-          {/* Other riders — circle with initial */}
-          {riders.filter((r) => r.user_id !== user?.id).map((r) => (
-            <Marker
-              key={r.user_id}
-              position={[Number(r.lat), Number(r.lng)]}
-              icon={makeRiderIcon((r.user_name || '?')[0].toUpperCase(), colorForUser(r.user_id), r.quick_status ?? '')}
-            />
-          ))}
-        </MapContainer>
+
+        {/* Next Stop Bottom Dock (Screen 1 mockup signature) */}
+        <NextStopBottomDock
+          pinnedStop={pinnedStop}
+          distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+          arrivedCount={arrivedCount}
+          totalCount={ridersWithFreshness.length}
+          onOpenDetail={() => setShowStopDetailSheet(true)}
+          onOpenTellGroup={() => setShowTellGroupSheet(true)}
+          onPinNewStop={() => setShowPinModal(true)}
+        />
       </div>
 
       {/* Chat panel */}
@@ -1131,6 +1419,13 @@ export default function RidePage() {
             >
               📌 Suggest / Pin Stop
             </button>
+            <button
+              type="button"
+              onClick={() => setShowNearbyHelp(true)}
+              style={{ ...styles.chatQuickPill, borderColor: '#10b981', color: '#34d399' }}
+            >
+              🛠️ Nearby Help (Fuel/Repair)
+            </button>
             {isLead && (
               <button
                 type="button"
@@ -1158,41 +1453,40 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Riders panel */}
+      {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {riders.length === 0 && <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40 }}>No riders online yet</p>}
-          {riders.map((r, i) => {
-            const dist = distanceTo(Number(r.lat), Number(r.lng));
-            const secsAgo = Math.round((Date.now() - new Date(r.updated_at).getTime()) / 1000);
-            const color = RIDER_COLORS[i % RIDER_COLORS.length];
-            const isMe = r.user_id === user?.id;
-            return (
-              <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#1f2937', borderRadius: 12, marginBottom: 8, border: isMe ? `1px solid ${color}` : '1px solid #374151' }}>
-                <div style={{ width: 44, height: 44, background: color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 18, flexShrink: 0 }}>
-                  {(r.user_name || '?')[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ color: '#fff', fontWeight: 600, margin: 0, fontSize: 14 }}>
-                    {r.user_name}{isMe ? ' (You)' : ''}
-                  </p>
-                  {r.quick_status && (
-                    <p style={{ color: '#f59e0b', fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{r.quick_status}</p>
-                  )}
-                  <p style={{ color: '#6b7280', fontSize: 12, margin: '2px 0 0' }}>
-                    {r.speed_kmh > 0 ? `${Math.round(r.speed_kmh)} km/h · ` : ''}
-                    {secsAgo < 10 ? 'just now' : `${secsAgo}s ago`}
-                  </p>
-                </div>
-                {dist != null && !isMe && (
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ color: '#10b981', fontWeight: 700, fontSize: 15, margin: 0 }}>{dist.toFixed(1)} km</p>
-                    <p style={{ color: '#6b7280', fontSize: 11, margin: 0 }}>away</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', background: '#111827' }}>
+          {/* Stale Riders Warning Banner */}
+          <StaleRidersAlertBanner
+            staleCount={staleRiders.length}
+            staleRiderNames={staleRiders.map((r) => r.userName)}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 2px 10px' }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+              Convoy Roster ({ridersWithFreshness.length})
+            </span>
+            <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>
+              ● {ridersWithFreshness.filter((r) => r.freshness.isLive).length} LIVE
+            </span>
+          </div>
+
+          {ridersWithFreshness.length === 0 && (
+            <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
+              No riders online yet. Positions will appear here when riders connect.
+            </p>
+          )}
+
+          {ridersWithFreshness.map((rider) => (
+            <RiderRosterRow
+              key={rider.userId}
+              rider={rider}
+              onClick={(r) => {
+                setTab('map');
+                handleFocusRider(r);
+              }}
+            />
+          ))}
         </div>
       )}
 
@@ -1286,7 +1580,7 @@ export default function RidePage() {
         <button onClick={sendSOS} style={{ flex: 1, padding: '14px 8px', background: '#dc2626', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ fontSize: 22 }}>🆘</span>SOS
         </button>
-        <button onClick={() => setShowStatusDrawer(true)} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: myStatus ? '#f59e0b' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+        <button onClick={() => setShowTellGroupSheet(true)} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: myStatus ? '#f59e0b' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <span style={{ fontSize: 22 }}>⚡</span>{myStatus ? 'Status ●' : 'Status'}
         </button>
         <button onClick={() => setTab(tab === 'chat' ? 'map' : 'chat')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'chat' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
@@ -1315,12 +1609,69 @@ export default function RidePage() {
         </button>
       </div>
 
-      {/* One-Tap Rider Status Drawer */}
+      {/* One-Tap Rider Status Drawer (Fallback Detailed) */}
       <QuickStatusDrawer
         isOpen={showStatusDrawer}
         onClose={() => setShowStatusDrawer(false)}
         currentStatus={myStatus}
         onSelectStatus={pickStatus}
+      />
+
+      {/* Large-target Presets Sheet ("Tell group", Mockup Screen 3) */}
+      <PresetsTellGroupSheet
+        isOpen={showTellGroupSheet}
+        onClose={() => setShowTellGroupSheet(false)}
+        onSelectStatus={(val) => pickStatus(val)}
+        isCaptain={isLead}
+        onSendAnnouncement={(label) => {
+          handleSendAnnouncement({
+            title: label,
+            message: `Lead announced: ${label}`,
+            urgency: 'high',
+            icon: '⚠️',
+          });
+        }}
+      />
+
+      {/* Next Stop Detail Bottom Sheet (Mockup Screen 2) */}
+      <StopDetailSheet
+        isOpen={showStopDetailSheet}
+        onClose={() => setShowStopDetailSheet(false)}
+        pinnedStop={pinnedStop}
+        riders={ridersForStopDetail}
+        myDistanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+        mySpeedKmh={myPosRef.current ? 0 : 0}
+        myFreshness={myFreshness}
+        isMeArrived={user?.id ? (ridersArrival[user.id]?.status === 'arrived') : false}
+        onToggleMyArrival={handleToggleMyArrival}
+        onOpenNavigation={(target) => {
+          setNavTarget(target);
+          setShowNavModal(true);
+        }}
+        onChangeStop={() => {
+          setShowStopDetailSheet(false);
+          setShowPinModal(true);
+        }}
+      />
+
+      {/* Route-Cached Verified Amenities ("Nearby help", Mockup Screen 5) */}
+      <NearbyHelpSheet
+        isOpen={showNearbyHelp}
+        onClose={() => setShowNearbyHelp(false)}
+        currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
+        onNavigate={(target) => {
+          setNavTarget(target);
+          setShowNavModal(true);
+        }}
+        onPinAsStop={(item) => {
+          handlePinStop({
+            id: `nearby_${Date.now()}`,
+            name: item.name,
+            lat: item.lat,
+            lng: item.lng,
+            type: item.type,
+          });
+        }}
       />
 
       {/* Target Pin Stop Modal */}

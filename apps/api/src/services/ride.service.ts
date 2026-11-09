@@ -76,7 +76,7 @@ export async function getAllLocations(sessionId: string) {
   const db = getDatabase();
   const { data } = await db.from('rider_locations')
     .select('*').eq('session_id', sessionId)
-    .gte('updated_at', new Date(Date.now() - 30000).toISOString());
+    .order('updated_at', { ascending: false });
   return data ?? [];
 }
 

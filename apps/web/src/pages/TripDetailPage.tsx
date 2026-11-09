@@ -7,6 +7,7 @@ import PlaceInput from '../components/PlaceInput';
 import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
 import NavigationAppModal from '../components/NavigationAppModal';
+import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: '⛽',
@@ -171,6 +172,7 @@ export default function TripDetailPage() {
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
+  const [showNearbyHelp, setShowNearbyHelp] = useState(false);
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -563,6 +565,10 @@ export default function TripDetailPage() {
               <button onClick={handleCopy} style={styles.passBtnAction}>
                 <span>🔗</span>
                 <span>{copied ? '✅ Link Copied' : 'Copy Link'}</span>
+              </button>
+              <button onClick={() => setShowNearbyHelp(true)} style={styles.passBtnAction} title="Verified fuel, repair, food & rest along route">
+                <span>🛠️</span>
+                <span>Nearby Help</span>
               </button>
               <button onClick={handleNativeShare} style={styles.passBtnAction}>
                 <span>↗️</span>
@@ -1012,6 +1018,36 @@ export default function TripDetailPage() {
         isOpen={showNavModal}
         onClose={() => setShowNavModal(false)}
         target={navTarget}
+      />
+
+      {/* Route-Cached Verified Amenities ("Nearby help", Mockup Screen 3) */}
+      <NearbyHelpSheet
+        isOpen={showNearbyHelp}
+        onClose={() => setShowNearbyHelp(false)}
+        onNavigate={(target) => {
+          setNavTarget(target);
+          setShowNavModal(true);
+        }}
+        onPinAsStop={async (item) => {
+          if (!trip?.id) return;
+          try {
+            await tripService.addStop(trip.id, {
+              place: item.name,
+              item_type: item.type,
+              description: 'Verified nearby help stop',
+              lat: item.lat,
+              lng: item.lng,
+            });
+            showToast(`✓ Added ${item.name} to itinerary!`);
+            // reload trip data
+            tripService.getTripById(trip.id).then((data) => {
+              setTrip(data.trip);
+              setStops(data.trip.itinerary ?? []);
+            }).catch(() => {});
+          } catch (err) {
+            console.warn(err);
+          }
+        }}
       />
     </div>
   );
