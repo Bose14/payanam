@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+import { RIDER_STATUS_PRESETS } from '../utils/statusPresets';
+
 interface PresetsTellGroupSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -8,14 +10,7 @@ interface PresetsTellGroupSheetProps {
   isCaptain?: boolean;
 }
 
-const RIDER_PRESETS = [
-  { id: 'on_my_way', label: 'On my way', icon: '🏍️' },
-  { id: 'need_fuel', label: 'Need fuel', icon: '⛽' },
-  { id: 'need_break', label: 'Need a break', icon: '☕' },
-  { id: 'behind_wait', label: 'Behind, wait', icon: '⏳' },
-  { id: 'lost_call', label: 'Lost, call me', icon: '📞' },
-  { id: 'all_good', label: 'All good', icon: '✅' },
-];
+const RIDER_PRESETS = RIDER_STATUS_PRESETS;
 
 const CAPTAIN_PRESETS = [
   { id: 'fuel_next_town', label: 'Fuel at next town', icon: '⛽' },
@@ -87,6 +82,7 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                   borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                 }}
               >
+                <span style={{ fontSize: 18, marginRight: 8, lineHeight: 1 }}>{p.icon}</span>
                 <span style={styles.btnLabel}>{p.label}</span>
               </button>
             );

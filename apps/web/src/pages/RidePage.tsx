@@ -28,6 +28,7 @@ import {
   StopApproachCard,
   MissedStopPromptCard,
   ArrivalOfferBanner,
+  PresetCard,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
@@ -40,8 +41,10 @@ import {
   evaluateStopApproach,
   detectArrivalZone,
   detectMissedStop,
+  getPresetInfo,
+  RIDER_STATUS_PRESETS,
 } from '../components';
-import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
@@ -375,6 +378,9 @@ export default function RidePage() {
     setMissedPromptDismissed(false);
     minDistToPinnedStopKmRef.current = Infinity;
   }, [pinnedStop?.name, pinnedStop?.lat, pinnedStop?.lng]);
+
+  // Feature G: Message Delivery Receipts State (Per-rider delivery tracking)
+  const [deliveryReceipts, setDeliveryReceipts] = useState<Record<string, DeliveryReceipt[]>>({});
 
   // Auto-refresh interval (5s) for real-time age badges and hollow markers
   const [, setTicker] = useState(0);
@@ -783,7 +789,52 @@ export default function RidePage() {
           return [...prev, payload as RideMessage];
         });
         if (payload.message_type === 'sos') setSosActive(true);
-        if (payload.message_type === 'chat') setNewMsgCount((c) => c + 1);
+        if (payload.message_type === 'chat' || payload.message_type === 'preset') setNewMsgCount((c) => c + 1);
+
+        // Feature G Requirement 4: Record delivery receipt and send ack back to group
+        if (payload.id && user?.id) {
+          const nowIso = new Date().toISOString();
+          setDeliveryReceipts((prev) => {
+            const list = prev[payload.id] || [];
+            if (list.some((r) => r.userId === user.id)) return prev;
+            return {
+              ...prev,
+              [payload.id]: [...list, { userId: user.id, userName, timestamp: nowIso }],
+            };
+          });
+
+          // Send receipt to sender and convoy
+          if (payload.user_id !== user.id) {
+            channel.send({
+              type: 'broadcast',
+              event: 'message_ack',
+              payload: {
+                messageId: payload.id,
+                userId: user.id,
+                userName,
+                timestamp: nowIso,
+              },
+            });
+          }
+        }
+      })
+      .on('broadcast', { event: 'message_ack' }, ({ payload }) => {
+        if (!payload?.messageId || !payload?.userId) return;
+        setDeliveryReceipts((prev) => {
+          const list = prev[payload.messageId] || [];
+          if (list.some((r) => r.userId === payload.userId)) return prev;
+          return {
+            ...prev,
+            [payload.messageId]: [
+              ...list,
+              {
+                userId: payload.userId,
+                userName: payload.userName || 'Rider',
+                timestamp: payload.timestamp || new Date().toISOString(),
+              },
+            ],
+          };
+        });
       })
       .on('broadcast', { event: 'status' }, ({ payload }) => {
         setRiders((prev) => prev.map((r) =>
@@ -904,13 +955,38 @@ export default function RidePage() {
     if (!sessionId) return;
     setMyStatus(value);
     setShowStatusDrawer(false);
+    setShowTellGroupSheet(false);
     await rideService.updateQuickStatus(sessionId, value).catch(() => {});
     // Broadcast status change so others see rider dot badge update instantly
     channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: value } });
     if (value) {
-      const result = await rideService.sendMessage(sessionId, { message: `Status update: ${value}`, messageType: 'status', userName }).catch(() => null);
-      const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: `Status update: ${value}`, message_type: 'status', created_at: new Date().toISOString() };
+      const nowIso = new Date().toISOString();
+      const result = await rideService.sendMessage(sessionId, { message: value, messageType: 'preset', userName }).catch(() => null);
+      const msg: RideMessage = result?.message ?? {
+        id: Date.now().toString(),
+        user_id: user?.id || 'unknown',
+        user_name: userName,
+        message: value,
+        message_type: 'preset',
+        created_at: nowIso,
+      };
+
+      // Record sender delivery receipt immediately
+      if (user?.id) {
+        setDeliveryReceipts((prev) => ({
+          ...prev,
+          [msg.id]: [{ userId: user.id, userName, timestamp: nowIso }],
+        }));
+      }
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+
       channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
+      setToast(`✓ Sent preset "${value}" to group!`);
+      setTimeout(() => setToast(''), 3000);
     }
   }, [sessionId, userName, user?.id]);
 
@@ -2057,6 +2133,36 @@ export default function RidePage() {
             </button>
           )}
 
+          {/* Feature G: One-tap Tell group floating button on Ride tab */}
+          {!splitView && !pinnedStop && (
+            <button
+              type="button"
+              onClick={() => setShowTellGroupSheet(true)}
+              style={{
+                position: 'absolute',
+                bottom: 20,
+                left: 12,
+                zIndex: 1000,
+                backgroundColor: '#F0C23A',
+                color: '#111316',
+                border: 'none',
+                borderRadius: 24,
+                padding: '10px 18px',
+                fontSize: 13,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
+              }}
+              title="Tell group presets"
+            >
+              <span>📢</span>
+              <span>Tell group</span>
+            </button>
+          )}
+
           {/* Wake lock indicator */}
           {wakeLockActive && (
             <div style={{
@@ -2443,9 +2549,28 @@ export default function RidePage() {
             )}
             {messages.map((m) => {
               const isMe = m.user_id === user?.id;
+              const isPreset = m.message_type === 'preset' || Boolean(getPresetInfo(m.message));
               const isStatus = m.message_type === 'status';
               const isAnnouncement = m.message_type === 'announcement';
               const isStopArrival = m.message_type === 'stop_arrival';
+
+              // Feature G: One-tap status preset cards in trip chat
+              if (isPreset) {
+                return (
+                  <PresetCard
+                    key={m.id}
+                    messageId={m.id}
+                    senderId={m.user_id}
+                    senderName={m.user_name}
+                    messageText={m.message}
+                    createdAt={m.created_at}
+                    isMe={isMe}
+                    deliveryReceipts={deliveryReceipts[m.id]}
+                    allRiders={ridersWithFreshness.map((r) => ({ userId: r.userId, userName: r.userName }))}
+                    isCaptain={session?.started_by === m.user_id || m.user_name?.toLowerCase().includes('captain')}
+                  />
+                );
+              }
 
               if (isStatus || isStopArrival) {
                 return (
@@ -2572,8 +2697,52 @@ export default function RidePage() {
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Quick Chat Pill Row */}
+          {/* Quick Chat Pill Row & Feature G Presets */}
           <div style={{ padding: '6px 14px', background: '#111316', display: 'flex', gap: 8, borderTop: '1px solid #2A2E35', overflowX: 'auto' }}>
+            <button
+              type="button"
+              onClick={() => setShowTellGroupSheet(true)}
+              style={{
+                padding: '6px 14px',
+                background: 'rgba(240, 194, 58, 0.15)',
+                border: '1.5px solid #F0C23A',
+                borderRadius: 14,
+                color: '#F0C23A',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span>📢 Tell group</span>
+            </button>
+            {RIDER_STATUS_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => pickStatus(p.label)}
+                style={{
+                  padding: '6px 12px',
+                  background: '#1B1E23',
+                  border: '1.5px solid #2A2E35',
+                  borderRadius: 14,
+                  color: '#F1EFEA',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <span>{p.icon}</span>
+                <span>{p.label}</span>
+              </button>
+            ))}
             <button
               type="button"
               onClick={handleShareCurrentLocation}
