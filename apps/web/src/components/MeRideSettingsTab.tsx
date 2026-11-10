@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { backgroundTrackingEngine, BackgroundTrackingStatus } from '../utils/backgroundTracking';
 
 export interface MeRideSettingsTabProps {
   userName: string;
@@ -23,6 +24,39 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
   onEndRide,
   isCaptain,
 }) => {
+  const [trackingStatus, setTrackingStatus] = useState<BackgroundTrackingStatus>(
+    () => backgroundTrackingEngine.getStatus()
+  );
+  const [copiedDiag, setCopiedDiag] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+
+  useEffect(() => {
+    const unsub = backgroundTrackingEngine.subscribe((st) => {
+      setTrackingStatus(st);
+    });
+    return unsub;
+  }, []);
+
+  const handleCopyDiagnostics = async () => {
+    const text = backgroundTrackingEngine.exportDiagnosticsText();
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedDiag(true);
+      setTimeout(() => setCopiedDiag(false), 2500);
+    } catch {
+      setCopiedDiag(true);
+      setTimeout(() => setCopiedDiag(false), 2500);
+    }
+  };
   return (
     <div style={styles.container}>
       {/* Top Header */}
@@ -137,6 +171,233 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             </div>
           </div>
         )}
+
+        {/* SECTION: Background Tracking (Feature P1 Foundation) */}
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionTitle}>BACKGROUND TRACKING</span>
+          <span style={{
+            ...styles.sectionBadge,
+            backgroundColor: trackingStatus.isHeartbeatHealthy
+              ? 'rgba(16, 185, 129, 0.15)'
+              : (trackingStatus.isPaused ? 'rgba(239, 68, 68, 0.15)' : 'rgba(240, 194, 58, 0.12)'),
+            color: trackingStatus.isHeartbeatHealthy
+              ? '#10B981'
+              : (trackingStatus.isPaused ? '#EF4444' : '#F0C23A'),
+          }}>
+            {trackingStatus.isPaused ? '⚠️ PAUSED' : (trackingStatus.isTracking ? '● HEALTHY' : 'STANDBY')}
+          </span>
+        </div>
+
+        <div style={styles.settingCard}>
+          {/* Header & Mode */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🛰️</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#F1EFEA' }}>
+                  Reliability & Heartbeat
+                </div>
+                <div style={{ fontSize: 11, color: '#9D9C9A' }}>
+                  {trackingStatus.platformMode}
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 8px',
+              borderRadius: 8,
+              backgroundColor: trackingStatus.isHeartbeatHealthy ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+              border: `1px solid ${trackingStatus.isHeartbeatHealthy ? '#10B981' : '#EF4444'}`,
+            }}>
+              <span style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                backgroundColor: trackingStatus.isHeartbeatHealthy ? '#10B981' : '#EF4444',
+              }} />
+              <span style={{
+                fontSize: 10.5,
+                fontWeight: 800,
+                color: trackingStatus.isHeartbeatHealthy ? '#10B981' : '#EF4444',
+              }}>
+                {trackingStatus.isHeartbeatHealthy ? 'Heartbeat OK' : 'Watchdog Alert'}
+              </span>
+            </div>
+          </div>
+
+          <p style={{ margin: '0 0 12px', fontSize: 11.5, color: '#9D9C9A', lineHeight: 1.4 }}>
+            Invisible in normal use. Heartbeat continuously monitors GPS fixes in background. The Ride tab alerts you immediately if tracking stops.
+          </p>
+
+          {/* Warning state if paused */}
+          {trackingStatus.isPaused && (
+            <div style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid #EF4444',
+              borderRadius: 12,
+              padding: '10px 12px',
+              marginBottom: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+            }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#FCA5A5' }}>
+                  ⚠️ Tracking paused
+                </div>
+                <div style={{ fontSize: 10.5, color: '#FCA5A5', marginTop: 2 }}>
+                  {trackingStatus.pauseReason || 'Positions are no longer being recorded.'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => backgroundTrackingEngine.resumeTracking()}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+              >
+                Resume
+              </button>
+            </div>
+          )}
+
+          {/* Status Diagnostic Grid (Step 4: Status logged) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 8,
+            marginBottom: 12,
+          }}>
+            <div style={{
+              backgroundColor: '#16191D',
+              border: '1px solid #2A2E35',
+              borderRadius: 10,
+              padding: '8px 10px',
+            }}>
+              <div style={{ fontSize: 10, color: '#9D9C9A', fontWeight: 700, textTransform: 'uppercase' }}>
+                Last Position Fix
+              </div>
+              <div style={{ fontSize: 12, color: '#F1EFEA', fontWeight: 800, marginTop: 2 }}>
+                {trackingStatus.lastFixTime
+                  ? new Date(trackingStatus.lastFixTime).toLocaleTimeString()
+                  : 'Awaiting fix'}
+              </div>
+              <div style={{ fontSize: 10, color: '#F0C23A', marginTop: 1 }}>
+                {trackingStatus.lastFixCoords
+                  ? `${trackingStatus.lastFixCoords.lat.toFixed(4)}, ${trackingStatus.lastFixCoords.lng.toFixed(4)}`
+                  : 'No coordinates'}
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: '#16191D',
+              border: '1px solid #2A2E35',
+              borderRadius: 10,
+              padding: '8px 10px',
+            }}>
+              <div style={{ fontSize: 10, color: '#9D9C9A', fontWeight: 700, textTransform: 'uppercase' }}>
+                Positions Recorded
+              </div>
+              <div style={{ fontSize: 12, color: '#F1EFEA', fontWeight: 800, marginTop: 2 }}>
+                {trackingStatus.totalFixesRecorded} fixes
+              </div>
+              <div style={{ fontSize: 10, color: '#9D9C9A', marginTop: 1 }}>
+                Watchdog: {trackingStatus.maxFixStallSec}s threshold
+              </div>
+            </div>
+          </div>
+
+          {/* Actions & Diagnostics */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleCopyDiagnostics}
+              style={{
+                flex: 1,
+                minWidth: '140px',
+                padding: '9px 12px',
+                backgroundColor: copiedDiag ? '#10B981' : '#2A2E35',
+                color: '#F1EFEA',
+                border: 'none',
+                borderRadius: 10,
+                fontSize: 11.5,
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                transition: 'background-color 0.2s ease',
+              }}
+            >
+              <span>{copiedDiag ? '✓' : '📋'}</span>
+              <span>{copiedDiag ? 'Diagnostics Copied!' : 'Copy Diagnostics Log'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowLogs((prev) => !prev)}
+              style={{
+                padding: '9px 12px',
+                backgroundColor: '#16191D',
+                color: '#9D9C9A',
+                border: '1px solid #2A2E35',
+                borderRadius: 10,
+                fontSize: 11.5,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              {showLogs ? 'Hide Log ▲' : `View Log (${trackingStatus.logs.length}) ▼`}
+            </button>
+          </div>
+
+          {/* Diagnostic Log Drawer */}
+          {showLogs && (
+            <div style={{
+              marginTop: 12,
+              padding: '10px',
+              backgroundColor: '#111316',
+              border: '1px solid #2A2E35',
+              borderRadius: 10,
+              maxHeight: 180,
+              overflowY: 'auto',
+              fontFamily: 'monospace',
+              fontSize: 10.5,
+            }}>
+              {trackingStatus.logs.length === 0 ? (
+                <div style={{ color: '#9D9C9A', textAlign: 'center', padding: '10px 0' }}>
+                  No log entries recorded yet.
+                </div>
+              ) : (
+                trackingStatus.logs.map((item, idx) => (
+                  <div key={idx} style={{ marginBottom: 4, lineHeight: 1.35 }}>
+                    <span style={{ color: '#9D9C9A' }}>[{item.timestamp}] </span>
+                    <span style={{
+                      color: item.level === 'ERROR' ? '#EF4444' : (item.level === 'WARN' ? '#F0C23A' : '#10B981'),
+                      fontWeight: 700,
+                    }}>
+                      [{item.level}]
+                    </span>{' '}
+                    <span style={{ color: '#F1EFEA' }}>{item.message}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
 
         {/* SECTION: Convoy Controls */}
         <div style={styles.sectionHeader}>

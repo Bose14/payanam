@@ -117,3 +117,4 @@ export function resolveProposal(
   saveProposals(tripId, updated);
   return resolved;
 }
+

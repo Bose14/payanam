@@ -66,8 +66,10 @@ import {
   formatLocationShareMessage,
   getCachedNearbyServices,
   makeServicePinIcon,
+  TrackingPausedBanner,
+  backgroundTrackingEngine,
 } from '../components';
-import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem, BackgroundTrackingStatus } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
@@ -344,6 +346,20 @@ export default function RidePage() {
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
 
+  // Feature P1: Background tracking reliability status
+  const [trackingStatus, setTrackingStatus] = useState<BackgroundTrackingStatus>(
+    () => backgroundTrackingEngine.getStatus()
+  );
+
+  useEffect(() => {
+    const unsub = backgroundTrackingEngine.subscribe(setTrackingStatus);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    backgroundTrackingEngine.setWakeLockActive(wakeLockActive);
+  }, [wakeLockActive]);
+
   // High Priority Stops & Communication State
   const [pinnedStop, setPinnedStop] = useState<PinnedStopData | null>(null);
   const [ridersArrival, setRidersArrival] = useState<Record<string, RiderArrivalInfo>>({});
@@ -401,6 +417,7 @@ export default function RidePage() {
   const handleToggleBatterySaver = useCallback((enabled: boolean) => {
     setBatterySaver(enabled);
     setBatterySaverPreference(enabled);
+    backgroundTrackingEngine.setBatterySaver(enabled);
     setToast(enabled ? '⚡ Battery saver enabled (30s update rate)' : '⚡ Standard telemetry restored (10s rate)');
     setTimeout(() => setToast(''), 3000);
   }, []);
@@ -652,6 +669,9 @@ export default function RidePage() {
     if (!sessionId || !session || ended) return;
     if (!navigator.geolocation) { setGpsError('GPS not supported on this device'); return; }
 
+    // Feature P1: Step 1 - Trip starts: Tracking runs with background keepalive & heartbeat watchdog
+    backgroundTrackingEngine.startTracking(batterySaver);
+
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
@@ -663,6 +683,9 @@ export default function RidePage() {
         setMySpeedKmh(speedKmh);
         const hdg = heading ?? 0;
         if (heading != null) setMyHeading(heading);
+
+        // Feature P1: Step 2 - Heartbeat recorded with GPS position fix
+        backgroundTrackingEngine.recordFix(lat, lng, pos.coords.accuracy);
 
         // Auto-arrival detection when within 250m of pinned stop
         if (pinnedStop) {
@@ -732,6 +755,7 @@ export default function RidePage() {
     return () => {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (dbSyncRef.current) clearInterval(dbSyncRef.current);
+      backgroundTrackingEngine.stopTracking();
     };
   }, [session, ended, sessionId, userName, user?.id, syncPendingBatch, pinnedStop, ridersArrival, batterySaver]);
 
@@ -2299,6 +2323,19 @@ export default function RidePage() {
           onChangePin={() => setShowPinModal(true)}
           onClearPin={handleClearPin}
           isLeader={isLead}
+        />
+      )}
+
+      {/* Feature P1: Step 3 - If tracking stops: The Ride tab warns: Tracking paused. Reopen Payanam. */}
+      {trackingStatus.isPaused && (
+        <TrackingPausedBanner
+          pauseReason={trackingStatus.pauseReason}
+          onResume={() => {
+            backgroundTrackingEngine.resumeTracking();
+            setToast('Tracking resumed');
+            setTimeout(() => setToast(''), 3000);
+          }}
+          onOpenMeSettings={() => setTab('me')}
         />
       )}
 
