@@ -21,7 +21,10 @@ export { default as PresetsTellGroupSheet } from './PresetsTellGroupSheet';
 export { NearbyHelpSheet } from './NearbyHelpSheet';
 export { OfflineSignalBanner } from './OfflineSignalBanner';
 export { RouteDeviationCard } from './RouteDeviationCard';
+export { BatterySaverNote } from './BatterySaverNote';
+export { MeRideSettingsTab } from './MeRideSettingsTab';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
+export * from '../utils/batterySaver';
 
 

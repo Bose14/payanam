@@ -22,10 +22,14 @@ import {
   NearbyHelpSheet,
   OfflineSignalBanner,
   RouteDeviationCard,
+  BatterySaverNote,
+  MeRideSettingsTab,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
   formatOffRouteDistance,
+  getBatterySaverPreference,
+  setBatterySaverPreference,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
@@ -260,7 +264,7 @@ function MapResizer({ splitView }: { splitView: boolean }) {
   return null;
 }
 
-type TabType = 'map' | 'chat' | 'riders' | 'nav' | 'plan' | 'discover';
+type TabType = 'map' | 'chat' | 'riders' | 'nav' | 'plan' | 'discover' | 'me';
 
 export default function RidePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -327,6 +331,17 @@ export default function RidePage() {
   // Feature C: Route Deviation Tracker State
   const [deviationTrackers, setDeviationTrackers] = useState<Record<string, RiderDeviationTracker>>({});
   const [dismissedDeviations, setDismissedDeviations] = useState<Set<string>>(new Set());
+
+  // Feature D: Battery-saver mode State (Me > Ride settings > Battery saver)
+  const [batterySaver, setBatterySaver] = useState<boolean>(() => getBatterySaverPreference());
+  const lastBroadcastTimeRef = useRef<number>(0);
+
+  const handleToggleBatterySaver = useCallback((enabled: boolean) => {
+    setBatterySaver(enabled);
+    setBatterySaverPreference(enabled);
+    setToast(enabled ? '⚡ Battery saver enabled (30s update rate)' : '⚡ Standard telemetry restored (10s rate)');
+    setTimeout(() => setToast(''), 3000);
+  }, []);
 
   // Auto-refresh interval (5s) for real-time age badges and hollow markers
   const [, setTicker] = useState(0);
@@ -593,14 +608,19 @@ export default function RidePage() {
           [user.id]: [...(prev[user.id] || []), [lat, lng]],
         }));
 
-        // Instant broadcast if online
-        if (navigator.onLine) {
+        // Feature D: Update rate drops -> "Positions are sent about every 30 s instead of about every 10 s."
+        const throttleIntervalMs = batterySaver ? 30000 : 10000;
+        const nowMs = Date.now();
+        const shouldBroadcast = (nowMs - lastBroadcastTimeRef.current) >= throttleIntervalMs;
+
+        if (navigator.onLine && shouldBroadcast) {
+          lastBroadcastTimeRef.current = nowMs;
           channelRef.current?.send({
             type: 'broadcast', event: 'location',
-            payload: { userId: user?.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: nowIso },
+            payload: { userId: user.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: nowIso },
           });
           syncPendingBatch();
-        } else {
+        } else if (!navigator.onLine) {
           offlinePositionQueue.setOnlineStatus(false);
         }
       },
@@ -608,21 +628,22 @@ export default function RidePage() {
         if (err.code === 1) setGpsError('Location permission denied. Please enable GPS.');
         else setGpsError('Unable to get your location.');
       },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
+      { enableHighAccuracy: !batterySaver, maximumAge: batterySaver ? 15000 : 2000, timeout: 10000 },
     );
 
-    // DB upsert every 15s — so late joiners see your last position
+    // DB upsert throttled based on battery saver (30s vs 15s)
+    const dbIntervalMs = batterySaver ? 30000 : 15000;
     dbSyncRef.current = setInterval(() => {
       if (myPosRef.current && navigator.onLine) {
         rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => {});
       }
-    }, 15000);
+    }, dbIntervalMs);
 
     return () => {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (dbSyncRef.current) clearInterval(dbSyncRef.current);
     };
-  }, [session, ended, sessionId, userName, user?.id, syncPendingBatch, pinnedStop, ridersArrival]);
+  }, [session, ended, sessionId, userName, user?.id, syncPendingBatch, pinnedStop, ridersArrival, batterySaver]);
 
   // Load initial state + subscribe to Broadcast channel
   useEffect(() => {
@@ -1273,7 +1294,7 @@ export default function RidePage() {
               whiteSpace: 'nowrap',
               letterSpacing: -0.5,
             }}>
-              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Itinerary & Plan' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : 'Group ride'}
+              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Itinerary & Plan' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Me · Settings' : 'Group ride'}
             </h1>
           </div>
         </div>
@@ -1287,7 +1308,7 @@ export default function RidePage() {
               fontWeight: 600,
               whiteSpace: 'nowrap',
             }}>
-              {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : ''}
+              {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : tab === 'me' ? 'Ride settings' : ''}
             </span>
           )}
 
@@ -1553,6 +1574,12 @@ export default function RidePage() {
         onDismiss={(userId) => {
           setDismissedDeviations((prev) => new Set([...prev, userId]));
         }}
+      />
+
+      {/* Feature D: Battery-saver mode note on Ride tab */}
+      <BatterySaverNote
+        enabled={batterySaver}
+        onOpenSettings={() => setTab('me')}
       />
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
@@ -2340,6 +2367,21 @@ export default function RidePage() {
         </div>
       )}
 
+      {/* Feature D: Me / Ride Settings Tab ("Lives on Me") */}
+      {tab === 'me' && (
+        <MeRideSettingsTab
+          userName={userName}
+          userEmail={user?.email}
+          batterySaver={batterySaver}
+          onToggleBatterySaver={handleToggleBatterySaver}
+          wakeLockActive={wakeLockActive}
+          onToggleWakeLock={() => setWakeLockActive((w) => !w)}
+          onReturnToRide={() => setTab('map')}
+          onEndRide={handleEndRide}
+          isCaptain={isLead}
+        />
+      )}
+
       {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
       <div style={{
         backgroundColor: '#111316',
@@ -2395,8 +2437,8 @@ export default function RidePage() {
         {/* Tab 5: ME */}
         <button
           type="button"
-          onClick={() => setShowTellGroupSheet(true)}
-          style={styles.inactiveNavBtn}
+          onClick={() => setTab('me')}
+          style={tab === 'me' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
           ME
         </button>
