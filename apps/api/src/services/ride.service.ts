@@ -44,9 +44,9 @@ export async function getSessionById(sessionId: string) {
     .select('id, title, from_place, to_place, from_lat, from_lng, to_lat, to_lng, days')
     .eq('id', session.trip_id).single();
 
-  // Step 3: get itinerary items
+  // Step 3: get itinerary items (including description for 'from chat' detection)
   const { data: items } = await db.from('itinerary_items')
-    .select('id, place, lat, lng, day_number, order_index, item_type')
+    .select('id, place, lat, lng, day_number, order_index, item_type, description')
     .eq('trip_id', session.trip_id)
     .order('day_number').order('order_index');
 

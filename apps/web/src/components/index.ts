@@ -28,6 +28,10 @@ export { StopApproachCard } from './StopApproachCard';
 export { MissedStopPromptCard } from './MissedStopPromptCard';
 export { ArrivalOfferBanner } from './ArrivalOfferBanner';
 export { default as PresetCard } from './PresetCard';
+export { default as TripChatWhatsAppBanner } from './TripChatWhatsAppBanner';
+export { default as ChatLocationCard } from './ChatLocationCard';
+export { default as ShareLocationModal } from './ShareLocationModal';
+export { default as ItineraryStopItem } from './ItineraryStopItem';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
@@ -36,5 +40,6 @@ export * from '../utils/plannedRouteProgress';
 export * from '../utils/stopPinning';
 export * from '../utils/statusPresets';
 export * from '../utils/captainAnnouncement';
+export * from '../utils/tripChatItinerary';
 
 

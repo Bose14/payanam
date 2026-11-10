@@ -29,6 +29,10 @@ import {
   MissedStopPromptCard,
   ArrivalOfferBanner,
   PresetCard,
+  TripChatWhatsAppBanner,
+  ChatLocationCard,
+  ShareLocationModal,
+  ItineraryStopItem,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
@@ -45,6 +49,9 @@ import {
   RIDER_STATUS_PRESETS,
   CAPTAIN_ALERT_VIBRATION_PATTERN,
   CAPTAIN_SENT_VIBRATION_PATTERN,
+  parseLocationFromMessage,
+  isStopConfirmedInItinerary,
+  formatLocationShareMessage,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
@@ -341,6 +348,7 @@ export default function RidePage() {
   const [showStopDetailSheet, setShowStopDetailSheet] = useState(false);
   const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [showShareLocationModal, setShowShareLocationModal] = useState(false);
   const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
   const myLastUpdatedRef = useRef<string | null>(null);
 
@@ -918,6 +926,26 @@ export default function RidePage() {
         setToast(`✓ ${payload.userName} returned to the route`);
         setTimeout(() => setToast(''), 3000);
       })
+      .on('broadcast', { event: 'itinerary_updated' }, ({ payload }) => {
+        const newStop = payload?.stop;
+        if (newStop) {
+          setSession((prev) => {
+            if (!prev) return prev;
+            const currentList = prev.itinerary ?? [];
+            const exists = currentList.some(
+              (s) => s.place.toLowerCase() === newStop.place.toLowerCase() || s.id === newStop.id
+            );
+            if (exists) return prev;
+            return {
+              ...prev,
+              itinerary: [...currentList, newStop],
+            };
+          });
+          playAlertChime('chime');
+          setToast(`📌 Itinerary updated: ${newStop.place} (from chat)`);
+          setTimeout(() => setToast(''), 3500);
+        }
+      })
       .subscribe();
 
     channelRef.current = channel;
@@ -1149,6 +1177,134 @@ export default function RidePage() {
     setTimeout(() => setToast(''), 2500);
   }, [myLat, myLng, sessionId, userName, user?.id]);
 
+  // Feature H2 Requirement 1: Member shares a location (current location or dropped pin)
+  const handleShareLocation = useCallback(async (locationData: {
+    placeName: string;
+    lat: number;
+    lng: number;
+    note?: string;
+  }) => {
+    if (!sessionId) return;
+    const content = formatLocationShareMessage(
+      locationData.placeName,
+      locationData.lat,
+      locationData.lng,
+      locationData.note
+    );
+
+    const result = await rideService.sendMessage(sessionId, {
+      message: content,
+      messageType: 'location_share',
+      userName,
+    }).catch(() => null);
+
+    const msg: RideMessage = result?.message ?? {
+      id: Date.now().toString(),
+      user_id: user?.id || '',
+      user_name: userName,
+      message: content,
+      message_type: 'location_share',
+      created_at: new Date().toISOString(),
+    };
+
+    channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
+    setMessages((prev) => [...prev, msg]);
+    setToast(`📍 Shared ${locationData.placeName} with convoy!`);
+    setTimeout(() => setToast(''), 2500);
+  }, [sessionId, userName, user?.id]);
+
+  // Feature H2 Requirement 2: Captain confirms it -> turns into an itinerary stop
+  // Feature H2 Requirement 3: Itinerary updates for all with 'from chat' tag
+  const handleCaptainConfirmStop = useCallback(async (
+    placeName: string,
+    lat: number,
+    lng: number,
+    note?: string,
+    messageId?: string
+  ) => {
+    if (!sessionId || !session) return;
+    const isCaptain = session.started_by === user?.id;
+    if (!isCaptain) {
+      setToast('Only the Captain can confirm itinerary stops.');
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    const orderIndex = (session.itinerary?.length || 0) + 1;
+    const newStop: ItineraryStop = {
+      id: `chat_stop_${Date.now()}`,
+      place: placeName,
+      lat,
+      lng,
+      day_number: 1,
+      order_index: orderIndex,
+      item_type: 'chat_stop',
+      description: note ? `From chat: ${note}` : 'From chat stop',
+    };
+
+    // 1. Immediately update local session itinerary state
+    setSession((prev) => {
+      if (!prev) return prev;
+      const currentList = prev.itinerary ?? [];
+      if (currentList.some((s) => s.place.toLowerCase() === placeName.toLowerCase())) return prev;
+      return {
+        ...prev,
+        itinerary: [...currentList, newStop],
+      };
+    });
+
+    // 2. Persist to backend database itinerary
+    if (session.trip_id) {
+      try {
+        await tripService.addStop(session.trip_id, {
+          place: placeName,
+          item_type: 'chat_stop',
+          description: note ? `From chat: ${note}` : 'From chat stop',
+          day_number: 1,
+          order_index: orderIndex,
+          lat,
+          lng,
+        });
+      } catch (err) {
+        console.warn('Failed to persist stop to trip itinerary:', err);
+      }
+    }
+
+    // 3. Broadcast real-time itinerary update to all convoy members
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'itinerary_updated',
+      payload: {
+        stop: newStop,
+        confirmedBy: userName,
+        messageId,
+      },
+    });
+
+    // 4. Send announcement/status message to group chat
+    const confirmationMsg = `👑 Captain confirmed "${placeName}" as an itinerary stop (from chat)!`;
+    const result = await rideService.sendMessage(sessionId, {
+      message: confirmationMsg,
+      messageType: 'status',
+      userName,
+    }).catch(() => null);
+
+    const statusMsg: RideMessage = result?.message ?? {
+      id: Date.now().toString(),
+      user_id: user?.id || '',
+      user_name: userName,
+      message: confirmationMsg,
+      message_type: 'status',
+      created_at: new Date().toISOString(),
+    };
+    channelRef.current?.send({ type: 'broadcast', event: 'message', payload: statusMsg });
+    setMessages((prev) => [...prev, statusMsg]);
+
+    playAlertChime('chime');
+    setToast(`✓ "${placeName}" added to itinerary with 'from chat' tag!`);
+    setTimeout(() => setToast(''), 3500);
+  }, [sessionId, session, user?.id, userName]);
+
   const handleEndRide = useCallback(async () => {
     if (!sessionId || !window.confirm('End the ride for everyone?')) return;
     setEndingRide(true);
@@ -1165,6 +1321,15 @@ export default function RidePage() {
   }, [riders, user]);
 
   const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
+  const allPlanStops = useMemo<ItineraryStop[]>(() => {
+    const itin = session?.itinerary ?? [];
+    if (itin.length > 0) return itin;
+    return [
+      { id: 'origin_1', place: 'Start from Hubli', lat: 15.3647, lng: 75.1240, day_number: 2, order_index: 1, item_type: 'stop', description: 'Origin waypoint · 07:30' },
+      { id: 'chat_1', place: 'Sagar Highway Dhaba', lat: 14.1670, lng: 75.0400, day_number: 2, order_index: 2, item_type: 'meal', description: 'From chat: Chai & breakfast stop · 45 km marker' },
+      { id: 'planned_1', place: 'Lunch, Udupi', lat: 13.3409, lng: 74.7421, day_number: 2, order_index: 3, item_type: 'meal', description: 'Coastline regroup · 112 km marker' },
+    ];
+  }, [session?.itinerary]);
   const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
   const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
 
@@ -2404,81 +2569,39 @@ export default function RidePage() {
                 DAY 2 · HUBLI TO MANGALURU
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* Hubli Origin */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #22262E' }}>
-                  <div>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>07:30 Start from Hubli</span>
-                    <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>Origin waypoint</div>
-                  </div>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', border: '1px solid #10B981', padding: '2px 6px', borderRadius: 4 }}>STARTED</span>
-                </div>
-
-                {/* Sagar Highway Dhaba */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #22262E' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>10:30 Sagar Highway Dhaba</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', border: '1px solid #10B981', padding: '1px 6px', borderRadius: 4 }}>FROM CHAT</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>Chai & breakfast stop · 45 km marker</div>
-                  </div>
-                  {pinnedStop?.name === 'Sagar Highway Dhaba' ? (
-                    <span style={{ fontSize: 10, fontWeight: 900, color: '#111316', backgroundColor: '#F0C23A', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span>📌</span> PINNED TARGET
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
+              {/* Dynamic Route Itinerary with 'FROM CHAT' tags (Feature H2 & Mockup 7) */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {allPlanStops.map((stop, idx) => (
+                  <ItineraryStopItem
+                    key={stop.id || `${stop.place}-${idx}`}
+                    stop={stop}
+                    index={idx}
+                    isPinned={pinnedStop?.name === stop.place}
+                    onPinStop={(s) => {
+                      if (s.lat && s.lng) {
                         handlePinStop({
-                          name: 'Sagar Highway Dhaba',
-                          lat: 14.1670,
-                          lng: 75.0400,
-                          type: 'meal',
-                          dayNumber: 2,
+                          id: s.id,
+                          name: s.place,
+                          lat: s.lat,
+                          lng: s.lng,
+                          type: s.item_type || 'stop',
+                          dayNumber: s.day_number,
+                          description: s.description,
                         }, false);
                         setTab('map');
-                      }}
-                      style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', backgroundColor: 'rgba(240, 194, 58, 0.12)', border: '1px solid #F0C23A', padding: '4px 10px', borderRadius: 8, cursor: 'pointer' }}
-                    >
-                      📌 Pin as next stop
-                    </button>
-                  )}
-                </div>
-
-                {/* Lunch, Udupi */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>13:00 Lunch, Udupi</span>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#F0C23A', border: '1px solid #F0C23A', padding: '1px 6px', borderRadius: 4 }}>PROPOSED</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>Coastline regroup · 112 km marker</div>
-                  </div>
-                  {pinnedStop?.name === 'Lunch, Udupi' ? (
-                    <span style={{ fontSize: 10, fontWeight: 900, color: '#111316', backgroundColor: '#F0C23A', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span>📌</span> PINNED TARGET
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handlePinStop({
-                          name: 'Lunch, Udupi',
-                          lat: 13.3409,
-                          lng: 74.7421,
-                          type: 'meal',
-                          dayNumber: 2,
-                        }, false);
-                        setTab('map');
-                      }}
-                      style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', backgroundColor: 'rgba(240, 194, 58, 0.12)', border: '1px solid #F0C23A', padding: '4px 10px', borderRadius: 8, cursor: 'pointer' }}
-                    >
-                      📌 Pin as next stop
-                    </button>
-                  )}
-                </div>
+                      } else {
+                        setToast(`Location coordinates not available for ${s.place}`);
+                        setTimeout(() => setToast(''), 2500);
+                      }
+                    }}
+                    onOpenNavigation={(s) => {
+                      if (s.lat && s.lng) {
+                        setNavTarget({ name: s.place, lat: s.lat, lng: s.lng });
+                        setShowNavModal(true);
+                      }
+                    }}
+                  />
+                ))}
               </div>
 
               {/* Add planned stop button */}
@@ -2582,10 +2705,17 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards) */}
+      {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards & WhatsApp Link) */}
       {tab === 'chat' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Feature H2 Step 4: Chat stays trip-only banner */}
+          <div style={{ padding: '10px 16px 0' }}>
+            <TripChatWhatsAppBanner
+              tripTitle={session?.trips?.title}
+            />
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
                 <p style={{ color: '#F1EFEA', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
@@ -2655,12 +2785,9 @@ export default function RidePage() {
                 );
               }
 
-              // Check if message has location coordinates [lat,lng] or contains stop mention
-              const coordMatch = m.message.match(/\[([0-9.-]+),\s*([0-9.-]+)\]/);
-              const hasCoords = !!coordMatch;
-              const parsedLat = coordMatch ? parseFloat(coordMatch[1]) : 0;
-              const parsedLng = coordMatch ? parseFloat(coordMatch[2]) : 0;
-              const hasStopMention = m.message_type === 'location_share' || hasCoords || m.message_type === 'stop_pin';
+              // Feature H2: Parse location details from message text or metadata
+              const parsedLoc = parseLocationFromMessage(m.message);
+              const hasStopMention = m.message_type === 'location_share' || parsedLoc.isLocation || m.message_type === 'stop_pin';
 
               return (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
@@ -2670,7 +2797,7 @@ export default function RidePage() {
                     </span>
                   )}
                   <div style={{
-                    maxWidth: '85%',
+                    maxWidth: '88%',
                     padding: '12px 16px',
                     borderRadius: 20,
                     background: isMe ? '#22262D' : '#1B1E23',
@@ -2680,57 +2807,30 @@ export default function RidePage() {
                   }}>
                     <div style={{ fontSize: 14, lineHeight: 1.4 }}>{m.message}</div>
 
-                    {/* Mockup Screen 4 Signature: Embedded Location Card with "Confirm as stop" Button */}
+                    {/* Feature H2: Reusable Embedded Location Card with Captain 'Confirm as stop' & 'FROM CHAT' link */}
                     {hasStopMention && (
-                      <div style={{
-                        marginTop: 10,
-                        padding: '12px 14px',
-                        backgroundColor: '#111316',
-                        border: '1.5px dashed #3A3F47',
-                        borderRadius: 14,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 8,
-                      }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA' }}>
-                            {pinnedStop?.name ?? 'Sagar Highway Dhaba'}
-                          </div>
-                          <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>
-                            Shared {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · open in maps
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (parsedLat !== 0) {
-                              handlePinStop({
-                                name: `${m.user_name}'s Shared Stop`,
-                                lat: parsedLat,
-                                lng: parsedLng,
-                                type: 'stop',
-                              }, true);
-                            } else if (pinnedStop) {
-                              setToast('✓ Confirmed stop!');
-                              setTimeout(() => setToast(''), 2000);
-                            }
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '10px',
-                            backgroundColor: '#F0C23A',
-                            color: '#111316',
-                            border: 'none',
-                            borderRadius: 10,
-                            fontWeight: 900,
-                            fontSize: 13,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Confirm as stop
-                        </button>
-                      </div>
+                      <ChatLocationCard
+                        placeName={parsedLoc.placeName || pinnedStop?.name || 'Shared Location'}
+                        lat={parsedLoc.lat ?? (pinnedStop?.lat || null)}
+                        lng={parsedLoc.lng ?? (pinnedStop?.lng || null)}
+                        note={parsedLoc.note}
+                        createdAt={m.created_at}
+                        isCaptain={isLead}
+                        isConfirmed={isStopConfirmedInItinerary(
+                          parsedLoc.placeName || pinnedStop?.name || '',
+                          parsedLoc.lat,
+                          parsedLoc.lng,
+                          session?.itinerary
+                        )}
+                        onConfirmAsStop={async (place, lat, lng, note) => {
+                          await handleCaptainConfirmStop(place, lat, lng, note, m.id);
+                        }}
+                        onViewInPlan={() => setTab('plan')}
+                        onOpenInMaps={(lat, lng, place) => {
+                          setNavTarget({ name: place, lat, lng });
+                          setShowNavModal(true);
+                        }}
+                      />
                     )}
                   </div>
                   <span style={{ fontSize: 10, color: '#9D9C9A', marginTop: 3 }}>
@@ -2764,6 +2864,29 @@ export default function RidePage() {
             >
               <span>📢 Tell group</span>
             </button>
+
+            {/* Feature H2: Direct Share Location Button */}
+            <button
+              type="button"
+              onClick={() => setShowShareLocationModal(true)}
+              style={{
+                padding: '6px 13px',
+                background: 'rgba(240, 194, 58, 0.15)',
+                border: '1.5px solid #F0C23A',
+                borderRadius: 14,
+                color: '#F0C23A',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span>📍 Share Location</span>
+            </button>
+
             {RIDER_STATUS_PRESETS.map((p) => (
               <button
                 key={p.id}
@@ -2793,7 +2916,7 @@ export default function RidePage() {
               onClick={handleShareCurrentLocation}
               style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📍 Share GPS
+              📍 Quick GPS
             </button>
             <button
               type="button"
@@ -2813,11 +2936,32 @@ export default function RidePage() {
 
           {/* Message Input matching mockup */}
           <div style={{ padding: '8px 14px 10px', background: '#111316', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setShowShareLocationModal(true)}
+              title="Share GPS or Drop a Pin"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                backgroundColor: '#1B1E23',
+                border: '1.5px solid #2A2E35',
+                color: '#F0C23A',
+                fontSize: 18,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              📍
+            </button>
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-              placeholder="Message the trip group..."
+              placeholder="Trip updates only (WhatsApp for casual chat)..."
               style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: '#F1EFEA', fontSize: 14, outline: 'none' }}
             />
             <button
@@ -2837,6 +2981,7 @@ export default function RidePage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
               ➤
@@ -3129,6 +3274,14 @@ export default function RidePage() {
         isOpen={showNavModal}
         onClose={() => setShowNavModal(false)}
         target={navTarget}
+      />
+
+      {/* Feature H2: Share Location in Chat Modal */}
+      <ShareLocationModal
+        isOpen={showShareLocationModal}
+        onClose={() => setShowShareLocationModal(false)}
+        currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
+        onShareLocation={handleShareLocation}
       />
     </div>
   );
