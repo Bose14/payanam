@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -13,9 +13,67 @@ import {
   QuickStatusDrawer,
   PinStopModal,
   StopArrivalTracker,
+  StaleRidersAlertBanner,
+  createRiderMarkerIcon,
+  RiderRosterRow,
+  StopDetailSheet,
+  NextStopBottomDock,
+  PresetsTellGroupSheet,
+  NearbyHelpSheet,
+  OfflineSignalBanner,
+  RouteDeviationCard,
+  BatterySaverNote,
+  MeRideSettingsTab,
+  RouteProgressStrip,
+  StopApproachCard,
+  MissedStopPromptCard,
+  ArrivalOfferBanner,
+  PresetCard,
+  TripChatWhatsAppBanner,
+  ChatLocationCard,
+  ShareLocationModal,
+  ItineraryStopItem,
+  ItineraryProposalCard,
+  ProposeEditModal,
+  ConvoyInviteCard,
+  PublishItineraryModal,
+  DiscoverTab,
+  isTripPublished,
+  ShareMilestoneModal,
+  TripCompletedBanner,
+  buildTripMilestoneSummary,
+  getStoredProposals,
+  addProposal,
+  resolveProposal,
+  getFreshness,
+  evaluateRiderDeviation,
+  getMinDistanceToRoute,
+  formatOffRouteDistance,
+  getBatterySaverPreference,
+  setBatterySaverPreference,
+  calculateRouteProgress,
+  getRouteTotalDistance,
+  evaluateRiderRouteStatus,
+  evaluateStopApproach,
+  detectArrivalZone,
+  detectMissedStop,
+  getPresetInfo,
+  RIDER_STATUS_PRESETS,
+  CAPTAIN_ALERT_VIBRATION_PATTERN,
+  CAPTAIN_SENT_VIBRATION_PATTERN,
+  parseLocationFromMessage,
+  isStopConfirmedInItinerary,
+  formatLocationShareMessage,
+  getCachedNearbyServices,
+  makeServicePinIcon,
+  TrackingPausedBanner,
+  backgroundTrackingEngine,
 } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem, BackgroundTrackingStatus } from '../components';
+import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
+import type { RiderRosterData } from '../components/RiderRosterRow';
 
 const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 
@@ -91,18 +149,23 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 // Navigation arrow for the current user — rotates with heading
-function makeMyNavIcon(color: string, heading: number, status: string) {
-  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
+function makeMyNavIcon(color: string, heading: number, status: string, isStale: boolean = false) {
+  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#F1EFEA;border:1.5px solid #2A2E35;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:800;box-shadow:0 3px 8px rgba(0,0,0,0.4);">${status}</div>` : '';
+  const fill = isStale ? '#1B1E23' : '#F0C23A';
+  const stroke = isStale ? color : '#111316';
+  const opacity = isStale ? '0.8' : '1';
+  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="#F0C23A" stroke="#111316" stroke-width="2" opacity="0.3"/>`;
+
   return L.divIcon({
     className: '',
     iconAnchor: [24, 24],
     iconSize: [48, 48 + (status ? 24 : 0)],
-    html: `<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+    html: `<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;opacity:${opacity};">
       <div style="transform:rotate(${heading}deg);width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
         <svg width="44" height="44" viewBox="0 0 44 44">
-          <circle cx="22" cy="22" r="20" fill="${color}" stroke="white" stroke-width="2.5" opacity="0.25"/>
-          <polygon points="22,4 34,38 22,30 10,38" fill="${color}" stroke="white" stroke-width="2"/>
-          <circle cx="22" cy="22" r="5" fill="white"/>
+          ${ringAura}
+          <polygon points="22,4 34,38 22,30 10,38" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
+          <circle cx="22" cy="22" r="5" fill="#111316"/>
         </svg>
       </div>
       ${badge}
@@ -110,23 +173,25 @@ function makeMyNavIcon(color: string, heading: number, status: string) {
   });
 }
 
-// Circle icon for other riders
-function makeRiderIcon(initial: string, color: string, status: string) {
-  const badge = status ? `<div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1f2937;color:#fff;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:600;">${status}</div>` : '';
-  return L.divIcon({
-    className: '',
-    iconAnchor: [18, 18],
-    iconSize: [36, 36 + (status ? 22 : 0)],
-    html: `<div style="position:relative;width:36px;height:36px;background:${color};border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;border:2px solid #fff;">${initial}${badge}</div>`,
-  });
-}
+// Circle icon for other riders - replaced by createRiderMarkerIcon
 
-function makeStopIcon() {
+function makeStopIcon(placeName?: string, itemType?: string, orderIndex?: number) {
+  const iconEmoji = itemType === 'fuel' ? '⛽' : itemType === 'food' ? '🍲' : itemType === 'rest' ? '☕' : '📍';
+  const label = placeName ? placeName.slice(0, 14) : `Stop ${orderIndex ?? ''}`;
   return L.divIcon({
-    className: '',
-    iconAnchor: [6, 6],
-    iconSize: [12, 12],
-    html: `<div style="width:12px;height:12px;background:#9ca3af;border-radius:50%;border:2px solid #fff;"></div>`,
+    className: 'stop-milestone-marker',
+    iconAnchor: [12, 12],
+    iconSize: [24, 24],
+    html: `
+      <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:24px;height:24px;background:#1B1E23;border:2px solid #F0C23A;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.6);font-size:11px;">
+          ${iconEmoji}
+        </div>
+        <div style="position:absolute;top:26px;background:#111316;color:#F1EFEA;border:1px solid #2A2E35;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);letter-spacing:-0.2px;">
+          ${label}
+        </div>
+      </div>
+    `,
   });
 }
 
@@ -145,7 +210,7 @@ function makePinnedStopIcon(type: string) {
   });
 }
 
-function playAlertChime(type: 'urgent' | 'chime' = 'chime') {
+function playAlertChime(type: 'urgent' | 'chime' | 'alert' = 'chime') {
   try {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
@@ -153,9 +218,9 @@ function playAlertChime(type: 'urgent' | 'chime' = 'chime') {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = type === 'urgent' ? 'sawtooth' : 'sine';
-    osc.frequency.setValueAtTime(type === 'urgent' ? 784 : 587.33, ctx.currentTime);
-    osc.frequency.setValueAtTime(type === 'urgent' ? 880 : 880, ctx.currentTime + 0.12);
+    osc.type = type === 'urgent' || type === 'alert' ? 'sawtooth' : 'sine';
+    osc.frequency.setValueAtTime(type === 'alert' ? 659.25 : (type === 'urgent' ? 784 : 587.33), ctx.currentTime);
+    osc.frequency.setValueAtTime(type === 'alert' ? 523.25 : (type === 'urgent' ? 880 : 880), ctx.currentTime + 0.12);
 
     gain.gain.setValueAtTime(0.18, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
@@ -189,21 +254,38 @@ interface Session {
     id: string; title: string; from_place: string; to_place: string;
     from_lat?: number | null; from_lng?: number | null;
     to_lat?: number | null; to_lng?: number | null;
+    days?: number;
+    bike_type?: string;
+    preferences?: string;
   };
   itinerary: ItineraryStop[];
 }
 
 // Continuously follows user position; stops following when user drags map
-function MapFollow({ lat, lng, following, onDrag }: { lat: number; lng: number; following: boolean; onDrag: () => void }) {
+function MapFollow({
+  lat,
+  lng,
+  following,
+  focusTarget,
+  onDrag,
+}: {
+  lat: number;
+  lng: number;
+  following: boolean;
+  focusTarget?: [number, number] | null;
+  onDrag: () => void;
+}) {
   const map = useMap();
   const onDragRef = useRef(onDrag);
   onDragRef.current = onDrag;
 
   useEffect(() => {
-    if (following) {
+    if (focusTarget) {
+      map.setView(focusTarget, Math.max(map.getZoom(), 17), { animate: true, duration: 0.6 });
+    } else if (following) {
       map.setView([lat, lng], Math.max(map.getZoom(), 17), { animate: true, duration: 0.6, easeLinearity: 0.4 });
     }
-  }, [lat, lng, following, map]);
+  }, [lat, lng, following, focusTarget, map]);
 
   useEffect(() => {
     const handler = () => onDragRef.current();
@@ -214,7 +296,27 @@ function MapFollow({ lat, lng, following, onDrag }: { lat: number; lng: number; 
   return null;
 }
 
-type TabType = 'map' | 'chat' | 'riders' | 'nav';
+function MapResizer({ splitView }: { splitView: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    // Invalidate size immediately and during CSS transition so tiles load across 100% of the canvas
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 50);
+    const t2 = setTimeout(() => map.invalidateSize(), 150);
+    const t3 = setTimeout(() => map.invalidateSize(), 300);
+    const t4 = setTimeout(() => map.invalidateSize(), 550);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, [splitView, map]);
+
+  return null;
+}
+
+type TabType = 'map' | 'chat' | 'riders' | 'nav' | 'plan' | 'discover' | 'me';
 
 export default function RidePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -238,11 +340,25 @@ export default function RidePage() {
   const [newMsgCount, setNewMsgCount] = useState(0);
   const [following, setFollowing] = useState(true);
   const [myHeading, setMyHeading] = useState(0);
+  const [mySpeedKmh, setMySpeedKmh] = useState(0);
   const [osrmRoute, setOsrmRoute] = useState<[number, number][]>([]);
   const [navSteps, setNavSteps] = useState<NavStep[]>([]);
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
-  const [backgroundWarning, setBackgroundWarning] = useState(false);
+
+  // Feature P1: Background tracking reliability status
+  const [trackingStatus, setTrackingStatus] = useState<BackgroundTrackingStatus>(
+    () => backgroundTrackingEngine.getStatus()
+  );
+
+  useEffect(() => {
+    const unsub = backgroundTrackingEngine.subscribe(setTrackingStatus);
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    backgroundTrackingEngine.setWakeLockActive(wakeLockActive);
+  }, [wakeLockActive]);
 
   // High Priority Stops & Communication State
   const [pinnedStop, setPinnedStop] = useState<PinnedStopData | null>(null);
@@ -259,6 +375,73 @@ export default function RidePage() {
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
   const [toast, setToast] = useState('');
+
+  // Mobile Mockup UX & Last-seen State
+  const [splitView, setSplitView] = useState(true);
+  const [showStopDetailSheet, setShowStopDetailSheet] = useState(false);
+  const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
+  const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [showServicePins, setShowServicePins] = useState(true);
+  const [corridorServices, setCorridorServices] = useState<NearbyServiceItem[]>([]);
+
+  useEffect(() => {
+    setCorridorServices(getCachedNearbyServices());
+  }, [showNearbyHelp]);
+  const [showShareLocationModal, setShowShareLocationModal] = useState(false);
+  const [showProposeModal, setShowProposeModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+  const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
+  const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
+  const myLastUpdatedRef = useRef<string | null>(null);
+
+  // Feature B: Offline Position Queue & Rider Trails State
+  const [queueState, setQueueState] = useState<OfflineQueueState>({
+    isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+    pendingCount: 0,
+    lastSyncedAt: null,
+    isSyncing: false,
+  });
+  const [justSynced, setJustSynced] = useState(false);
+  const [riderTrails, setRiderTrails] = useState<Record<string, Array<[number, number]>>>({});
+  const isSyncingBatchRef = useRef(false);
+
+  // Feature C: Route Deviation Tracker State
+  const [deviationTrackers, setDeviationTrackers] = useState<Record<string, RiderDeviationTracker>>({});
+  const [dismissedDeviations, setDismissedDeviations] = useState<Set<string>>(new Set());
+
+  // Feature D: Battery-saver mode State (Me > Ride settings > Battery saver)
+  const [batterySaver, setBatterySaver] = useState<boolean>(() => getBatterySaverPreference());
+  const lastBroadcastTimeRef = useRef<number>(0);
+
+  const handleToggleBatterySaver = useCallback((enabled: boolean) => {
+    setBatterySaver(enabled);
+    setBatterySaverPreference(enabled);
+    backgroundTrackingEngine.setBatterySaver(enabled);
+    setToast(enabled ? '⚡ Battery saver enabled (30s update rate)' : '⚡ Standard telemetry restored (10s rate)');
+    setTimeout(() => setToast(''), 3000);
+  }, []);
+
+  // Feature J: Arrival detection offer and Missed stop prompt states
+  const [arrivalOfferDismissed, setArrivalOfferDismissed] = useState(false);
+  const [missedPromptDismissed, setMissedPromptDismissed] = useState(false);
+  const minDistToPinnedStopKmRef = useRef<number>(Infinity);
+
+  useEffect(() => {
+    setArrivalOfferDismissed(false);
+    setMissedPromptDismissed(false);
+    minDistToPinnedStopKmRef.current = Infinity;
+  }, [pinnedStop?.name, pinnedStop?.lat, pinnedStop?.lng]);
+
+  // Feature G: Message Delivery Receipts State (Per-rider delivery tracking)
+  const [deliveryReceipts, setDeliveryReceipts] = useState<Record<string, DeliveryReceipt[]>>({});
+
+  // Auto-refresh interval (5s) for real-time age badges and hollow markers
+  const [, setTicker] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTicker((t) => t + 1), 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const watchIdRef = useRef<number | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -281,29 +464,42 @@ export default function RidePage() {
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  // Fetch road-following route: GPS position → itinerary stops → destination
-  // Runs once when session + first GPS fix are both ready; refreshes every 2 min
+  // Feature 1A: Load itinerary proposals for current trip
+  useEffect(() => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    setProposals(getStoredProposals(tripId));
+  }, [session?.trip_id, sessionId]);
+
+  // Fetch road-following route from trip plan: start → itinerary stops → destination
+  // Loads immediately from trip plan (Plan tab) even before GPS, and refreshes every 2 min
   const routeFetchedRef = useRef(false);
   useEffect(() => {
     if (!session) return;
 
     const buildRoute = async () => {
-      const pos = myPosRef.current;
-      if (!pos) return; // GPS not ready yet
       const { trips } = session;
       const stopCoords: [number, number][] = (session.itinerary ?? [])
         .filter((s) => s.lat && s.lng)
         .map((s) => [s.lat as number, s.lng as number]);
 
+      let startPoint: [number, number] | null = null;
+      if (myPosRef.current) {
+        startPoint = [myPosRef.current.lat, myPosRef.current.lng];
+      } else if (trips.from_lat && trips.from_lng) {
+        startPoint = [trips.from_lat, trips.from_lng];
+      } else if (trips.from_place) {
+        startPoint = await geocodePlaceName(trips.from_place);
+      }
+
       let destination: [number, number] | null = null;
       if (trips.to_lat && trips.to_lng) {
         destination = [trips.to_lat, trips.to_lng];
-      } else {
+      } else if (trips.to_place) {
         destination = await geocodePlaceName(trips.to_place);
       }
 
       const waypoints: [number, number][] = [
-        [pos.lat, pos.lng],
+        ...(startPoint ? [startPoint] : []),
         ...stopCoords,
         ...(destination ? [destination] : []),
       ];
@@ -315,11 +511,11 @@ export default function RidePage() {
       routeFetchedRef.current = true;
     };
 
-    // Initial fetch — wait up to 10s for GPS
-    const timer = setTimeout(buildRoute, 2000);
+    // Initial fetch — immediately load planned route from trip plan
+    buildRoute();
     // Refresh every 2 min so route updates as you progress
     const interval = setInterval(buildRoute, 120_000);
-    return () => { clearTimeout(timer); clearInterval(interval); };
+    return () => { clearInterval(interval); };
   }, [session]);
 
   // Wake Lock + background visibility tracking
@@ -342,7 +538,8 @@ export default function RidePage() {
       if (document.visibilityState === 'visible') {
         // Re-acquire wake lock (it auto-releases when screen locks)
         acquireWakeLock();
-        setBackgroundWarning(false);
+        // Immediately sync any fixes queued while in background/screen locked
+        syncPendingBatch();
         // Re-broadcast current position immediately after coming back
         if (myPosRef.current && channelRef.current) {
           channelRef.current.send({
@@ -350,8 +547,6 @@ export default function RidePage() {
             payload: { userId: user?.id, userName, lat: myPosRef.current.lat, lng: myPosRef.current.lng, speedKmh: 0, heading: 0, updatedAt: new Date().toISOString() },
           });
         }
-      } else {
-        setBackgroundWarning(true);
       }
     };
 
@@ -362,19 +557,135 @@ export default function RidePage() {
     };
   }, [session, ended, userName, user?.id]);
 
+  // Feature B: Sync queued positions in batches and in sequence order
+  const syncPendingBatch = useCallback(async () => {
+    if (!sessionId || !user?.id || isSyncingBatchRef.current) return;
+    if (!navigator.onLine) {
+      offlinePositionQueue.setOnlineStatus(false);
+      return;
+    }
+
+    const pending = await offlinePositionQueue.getPendingFixes(sessionId, 50);
+    if (pending.length === 0) return;
+
+    isSyncingBatchRef.current = true;
+    offlinePositionQueue.setSyncing(true);
+
+    try {
+      const res = await rideService.uploadLocationBatch(
+        sessionId,
+        pending.map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          speedKmh: p.speedKmh,
+          heading: p.heading,
+          userName: p.userName,
+          seq: p.seq,
+          timestamp: p.timestamp,
+        })),
+        userName,
+      );
+
+      const ids = pending.map((p) => p.id!).filter(Boolean);
+      await offlinePositionQueue.markFixesSynced(sessionId, ids);
+
+      // Requirement 5: Group map catches up: Riders' trails fill in and their markers move to current position
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'trail_catchup',
+        payload: {
+          userId: user.id,
+          userName,
+          latestLocation: res?.latestLocation || {
+            lat: pending[pending.length - 1].lat,
+            lng: pending[pending.length - 1].lng,
+            speed_kmh: pending[pending.length - 1].speedKmh,
+            heading: pending[pending.length - 1].heading,
+            updated_at: pending[pending.length - 1].timestamp,
+          },
+          trailPoints: pending.map((p) => [p.lat, p.lng]),
+        },
+      });
+
+      setJustSynced(true);
+      setTimeout(() => setJustSynced(false), 3500);
+    } catch (err) {
+      console.warn('Batch upload paused due to connection error:', err);
+      offlinePositionQueue.setOnlineStatus(false);
+    } finally {
+      isSyncingBatchRef.current = false;
+      offlinePositionQueue.setSyncing(false);
+      await offlinePositionQueue.refreshPendingCount(sessionId);
+    }
+  }, [sessionId, user?.id, userName]);
+
+  // Feature B: Queue listener, network change hooks, and initial trail loading
+  useEffect(() => {
+    if (!sessionId || !user?.id) return;
+
+    const unsubscribe = offlinePositionQueue.subscribe((st) => {
+      setQueueState(st);
+    });
+    offlinePositionQueue.refreshPendingCount(sessionId);
+
+    // Load local recorded trail from IndexedDB
+    offlinePositionQueue.getLocalTrail(sessionId, user.id).then((pts) => {
+      if (pts.length > 0) {
+        setRiderTrails((prev) => ({ ...prev, [user.id]: pts }));
+      }
+    });
+
+    // Load group trails from server
+    rideService.getRiderTrails(sessionId).then((d) => {
+      if (d?.trails) {
+        setRiderTrails((prev) => ({ ...d.trails, ...prev }));
+      }
+    }).catch(() => {});
+
+    const handleOnline = () => {
+      offlinePositionQueue.setOnlineStatus(true);
+      syncPendingBatch();
+    };
+    const handleOffline = () => {
+      offlinePositionQueue.setOnlineStatus(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const queueTimer = setInterval(() => {
+      syncPendingBatch();
+    }, 15000);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(queueTimer);
+    };
+  }, [sessionId, user?.id, syncPendingBatch]);
+
   // Start GPS watch — broadcast on every fix, DB upsert every 15s
   useEffect(() => {
     if (!sessionId || !session || ended) return;
     if (!navigator.geolocation) { setGpsError('GPS not supported on this device'); return; }
 
+    // Feature P1: Step 1 - Trip starts: Tracking runs with background keepalive & heartbeat watchdog
+    backgroundTrackingEngine.startTracking(batterySaver);
+
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
         setMyLat(lat); setMyLng(lng);
         myPosRef.current = { lat, lng };
+        const nowIso = new Date().toISOString();
+        myLastUpdatedRef.current = nowIso;
         const speedKmh = speed != null ? speed * 3.6 : 0;
+        setMySpeedKmh(speedKmh);
         const hdg = heading ?? 0;
         if (heading != null) setMyHeading(heading);
+
+        // Feature P1: Step 2 - Heartbeat recorded with GPS position fix
+        backgroundTrackingEngine.recordFix(lat, lng, pos.coords.accuracy);
 
         // Auto-arrival detection when within 250m of pinned stop
         if (pinnedStop) {
@@ -383,31 +694,70 @@ export default function RidePage() {
             handleToggleMyArrival(true);
           }
         }
-        // Instant broadcast — zero DB write, real-time for all riders
-        channelRef.current?.send({
-          type: 'broadcast', event: 'location',
-          payload: { userId: user?.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: new Date().toISOString() },
-        });
+
+        if (!user?.id) return;
+
+        // STEP 1: GPS fix recorded — written to phone's local database before app treats it as saved
+        try {
+          const seq = await offlinePositionQueue.getNextSequence(sessionId, user.id);
+          await offlinePositionQueue.enqueueFix({
+            sessionId,
+            userId: user.id,
+            userName,
+            lat,
+            lng,
+            speedKmh,
+            heading: hdg,
+            seq,
+            timestamp: nowIso,
+          });
+        } catch (err) {
+          console.warn('Local position queue write error:', err);
+        }
+
+        // STEP 5: Add point to local rider trail immediately so rider sees path even offline
+        setRiderTrails((prev) => ({
+          ...prev,
+          [user.id]: [...(prev[user.id] || []), [lat, lng]],
+        }));
+
+        // Feature D: Update rate drops -> "Positions are sent about every 30 s instead of about every 10 s."
+        const throttleIntervalMs = batterySaver ? 30000 : 10000;
+        const nowMs = Date.now();
+        const shouldBroadcast = (nowMs - lastBroadcastTimeRef.current) >= throttleIntervalMs;
+
+        if (navigator.onLine && shouldBroadcast) {
+          lastBroadcastTimeRef.current = nowMs;
+          channelRef.current?.send({
+            type: 'broadcast', event: 'location',
+            payload: { userId: user.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: nowIso },
+          });
+          syncPendingBatch();
+        } else if (!navigator.onLine) {
+          offlinePositionQueue.setOnlineStatus(false);
+        }
       },
       (err) => {
         if (err.code === 1) setGpsError('Location permission denied. Please enable GPS.');
         else setGpsError('Unable to get your location.');
       },
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
+      { enableHighAccuracy: !batterySaver, maximumAge: batterySaver ? 15000 : 2000, timeout: 10000 },
     );
 
-    // DB upsert every 15s — so late joiners see your last position
+    // DB upsert throttled based on battery saver (30s vs 15s)
+    const dbIntervalMs = batterySaver ? 30000 : 15000;
     dbSyncRef.current = setInterval(() => {
-      if (myPosRef.current) {
+      if (myPosRef.current && navigator.onLine) {
         rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => {});
       }
-    }, 15000);
+    }, dbIntervalMs);
 
     return () => {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (dbSyncRef.current) clearInterval(dbSyncRef.current);
+      backgroundTrackingEngine.stopTracking();
     };
-  }, [session, ended, sessionId, userName, user?.id]);
+  }, [session, ended, sessionId, userName, user?.id, syncPendingBatch, pinnedStop, ridersArrival, batterySaver]);
 
   // Load initial state + subscribe to Broadcast channel
   useEffect(() => {
@@ -465,6 +815,40 @@ export default function RidePage() {
           return [...prev, entry];
         });
         if (payload.quickStatus?.includes('🆘')) setSosActive(true);
+        // Requirement 5: Append point to rider's trail
+        if (payload.lat && payload.lng && payload.userId) {
+          setRiderTrails((prev) => ({
+            ...prev,
+            [payload.userId]: [...(prev[payload.userId] || []), [payload.lat, payload.lng]],
+          }));
+        }
+      })
+      .on('broadcast', { event: 'trail_catchup' }, ({ payload }) => {
+        if (!payload || !payload.userId) return;
+        // Requirement 5: Group map catches up: Riders' trails fill in and their markers move to current position
+        if (payload.latestLocation) {
+          setRiders((prev) => {
+            const idx = prev.findIndex((r) => r.user_id === payload.userId);
+            const entry: RiderLocation = {
+              user_id: payload.userId,
+              user_name: payload.userName,
+              lat: payload.latestLocation.lat,
+              lng: payload.latestLocation.lng,
+              speed_kmh: payload.latestLocation.speed_kmh ?? 0,
+              heading: payload.latestLocation.heading ?? 0,
+              quick_status: idx >= 0 ? prev[idx].quick_status : '',
+              updated_at: payload.latestLocation.updated_at || new Date().toISOString(),
+            };
+            if (idx >= 0) { const u = [...prev]; u[idx] = entry; return u; }
+            return [...prev, entry];
+          });
+        }
+        if (Array.isArray(payload.trailPoints) && payload.trailPoints.length > 0) {
+          setRiderTrails((prev) => ({
+            ...prev,
+            [payload.userId]: [...(prev[payload.userId] || []), ...payload.trailPoints],
+          }));
+        }
       })
       .on('broadcast', { event: 'message' }, ({ payload }) => {
         setMessages((prev) => {
@@ -472,7 +856,52 @@ export default function RidePage() {
           return [...prev, payload as RideMessage];
         });
         if (payload.message_type === 'sos') setSosActive(true);
-        if (payload.message_type === 'chat') setNewMsgCount((c) => c + 1);
+        if (payload.message_type === 'chat' || payload.message_type === 'preset') setNewMsgCount((c) => c + 1);
+
+        // Feature G Requirement 4: Record delivery receipt and send ack back to group
+        if (payload.id && user?.id) {
+          const nowIso = new Date().toISOString();
+          setDeliveryReceipts((prev) => {
+            const list = prev[payload.id] || [];
+            if (list.some((r) => r.userId === user.id)) return prev;
+            return {
+              ...prev,
+              [payload.id]: [...list, { userId: user.id, userName, timestamp: nowIso }],
+            };
+          });
+
+          // Send receipt to sender and convoy
+          if (payload.user_id !== user.id) {
+            channel.send({
+              type: 'broadcast',
+              event: 'message_ack',
+              payload: {
+                messageId: payload.id,
+                userId: user.id,
+                userName,
+                timestamp: nowIso,
+              },
+            });
+          }
+        }
+      })
+      .on('broadcast', { event: 'message_ack' }, ({ payload }) => {
+        if (!payload?.messageId || !payload?.userId) return;
+        setDeliveryReceipts((prev) => {
+          const list = prev[payload.messageId] || [];
+          if (list.some((r) => r.userId === payload.userId)) return prev;
+          return {
+            ...prev,
+            [payload.messageId]: [
+              ...list,
+              {
+                userId: payload.userId,
+                userName: payload.userName || 'Rider',
+                timestamp: payload.timestamp || new Date().toISOString(),
+              },
+            ],
+          };
+        });
       })
       .on('broadcast', { event: 'status' }, ({ payload }) => {
         setRiders((prev) => prev.map((r) =>
@@ -505,9 +934,113 @@ export default function RidePage() {
           setTimeout(() => setToast(''), 3500);
         }
       })
+      .on('broadcast', { event: 'stop_prealert' }, ({ payload }) => {
+        playAlertChime('chime');
+        setToast(`⛽ Pre-alert: Approaching ${payload.stopName} in ${payload.distanceKm ? `${payload.distanceKm.toFixed(1)} km` : '2 km'} (~${payload.etaMinutes || 4} min) · Prepare to regroup!`);
+        setTimeout(() => setToast(''), 4500);
+      })
+      .on('broadcast', { event: 'stop_arrival_alert' }, ({ payload }) => {
+        playAlertChime('urgent');
+        setToast(`🏁 Convoy reached ${payload.stopName}! (${payload.userName} is here)`);
+        setTimeout(() => setToast(''), 4500);
+      })
       .on('broadcast', { event: 'announcement' }, ({ payload }) => {
         setActiveAnnouncement(payload);
         playAlertChime('urgent');
+        // Feature K Requirement 4: Members get the alert with a distinct vibration pattern
+        if ('vibrate' in navigator) {
+          navigator.vibrate(CAPTAIN_ALERT_VIBRATION_PATTERN);
+        }
+      })
+      .on('broadcast', { event: 'route_deviation' }, ({ payload }) => {
+        if (!payload || !payload.userId) return;
+        playAlertChime('alert');
+        setToast(`⚠️ Route Deviation: ${payload.userName} is ${formatOffRouteDistance(payload.distanceMeters)} off the route`);
+        setTimeout(() => setToast(''), 4000);
+        setDeviationTrackers((prev) => ({
+          ...prev,
+          [payload.userId]: {
+            userId: payload.userId,
+            userName: payload.userName,
+            lat: payload.lat,
+            lng: payload.lng,
+            distanceMeters: payload.distanceMeters,
+            firstOffRouteAt: Date.now() - ((payload.durationSeconds || 120) * 1000),
+            durationSeconds: payload.durationSeconds || 120,
+            isDeviated: true,
+            lastEvaluatedAt: Date.now(),
+          },
+        }));
+      })
+      .on('broadcast', { event: 'route_restored' }, ({ payload }) => {
+        if (!payload || !payload.userId) return;
+        setDeviationTrackers((prev) => {
+          if (!prev[payload.userId]) return prev;
+          const updated = { ...prev };
+          delete updated[payload.userId];
+          return updated;
+        });
+        setToast(`✓ ${payload.userName} returned to the route`);
+        setTimeout(() => setToast(''), 3000);
+      })
+      .on('broadcast', { event: 'itinerary_updated' }, ({ payload }) => {
+        const newStop = payload?.stop;
+        if (newStop) {
+          setSession((prev) => {
+            if (!prev) return prev;
+            const currentList = prev.itinerary ?? [];
+            const exists = currentList.some(
+              (s) => s.place.toLowerCase() === newStop.place.toLowerCase() || s.id === newStop.id
+            );
+            if (exists) return prev;
+            return {
+              ...prev,
+              itinerary: [...currentList, newStop],
+            };
+          });
+          playAlertChime('chime');
+          setToast(`📌 Itinerary updated: ${newStop.place} (from chat)`);
+          setTimeout(() => setToast(''), 3500);
+        }
+      })
+      .on('broadcast', { event: 'itinerary_proposal' }, ({ payload }) => {
+        const prop = payload?.proposal;
+        if (prop) {
+          setProposals((prev) => {
+            if (prev.some((p) => p.id === prop.id)) return prev;
+            return [prop, ...prev];
+          });
+          playAlertChime('chime');
+          setToast(`💡 ${prop.proposerName} proposed: "${prop.title}"`);
+          setTimeout(() => setToast(''), 4000);
+        }
+      })
+      .on('broadcast', { event: 'proposal_resolved' }, ({ payload }) => {
+        const { proposalId, status, resolverName, updatedStop } = payload || {};
+        if (proposalId) {
+          setProposals((prev) =>
+            prev.map((p) =>
+              p.id === proposalId
+                ? { ...p, status, resolvedAt: new Date().toISOString(), resolvedBy: resolverName }
+                : p
+            )
+          );
+          if (status === 'accepted') {
+            playAlertChime('chime');
+            setToast(`✓ Proposal accepted by ${resolverName || 'Captain'}!`);
+            if (updatedStop) {
+              setSession((prev) => {
+                if (!prev) return prev;
+                const list = prev.itinerary ?? [];
+                if (list.some((s) => s.place === updatedStop.place)) return prev;
+                return { ...prev, itinerary: [...list, updatedStop] };
+              });
+            }
+          } else {
+            setToast(`Proposal declined by ${resolverName || 'Captain'}`);
+          }
+          setTimeout(() => setToast(''), 3500);
+        }
       })
       .subscribe();
 
@@ -552,13 +1085,38 @@ export default function RidePage() {
     if (!sessionId) return;
     setMyStatus(value);
     setShowStatusDrawer(false);
+    setShowTellGroupSheet(false);
     await rideService.updateQuickStatus(sessionId, value).catch(() => {});
     // Broadcast status change so others see rider dot badge update instantly
     channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: value } });
     if (value) {
-      const result = await rideService.sendMessage(sessionId, { message: `Status update: ${value}`, messageType: 'status', userName }).catch(() => null);
-      const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: `Status update: ${value}`, message_type: 'status', created_at: new Date().toISOString() };
+      const nowIso = new Date().toISOString();
+      const result = await rideService.sendMessage(sessionId, { message: value, messageType: 'preset', userName }).catch(() => null);
+      const msg: RideMessage = result?.message ?? {
+        id: Date.now().toString(),
+        user_id: user?.id || 'unknown',
+        user_name: userName,
+        message: value,
+        message_type: 'preset',
+        created_at: nowIso,
+      };
+
+      // Record sender delivery receipt immediately
+      if (user?.id) {
+        setDeliveryReceipts((prev) => ({
+          ...prev,
+          [msg.id]: [{ userId: user.id, userName, timestamp: nowIso }],
+        }));
+      }
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === msg.id)) return prev;
+        return [...prev, msg];
+      });
+
       channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
+      setToast(`✓ Sent preset "${value}" to group!`);
+      setTimeout(() => setToast(''), 3000);
     }
   }, [sessionId, userName, user?.id]);
 
@@ -636,9 +1194,16 @@ export default function RidePage() {
     });
 
     if (isArrived) {
-      playAlertChime('chime');
+      playAlertChime('urgent');
       setToast(`🏁 Marked as arrived at ${pinnedStop.name}!`);
       setTimeout(() => setToast(''), 3500);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'stop_arrival_alert',
+        payload: { stopName: pinnedStop.name, userId: user.id, userName },
+      });
+
       await rideService.sendMessage(sessionId, {
         message: `🏁 I have arrived at ${pinnedStop.name}!`,
         messageType: 'stop_arrival',
@@ -659,6 +1224,9 @@ export default function RidePage() {
 
     setActiveAnnouncement(payload);
     playAlertChime('urgent');
+    if ('vibrate' in navigator) {
+      navigator.vibrate(CAPTAIN_SENT_VIBRATION_PATTERN);
+    }
 
     channelRef.current?.send({
       type: 'broadcast',
@@ -705,6 +1273,134 @@ export default function RidePage() {
     setTimeout(() => setToast(''), 2500);
   }, [myLat, myLng, sessionId, userName, user?.id]);
 
+  // Feature H2 Requirement 1: Member shares a location (current location or dropped pin)
+  const handleShareLocation = useCallback(async (locationData: {
+    placeName: string;
+    lat: number;
+    lng: number;
+    note?: string;
+  }) => {
+    if (!sessionId) return;
+    const content = formatLocationShareMessage(
+      locationData.placeName,
+      locationData.lat,
+      locationData.lng,
+      locationData.note
+    );
+
+    const result = await rideService.sendMessage(sessionId, {
+      message: content,
+      messageType: 'location_share',
+      userName,
+    }).catch(() => null);
+
+    const msg: RideMessage = result?.message ?? {
+      id: Date.now().toString(),
+      user_id: user?.id || '',
+      user_name: userName,
+      message: content,
+      message_type: 'location_share',
+      created_at: new Date().toISOString(),
+    };
+
+    channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
+    setMessages((prev) => [...prev, msg]);
+    setToast(`📍 Shared ${locationData.placeName} with convoy!`);
+    setTimeout(() => setToast(''), 2500);
+  }, [sessionId, userName, user?.id]);
+
+  // Feature H2 Requirement 2: Captain confirms it -> turns into an itinerary stop
+  // Feature H2 Requirement 3: Itinerary updates for all with 'from chat' tag
+  const handleCaptainConfirmStop = useCallback(async (
+    placeName: string,
+    lat: number,
+    lng: number,
+    note?: string,
+    messageId?: string
+  ) => {
+    if (!sessionId || !session) return;
+    const isCaptain = session.started_by === user?.id;
+    if (!isCaptain) {
+      setToast('Only the Captain can confirm itinerary stops.');
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    const orderIndex = (session.itinerary?.length || 0) + 1;
+    const newStop: ItineraryStop = {
+      id: `chat_stop_${Date.now()}`,
+      place: placeName,
+      lat,
+      lng,
+      day_number: 1,
+      order_index: orderIndex,
+      item_type: 'chat_stop',
+      description: note ? `From chat: ${note}` : 'From chat stop',
+    };
+
+    // 1. Immediately update local session itinerary state
+    setSession((prev) => {
+      if (!prev) return prev;
+      const currentList = prev.itinerary ?? [];
+      if (currentList.some((s) => s.place.toLowerCase() === placeName.toLowerCase())) return prev;
+      return {
+        ...prev,
+        itinerary: [...currentList, newStop],
+      };
+    });
+
+    // 2. Persist to backend database itinerary
+    if (session.trip_id) {
+      try {
+        await tripService.addStop(session.trip_id, {
+          place: placeName,
+          item_type: 'chat_stop',
+          description: note ? `From chat: ${note}` : 'From chat stop',
+          day_number: 1,
+          order_index: orderIndex,
+          lat,
+          lng,
+        });
+      } catch (err) {
+        console.warn('Failed to persist stop to trip itinerary:', err);
+      }
+    }
+
+    // 3. Broadcast real-time itinerary update to all convoy members
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'itinerary_updated',
+      payload: {
+        stop: newStop,
+        confirmedBy: userName,
+        messageId,
+      },
+    });
+
+    // 4. Send announcement/status message to group chat
+    const confirmationMsg = `👑 Captain confirmed "${placeName}" as an itinerary stop (from chat)!`;
+    const result = await rideService.sendMessage(sessionId, {
+      message: confirmationMsg,
+      messageType: 'status',
+      userName,
+    }).catch(() => null);
+
+    const statusMsg: RideMessage = result?.message ?? {
+      id: Date.now().toString(),
+      user_id: user?.id || '',
+      user_name: userName,
+      message: confirmationMsg,
+      message_type: 'status',
+      created_at: new Date().toISOString(),
+    };
+    channelRef.current?.send({ type: 'broadcast', event: 'message', payload: statusMsg });
+    setMessages((prev) => [...prev, statusMsg]);
+
+    playAlertChime('chime');
+    setToast(`✓ "${placeName}" added to itinerary with 'from chat' tag!`);
+    setTimeout(() => setToast(''), 3500);
+  }, [sessionId, session, user?.id, userName]);
+
   const handleEndRide = useCallback(async () => {
     if (!sessionId || !window.confirm('End the ride for everyone?')) return;
     setEndingRide(true);
@@ -714,20 +1410,548 @@ export default function RidePage() {
     } finally { setEndingRide(false); }
   }, [sessionId, session, navigate]);
 
+  // Feature 1A Step 4: Member proposes an edit to itinerary
+  const handleCreateProposal = useCallback(async (data: { title: string; description?: string }) => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    const newProp = addProposal(tripId, {
+      tripId,
+      proposerId: user?.id || 'anon',
+      proposerName: userName,
+      proposerInitials: userName.slice(0, 2).toUpperCase(),
+      title: data.title,
+      description: data.description,
+    });
+
+    setProposals((prev) => [newProp, ...prev]);
+
+    // Broadcast proposal to convoy
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'itinerary_proposal',
+      payload: { proposal: newProp },
+    });
+
+    // Send chat status message
+    if (sessionId) {
+      await rideService.sendMessage(sessionId, {
+        message: `💡 ${userName} proposed itinerary edit: "${data.title}"`,
+        messageType: 'status',
+        userName,
+      }).catch(() => null);
+    }
+
+    setToast('✓ Proposal submitted to Captain!');
+    setTimeout(() => setToast(''), 3000);
+  }, [session?.trip_id, sessionId, user?.id, userName]);
+
+  // Feature 1A Step 4: Owner or captain approves proposed edit
+  const handleAcceptProposal = useCallback(async (prop: ItineraryProposal) => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    const isCaptain = session?.started_by === user?.id;
+    if (!isCaptain) {
+      setToast('Only the Captain / Owner can approve proposals.');
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    resolveProposal(tripId, prop.id, 'accepted', userName);
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'accepted', resolvedBy: userName } : p))
+    );
+
+    // If proposal describes a stop or time, add/update in itinerary
+    let newStop: ItineraryStop | undefined;
+    if (prop.title) {
+      const orderIndex = (session?.itinerary?.length || 0) + 1;
+      newStop = {
+        id: `prop_stop_${Date.now()}`,
+        place: prop.title,
+        lat: prop.proposedLat ?? 13.5000,
+        lng: prop.proposedLng ?? 74.8000,
+        day_number: 2,
+        order_index: orderIndex,
+        item_type: 'stop',
+        description: `Approved proposal from ${prop.proposerName}: ${prop.description || prop.title}`,
+      };
+
+      setSession((prev) => {
+        if (!prev) return prev;
+        const list = prev.itinerary ?? [];
+        return { ...prev, itinerary: [...list, newStop!] };
+      });
+
+      if (session?.trip_id) {
+        tripService.addStop(session.trip_id, {
+          place: newStop.place,
+          item_type: 'stop',
+          description: newStop.description,
+          day_number: newStop.day_number,
+          order_index: newStop.order_index,
+          lat: newStop.lat,
+          lng: newStop.lng,
+        }).catch(() => null);
+      }
+    }
+
+    // Broadcast resolution to convoy
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'proposal_resolved',
+      payload: {
+        proposalId: prop.id,
+        status: 'accepted',
+        resolverName: userName,
+        updatedStop: newStop,
+      },
+    });
+
+    // Send chat status message
+    if (sessionId) {
+      await rideService.sendMessage(sessionId, {
+        message: `👑 Captain approved ${prop.proposerName}'s proposal: "${prop.title}"`,
+        messageType: 'status',
+        userName,
+      }).catch(() => null);
+    }
+
+    setToast(`✓ Approved proposal from ${prop.proposerName}`);
+    setTimeout(() => setToast(''), 3000);
+  }, [session?.trip_id, session?.started_by, session?.itinerary, sessionId, user?.id, userName]);
+
+  // Feature 1A Step 4: Owner or captain declines proposed edit
+  const handleDeclineProposal = useCallback(async (prop: ItineraryProposal) => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    const isCaptain = session?.started_by === user?.id;
+    if (!isCaptain) {
+      setToast('Only the Captain / Owner can decline proposals.');
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    resolveProposal(tripId, prop.id, 'declined', userName);
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'declined', resolvedBy: userName } : p))
+    );
+
+    // Broadcast decline
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'proposal_resolved',
+      payload: {
+        proposalId: prop.id,
+        status: 'declined',
+        resolverName: userName,
+      },
+    });
+
+    if (sessionId) {
+      await rideService.sendMessage(sessionId, {
+        message: `Captain declined proposal: "${prop.title}"`,
+        messageType: 'status',
+        userName,
+      }).catch(() => null);
+    }
+
+    setToast('Proposal declined');
+    setTimeout(() => setToast(''), 2500);
+  }, [session?.trip_id, session?.started_by, sessionId, user?.id, userName]);
+
   const colorForUser = useCallback((uid: string) => {
     const allIds = [user?.id ?? '', ...riders.filter(r => r.user_id !== user?.id).map(r => r.user_id)];
     const idx = allIds.indexOf(uid);
     return RIDER_COLORS[idx >= 0 ? idx % RIDER_COLORS.length : 0];
   }, [riders, user]);
 
-  const distanceTo = useCallback((lat: number, lng: number) => {
-    if (!myPosRef.current) return null;
-    return haversineKm(myPosRef.current.lat, myPosRef.current.lng, lat, lng);
-  }, []);
-
   const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
+  const allPlanStops = useMemo<ItineraryStop[]>(() => {
+    const itin = session?.itinerary ?? [];
+    if (itin.length > 0) return itin;
+    return [
+      { id: 'origin_1', place: 'Start from Hubli', lat: 15.3647, lng: 75.1240, day_number: 2, order_index: 1, item_type: 'stop', description: 'Origin waypoint · 07:30' },
+      { id: 'chat_1', place: 'Sagar Highway Dhaba', lat: 14.1670, lng: 75.0400, day_number: 2, order_index: 2, item_type: 'meal', description: 'From chat: Chai & breakfast stop · 45 km marker' },
+      { id: 'planned_1', place: 'Lunch, Udupi', lat: 13.3409, lng: 74.7421, day_number: 2, order_index: 3, item_type: 'meal', description: 'Coastline regroup · 112 km marker' },
+    ];
+  }, [session?.itinerary]);
   const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
   const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
+
+  const milestoneSummary = useMemo(() => {
+    if (!session?.trips) return null;
+    return buildTripMilestoneSummary({
+      trip: {
+        id: session.trips.id,
+        title: session.trips.title,
+        from_place: session.trips.from_place,
+        to_place: session.trips.to_place,
+        days: session.trips.days || 1,
+        bike_type: session.trips.bike_type,
+      },
+      stops: allPlanStops,
+      coRiders: riders.map((r) => ({ name: r.user_name || 'Co-Rider' })),
+      bikeModel: session.trips.bike_type,
+    });
+  }, [session?.trips, allPlanStops, riders]);
+
+  const activeRoute = useMemo(
+    () => (osrmRoute.length > 1 ? osrmRoute : routeCoords),
+    [osrmRoute, routeCoords]
+  );
+
+  const totalRouteDist = useMemo(() => getRouteTotalDistance(activeRoute), [activeRoute]);
+
+  const myFreshness = getFreshness(myLastUpdatedRef.current ?? (myLat ? new Date().toISOString() : null));
+
+  // Feature E2 & A: Compute freshness and planned route progress status for all riders
+  const ridersWithFreshness: RiderRosterData[] = useMemo(() => {
+    // 1. Calculate raw progress for all valid positions along activeRoute
+    const progressMap: Record<string, { distanceAlong: number; percent: number; crossTrack: number }> = {};
+    if (activeRoute.length >= 2) {
+      if (myLat && myLng && user?.id) {
+        const myProg = calculateRouteProgress([myLat, myLng], activeRoute, totalRouteDist);
+        progressMap[user.id] = {
+          distanceAlong: myProg.distanceAlongMeters,
+          percent: myProg.progressPercent,
+          crossTrack: myProg.crossTrackDistanceMeters,
+        };
+      }
+      riders.forEach((r) => {
+        if (r.user_id && r.lat && r.lng) {
+          const prog = calculateRouteProgress([Number(r.lat), Number(r.lng)], activeRoute, totalRouteDist);
+          progressMap[r.user_id] = {
+            distanceAlong: prog.distanceAlongMeters,
+            percent: prog.progressPercent,
+            crossTrack: prog.crossTrackDistanceMeters,
+          };
+        }
+      });
+    }
+
+    // 2. Reference progress: Captain's progress or current user's progress
+    const captainId = session?.started_by;
+    const refProgressMeters = (captainId && progressMap[captainId])
+      ? progressMap[captainId].distanceAlong
+      : (user?.id && progressMap[user.id])
+        ? progressMap[user.id].distanceAlong
+        : 0;
+
+    return riders.map((r, i) => {
+      const isMe = r.user_id === user?.id;
+      const freshness = isMe ? myFreshness : getFreshness(r.updated_at);
+      const isCaptain = session?.started_by === r.user_id;
+      const dist = myLat && myLng && r.lat && r.lng ? haversineKm(myLat, myLng, Number(r.lat), Number(r.lng)) : null;
+      const color = RIDER_COLORS[i % RIDER_COLORS.length];
+      const prog = r.user_id ? progressMap[r.user_id] : null;
+
+      // Feature C deviation alert status
+      const isOffRoute = r.user_id ? !!deviationTrackers[r.user_id]?.isDeviated : false;
+
+      // Feature E2 route status (Ahead, on plan, behind, off route, unknown)
+      const routeStatus = prog
+        ? evaluateRiderRouteStatus({
+            riderProgressMeters: prog.distanceAlong,
+            refProgressMeters,
+            crossTrackMeters: prog.crossTrack,
+            isOffRouteAlert: isOffRoute,
+            isStaleOrUnknown: freshness.isStale || freshness.isUnknown,
+            progressPercent: prog.percent,
+          })
+        : undefined;
+
+      return {
+        userId: r.user_id,
+        userName: r.user_name || 'Rider',
+        isMe,
+        isCaptain,
+        lat: Number(r.lat),
+        lng: Number(r.lng),
+        speedKmh: r.speed_kmh,
+        heading: r.heading,
+        quickStatus: r.quick_status,
+        updatedAt: r.updated_at,
+        distanceKm: dist,
+        color,
+        freshness,
+        routeStatus,
+      };
+    });
+  }, [riders, user?.id, myFreshness, session?.started_by, myLat, myLng, activeRoute, totalRouteDist, deviationTrackers]);
+
+  // Feature E2: Data prepared for RouteProgressStrip
+  const ridersForProgressStrip: RouteProgressRider[] = useMemo(() => {
+    return ridersWithFreshness
+      .filter((r) => r.lat && r.lng && r.routeStatus)
+      .map((r) => ({
+        userId: r.userId,
+        userName: r.userName,
+        isMe: r.isMe,
+        isCaptain: r.isCaptain,
+        color: r.color,
+        progressPercent: r.routeStatus!.progressPercent,
+        distanceAlongMeters: r.routeStatus!.distanceAlongMeters,
+        routeStatus: r.routeStatus!,
+      }));
+  }, [ridersWithFreshness]);
+
+  const stopsForProgressStrip: RouteMilestoneStop[] = useMemo(() => {
+    if (!activeRoute || activeRoute.length < 2) return [];
+    return itineraryStops.map((stop) => {
+      const prog = calculateRouteProgress([stop.lat as number, stop.lng as number], activeRoute, totalRouteDist);
+      return {
+        id: stop.id,
+        place: stop.place,
+        progressPercent: prog.progressPercent,
+        itemType: stop.item_type,
+      };
+    });
+  }, [itineraryStops, activeRoute, totalRouteDist]);
+
+  // Stale and unknown riders (for alert banner)
+  const staleRiders = useMemo(() => {
+    return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
+  }, [ridersWithFreshness]);
+
+  // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop)
+  const distToPinnedStop = useMemo(() => {
+    if (!pinnedStop || !myLat || !myLng) return null;
+    return haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng);
+  }, [pinnedStop, myLat, myLng]);
+
+  // Track minimum distance approached to pinned stop (for missed stop detection)
+  useEffect(() => {
+    if (distToPinnedStop != null && distToPinnedStop < minDistToPinnedStopKmRef.current) {
+      minDistToPinnedStopKmRef.current = distToPinnedStop;
+    }
+  }, [distToPinnedStop]);
+
+  // Stop & rider progress along active route
+  const pinnedStopRouteProgressMeters = useMemo(() => {
+    if (!pinnedStop || activeRoute.length < 2) return null;
+    const prog = calculateRouteProgress([pinnedStop.lat, pinnedStop.lng], activeRoute, totalRouteDist);
+    return prog.distanceAlongMeters;
+  }, [pinnedStop, activeRoute, totalRouteDist]);
+
+  const myRouteProgressMeters = useMemo(() => {
+    if (!myLat || !myLng || activeRoute.length < 2) return null;
+    const prog = calculateRouteProgress([myLat, myLng], activeRoute, totalRouteDist);
+    return prog.distanceAlongMeters;
+  }, [myLat, myLng, activeRoute, totalRouteDist]);
+
+  // Format riders for StopDetailSheet (Feature J arrival status)
+  const ridersForStopDetail = useMemo(() => {
+    return ridersWithFreshness.map((r) => {
+      const arrival = ridersArrival[r.userId];
+      const distKm = pinnedStop ? haversineKm(r.lat, r.lng, pinnedStop.lat, pinnedStop.lng) : null;
+
+      const riderProg = (activeRoute.length > 1)
+        ? calculateRouteProgress([r.lat, r.lng], activeRoute, totalRouteDist).distanceAlongMeters
+        : null;
+
+      const isMissed = Boolean(
+        arrival?.status !== 'arrived' &&
+        riderProg != null &&
+        pinnedStopRouteProgressMeters != null &&
+        pinnedStopRouteProgressMeters > 0 &&
+        riderProg > pinnedStopRouteProgressMeters + 350
+      );
+
+      return {
+        userId: r.userId,
+        userName: r.userName,
+        isMe: r.isMe,
+        freshness: r.freshness,
+        distanceKm: distKm,
+        speedKmh: r.speedKmh,
+        arrivalStatus: (arrival?.status ?? (isMissed ? 'missed' : 'en_route')) as 'arrived' | 'en_route' | 'departed' | 'missed',
+        arrivedAt: arrival?.arrivedAt,
+        isMissed,
+      };
+    });
+  }, [ridersWithFreshness, ridersArrival, pinnedStop, activeRoute, totalRouteDist, pinnedStopRouteProgressMeters]);
+
+  const isMeArrived = useMemo(() => {
+    return user?.id ? ridersArrival[user.id]?.status === 'arrived' : false;
+  }, [user?.id, ridersArrival]);
+
+  // Feature J: Auto-detect arrival zone (< 200m)
+  const isArrivalZone = useMemo(() => {
+    if (isMeArrived || arrivalOfferDismissed || distToPinnedStop == null) return false;
+    return detectArrivalZone(distToPinnedStop, 0.2);
+  }, [isMeArrived, arrivalOfferDismissed, distToPinnedStop]);
+
+  // Feature J: Auto-detect missed stop (> 350m past stop)
+  const isMissedStop = useMemo(() => {
+    if (isMeArrived || missedPromptDismissed) return false;
+    return detectMissedStop({
+      riderProgressMeters: myRouteProgressMeters ?? undefined,
+      stopProgressMeters: pinnedStopRouteProgressMeters ?? undefined,
+      distanceToStopKm: distToPinnedStop,
+      minDistanceRecordedKm: minDistToPinnedStopKmRef.current,
+      isArrived: isMeArrived,
+      isDismissed: missedPromptDismissed,
+      thresholdMeters: 350,
+    });
+  }, [isMeArrived, missedPromptDismissed, myRouteProgressMeters, pinnedStopRouteProgressMeters, distToPinnedStop]);
+
+  const arrivedCount = useMemo(() => {
+    return Object.values(ridersArrival).filter((r) => r.status === 'arrived').length;
+  }, [ridersArrival]);
+
+  const enrichedRidersArrival = useMemo(() => {
+    const result: Record<string, RiderArrivalInfo> = {};
+    for (const [uid, arrival] of Object.entries(ridersArrival)) {
+      const riderMeta = ridersWithFreshness.find((r) => r.userId === uid);
+      result[uid] = {
+        ...arrival,
+        isStale: riderMeta ? (riderMeta.freshness.isStale || riderMeta.freshness.isUnknown) : false,
+        ageLabel: riderMeta?.freshness.ageLabel,
+      };
+    }
+    return result;
+  }, [ridersArrival, ridersWithFreshness]);
+
+  const handleFocusRider = useCallback((rider: RiderRosterData) => {
+    setFocusTarget([rider.lat, rider.lng]);
+    setFollowing(false);
+    setToast(`Focused on ${rider.userName} (${rider.freshness.ageLabel})`);
+    setTimeout(() => {
+      setToast('');
+      setFocusTarget(null);
+    }, 2500);
+  }, []);
+
+  const stopApproachEval = useMemo(() => {
+    return evaluateStopApproach(distToPinnedStop, mySpeedKmh, isMeArrived);
+  }, [distToPinnedStop, mySpeedKmh, isMeArrived]);
+
+  const [dismissStopApproach, setDismissStopApproach] = useState(false);
+  const preAlertTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!pinnedStop) {
+      preAlertTriggeredRef.current = false;
+      setDismissStopApproach(false);
+      return;
+    }
+    // Pre-alert detection (2 km / 5 min threshold)
+    if (stopApproachEval.isApproaching && !preAlertTriggeredRef.current) {
+      preAlertTriggeredRef.current = true;
+      playAlertChime('chime');
+      setToast(`⛽ Pre-alert: Approaching ${pinnedStop.name} in ${distToPinnedStop?.toFixed(1) ?? '2'} km · Prepare to regroup!`);
+      setTimeout(() => setToast(''), 4500);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'stop_prealert',
+        payload: {
+          stopName: pinnedStop.name,
+          distanceKm: distToPinnedStop,
+          etaMinutes: stopApproachEval.etaMinutes,
+        },
+      });
+    }
+  }, [stopApproachEval.isApproaching, pinnedStop, distToPinnedStop, stopApproachEval.etaMinutes]);
+
+  // Feature C: Evaluate route deviation for all riders against active route
+  useEffect(() => {
+    if (!activeRoute || activeRoute.length < 2) return;
+
+    setDeviationTrackers((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      // 1. Evaluate current user
+      if (user?.id && myLat && myLng) {
+        const myTracker = evaluateRiderDeviation(
+          { userId: user.id, userName, lat: myLat, lng: myLng },
+          activeRoute,
+          prev[user.id]
+        );
+        // Requirement 2 & 3: Check if crossed threshold (> 300m for 2min)
+        if (myTracker.isDeviated && !prev[user.id]?.isDeviated) {
+          channelRef.current?.send({
+            type: 'broadcast',
+            event: 'route_deviation',
+            payload: {
+              userId: user.id,
+              userName,
+              distanceMeters: Math.round(myTracker.distanceMeters),
+              durationSeconds: myTracker.durationSeconds,
+              lat: myLat,
+              lng: myLng,
+              timestamp: new Date().toISOString(),
+            },
+          });
+          playAlertChime('alert');
+          setToast(`⚠️ You are ${formatOffRouteDistance(myTracker.distanceMeters)} off the planned route`);
+          setTimeout(() => setToast(''), 4000);
+        } else if (!myTracker.isDeviated && prev[user.id]?.isDeviated) {
+          // Requirement 5: Alert clears when back on line
+          channelRef.current?.send({
+            type: 'broadcast',
+            event: 'route_restored',
+            payload: { userId: user.id, userName },
+          });
+        }
+        next[user.id] = myTracker;
+        changed = true;
+      }
+
+      // 2. Evaluate all other riders in convoy
+      riders.forEach((r) => {
+        if (!r.user_id || r.user_id === user?.id || !r.lat || !r.lng) return;
+        const rTracker = evaluateRiderDeviation(
+          { userId: r.user_id, userName: r.user_name || 'Rider', lat: Number(r.lat), lng: Number(r.lng) },
+          activeRoute,
+          prev[r.user_id]
+        );
+        if (rTracker.isDeviated && !prev[r.user_id]?.isDeviated) {
+          playAlertChime('alert');
+          setToast(`⚠️ ${r.user_name || 'Rider'} is ${formatOffRouteDistance(rTracker.distanceMeters)} off the route`);
+          setTimeout(() => setToast(''), 4000);
+        }
+        next[r.user_id] = rTracker;
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [activeRoute, myLat, myLng, riders, user?.id, userName]);
+
+  // Active deviation alerts
+  const activeDeviationAlerts: OffRouteAlert[] = useMemo(() => {
+    if (!activeRoute || activeRoute.length < 2) return [];
+    return Object.values(deviationTrackers)
+      .filter((t) => t.isDeviated && !dismissedDeviations.has(t.userId))
+      .map((t) => {
+        const { nearestPoint } = getMinDistanceToRoute(t.lat, t.lng, activeRoute);
+        return {
+          userId: t.userId,
+          userName: t.userName,
+          lat: t.lat,
+          lng: t.lng,
+          distanceMeters: t.distanceMeters,
+          durationSeconds: t.durationSeconds,
+          firstOffRouteAt: t.firstOffRouteAt || Date.now(),
+          nearestRoutePoint: nearestPoint,
+        };
+      })
+      .sort((a, b) => b.distanceMeters - a.distanceMeters);
+  }, [deviationTrackers, dismissedDeviations, activeRoute]);
+
+  // Requirement 4: Captain acts -> tap Regroup sends announcement to everyone
+  const handleRegroup = useCallback(
+    (alert: OffRouteAlert) => {
+      handleSendAnnouncement({
+        title: 'Regroup Convoy',
+        message: `${alert.userName} is ${formatOffRouteDistance(alert.distanceMeters)} off the route. Slow down or wait at next junction.`,
+        icon: '🛑',
+        urgency: 'high',
+      });
+      setToast(`📢 Regroup announcement broadcasted to convoy!`);
+      setTimeout(() => setToast(''), 3000);
+    },
+    [handleSendAnnouncement]
+  );
 
   if (loading) return (
     <div style={s.fullCenter}>
@@ -748,87 +1972,246 @@ export default function RidePage() {
   const isLead = session?.started_by === user?.id;
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: '#111827', fontFamily: 'system-ui, sans-serif', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#111316', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
+      {/* Dynamic Dark Style for Map & Elements */}
+      <style>{`
+        .warm-map-container,
+        .leaflet-container {
+          background-color: #111316 !important;
+          width: 100%;
+          height: 100%;
+        }
+        .warm-map-container .leaflet-tile-pane {
+          filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%);
+        }
+        .warm-map-container .leaflet-control-attribution {
+          display: none;
+        }
+      `}</style>
+
       {/* SOS Banner */}
       {sosActive && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#dc2626', color: '#fff', padding: '12px 16px', textAlign: 'center', fontWeight: 700, fontSize: 15, animation: 'pulse 1s infinite' }}>
-          🆘 SOS ALERT — A rider needs help! Check the Riders tab.
-          <button onClick={() => setSosActive(false)} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontWeight: 600 }}>Dismiss</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#DC2626', color: '#FFFFFF', padding: '12px 16px', textAlign: 'center', fontWeight: 800, fontSize: 14 }}>
+          🆘 SOS ALERT — A rider needs help!
+          <button onClick={() => setSosActive(false)} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.25)', border: 'none', color: '#FFFFFF', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontWeight: 700 }}>Dismiss</button>
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ background: '#1f2937', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexShrink: 0, marginTop: sosActive ? 48 : 0 }}>
+      {/* Header — Matte Obsidian Dark matching Mockup */}
+      <div style={{
+        backgroundColor: '#111316',
+        padding: '14px 18px 8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        flexShrink: 0,
+        marginTop: sosActive ? 48 : 0,
+      }}>
+        {/* Left: Clean Minimal Back Arrow + Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 18, cursor: 'pointer', padding: 0, flexShrink: 0 }}>←</button>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ color: '#fff', fontWeight: 700, fontSize: 14, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              🏍️ {session?.trips?.title ?? 'Live Ride'}
-            </p>
-            <p style={{ color: '#10b981', fontSize: 11, margin: 0, fontWeight: 600 }}>
-              ● LIVE · {riders.length} rider{riders.length !== 1 ? 's' : ''}
-              {!wakeLockActive && <span style={{ color: '#f59e0b', marginLeft: 6 }}>· Screen on</span>}
-            </p>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#F1EFEA',
+              fontSize: 22,
+              cursor: 'pointer',
+              padding: '0 4px 0 0',
+              fontWeight: 800,
+              lineHeight: 1,
+              flexShrink: 0,
+            }}
+            title="Leave Ride Screen"
+          >
+            ←
+          </button>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 className="mobile-header-title" style={{
+              color: '#F1EFEA',
+              fontWeight: 900,
+              fontSize: 20,
+              margin: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              letterSpacing: -0.5,
+            }}>
+              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Itinerary & Plan' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Me · Settings' : 'Group ride'}
+            </h1>
           </div>
         </div>
 
-        {/* Quick actions for Captain & Riders */}
+        {/* Right: Subtitle & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {tab !== 'map' && (
+            <span className="hide-on-mobile" style={{
+              color: '#9D9C9A',
+              fontSize: 12,
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}>
+              {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : tab === 'me' ? 'Ride settings' : ''}
+            </span>
+          )}
+
+          {/* Quick Nearby Help */}
           <button
             type="button"
-            onClick={() => setShowPinModal(true)}
+            onClick={() => setShowNearbyHelp(true)}
             style={{
-              background: pinnedStop ? 'rgba(245, 158, 11, 0.2)' : '#374151',
-              border: pinnedStop ? '1px solid #f59e0b' : '1px solid #4b5563',
-              color: pinnedStop ? '#fbbf24' : '#fff',
-              borderRadius: 8,
-              padding: '6px 10px',
-              fontSize: 12,
-              fontWeight: 700,
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              backgroundColor: '#1B1E23',
+              border: '1.5px solid #2A2E35',
+              fontSize: 13,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
+              justifyContent: 'center',
+              flexShrink: 0,
             }}
-            title="Set convoy regroup target stop"
+            title="Verified Nearby Help (Fuel, Repair, Food, Rest)"
           >
-            <span>{pinnedStop ? '📍 Target' : '📌 Pin Stop'}</span>
+            🛠️
           </button>
 
+          {/* Feature K: Captain-only announcement control on Ride tab */}
           {isLead && (
             <button
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                border: 'none',
-                color: '#111827',
-                borderRadius: 8,
-                padding: '6px 10px',
+                padding: '4px 8px',
+                borderRadius: 18,
+                backgroundColor: 'rgba(240, 194, 58, 0.15)',
+                border: '1.5px solid #F0C23A',
+                color: '#F0C23A',
+                fontSize: 11.5,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+                flexShrink: 0,
+              }}
+              title="Captain announcement sheet (Feature K)"
+            >
+              <span>👑</span>
+              <span className="hide-on-mobile">Announce</span>
+            </button>
+          )}
+
+          {/* Discreet Emergency SOS */}
+          <button
+            type="button"
+            onClick={sendSOS}
+            style={{
+              padding: '4px 8px',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1.5px solid #EF4444',
+              color: '#EF4444',
+              borderRadius: 14,
+              fontSize: 11,
+              fontWeight: 900,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title="Emergency SOS"
+          >
+            SOS
+          </button>
+
+          {/* End / Leave Ride */}
+          {isLead && (
+            <button
+              type="button"
+              onClick={handleEndRide}
+              disabled={endingRide}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                backgroundColor: '#1B1E23',
+                border: '1.5px solid #2A2E35',
+                color: '#EF4444',
                 fontSize: 12,
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                justifyContent: 'center',
+                flexShrink: 0,
               }}
-              title="Broadcast alert to all riders"
+              title="End ride for everyone"
             >
-              <span>📢 Broadcast</span>
-            </button>
-          )}
-
-          {isLead ? (
-            <button onClick={handleEndRide} disabled={endingRide} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
-              {endingRide ? '...' : '⏹ End'}
-            </button>
-          ) : (
-            <button onClick={() => navigate(-1)} style={{ background: '#374151', color: '#9ca3af', border: 'none', borderRadius: 8, padding: '7px 11px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
-              Leave
+              {endingRide ? '...' : '⏹'}
             </button>
           )}
         </div>
       </div>
+
+      {/* Dedicated Expedition Route Strip for Mobile Users View */}
+      {session?.trips?.title && tab === 'map' && (
+        <div style={{
+          backgroundColor: '#1B1E23',
+          border: '1.5px solid #2A2E35',
+          borderRadius: 14,
+          margin: '2px 16px 8px',
+          padding: '7px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              backgroundColor: 'rgba(240, 194, 58, 0.15)',
+              color: '#F0C23A',
+              fontSize: 12,
+              flexShrink: 0,
+            }}>
+              🗺️
+            </span>
+            <span style={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: '#F1EFEA',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              letterSpacing: -0.2,
+            }}>
+              {session.trips.title}
+            </span>
+          </div>
+
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: '#9D9C9A',
+            backgroundColor: '#111316',
+            border: '1px solid #2A2E35',
+            padding: '2px 8px',
+            borderRadius: 999,
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+          }}>
+            Day 2 · 62 km to go
+          </span>
+        </div>
+      )}
 
       {/* Floating HUD Toast */}
       {toast && (
@@ -853,43 +2236,76 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Captain Announcement Top Banner */}
+      {/* Feature K: Captain Announcement Alert Card (Members see the announcement as an alert) */}
       {activeAnnouncement && (
         <div style={{
-          background: activeAnnouncement.urgency === 'high' ? 'linear-gradient(135deg, #991b1b, #b91c1c)' : 'linear-gradient(135deg, #b45309, #d97706)',
-          color: '#fff',
-          padding: '8px 14px',
+          margin: '0 16px 8px 16px',
+          padding: '12px 14px',
+          borderRadius: 18,
+          backgroundColor: '#1B1E23',
+          border: activeAnnouncement.urgency === 'high' ? '1.5px solid #EF4444' : '1.5px solid #F0C23A',
+          boxShadow: activeAnnouncement.urgency === 'high' ? '0 4px 20px rgba(239, 68, 68, 0.35)' : '0 4px 20px rgba(240, 194, 58, 0.35)',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 12,
           flexShrink: 0,
-          borderBottom: '2px solid rgba(255,255,255,0.2)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          zIndex: 35,
+          animation: 'slideDown 0.25s ease-out',
         }}>
-          <span style={{ fontSize: 22, flexShrink: 0 }}>{activeAnnouncement.icon}</span>
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: activeAnnouncement.urgency === 'high' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(240, 194, 58, 0.15)',
+            border: activeAnnouncement.urgency === 'high' ? '1px solid #EF4444' : '1px solid #F0C23A',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            flexShrink: 0,
+          }}>
+            {activeAnnouncement.icon}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: '#fef08a' }}>
-              📢 CAPTAIN ANNOUNCEMENT ({activeAnnouncement.timestamp})
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <span style={{
+                fontSize: 9,
+                fontWeight: 900,
+                color: activeAnnouncement.urgency === 'high' ? '#EF4444' : '#F0C23A',
+                letterSpacing: 0.8,
+                textTransform: 'uppercase',
+              }}>
+                📢 CAPTAIN ANNOUNCEMENT
+              </span>
+              <span style={{ fontSize: 9.5, color: '#9D9C9A', fontWeight: 600 }}>
+                {activeAnnouncement.timestamp}
+              </span>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeAnnouncement.title}: {activeAnnouncement.message}
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA', lineHeight: 1.2 }}>
+              {activeAnnouncement.title}
             </div>
+            {activeAnnouncement.message && (
+              <div style={{ fontSize: 11.5, color: '#9D9C9A', fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
+                {activeAnnouncement.message}
+              </div>
+            )}
           </div>
           <button
+            type="button"
             onClick={() => setActiveAnnouncement(null)}
             style={{
-              background: 'rgba(255,255,255,0.25)',
-              border: 'none',
-              color: '#fff',
-              borderRadius: 6,
-              padding: '3px 8px',
+              padding: '6px 12px',
+              backgroundColor: '#111316',
+              border: '1.5px solid #2A2E35',
+              borderRadius: 10,
+              color: '#F1EFEA',
               fontSize: 11,
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: 'pointer',
               flexShrink: 0,
             }}
           >
-            Dismiss
+            Got it ✓
           </button>
         </div>
       )}
@@ -898,10 +2314,12 @@ export default function RidePage() {
       {pinnedStop && (
         <StopArrivalTracker
           pinnedStop={pinnedStop}
-          ridersArrival={ridersArrival}
+          ridersArrival={enrichedRidersArrival}
           currentUserId={user?.id}
           myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
           mySpeedKmh={myPosRef.current ? 0 : 0}
+          isMyStale={myFreshness.isStale || myFreshness.isUnknown}
+          myAgeLabel={myFreshness.ageLabel}
           onToggleMyArrival={handleToggleMyArrival}
           onOpenNavigation={(target) => {
             setNavTarget(target);
@@ -913,103 +2331,803 @@ export default function RidePage() {
         />
       )}
 
-      {/* Background warning banner */}
-      {backgroundWarning && (
-        <div style={{ background: '#92400e', color: '#fef3c7', padding: '8px 16px', fontSize: 13, fontWeight: 600, textAlign: 'center', flexShrink: 0 }}>
-          ⚠️ App was in background — location may have paused. Keep this screen open while riding.
-          <button onClick={() => setBackgroundWarning(false)} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#fef3c7', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
+      {/* Feature P1: Step 3 - If tracking stops: The Ride tab warns: Tracking paused. Reopen Payanam. */}
+      {trackingStatus.isPaused && (
+        <TrackingPausedBanner
+          pauseReason={trackingStatus.pauseReason}
+          onResume={() => {
+            backgroundTrackingEngine.resumeTracking();
+            setToast('Tracking resumed');
+            setTimeout(() => setToast(''), 3000);
+          }}
+          onOpenMeSettings={() => setTab('me')}
+        />
+      )}
+
+      {/* Feature B: Offline Position Queue Ride Banner ("No signal. Your position is saved and will sync.") */}
+      <OfflineSignalBanner
+        isOnline={queueState.isOnline}
+        pendingCount={queueState.pendingCount}
+        isSyncing={queueState.isSyncing}
+        justSynced={justSynced}
+        onForceSync={syncPendingBatch}
+      />
+
+      {/* Feature C: Route-deviation alert card */}
+      <RouteDeviationCard
+        alerts={activeDeviationAlerts}
+        isCaptain={isLead}
+        currentUserId={user?.id}
+        onRegroup={handleRegroup}
+        onFocusRider={(lat, lng) => {
+          setFocusTarget([lat, lng]);
+          setFollowing(false);
+          setToast('Focused on off-route rider');
+        }}
+        onNavigateBack={(lat, lng) => {
+          setNavTarget({ name: 'Planned Route Rejoin Point', lat, lng });
+          setShowNavModal(true);
+        }}
+        onDismiss={(userId) => {
+          setDismissedDeviations((prev) => new Set([...prev, userId]));
+        }}
+      />
+
+      {/* Feature D: Battery-saver mode note on Ride tab */}
+      <BatterySaverNote
+        enabled={batterySaver}
+        onOpenSettings={() => setTab('me')}
+      />
+
+      {/* Feature J: Arrival detection offer (<200m) */}
+      {isArrivalZone && pinnedStop && !isMeArrived && !arrivalOfferDismissed && (
+        <ArrivalOfferBanner
+          stopName={pinnedStop.name}
+          distanceMeters={(distToPinnedStop ?? 0.1) * 1000}
+          onConfirmArrival={() => handleToggleMyArrival(true)}
+          onDismiss={() => setArrivalOfferDismissed(true)}
+        />
+      )}
+
+      {/* Feature J: Missed stop prompt (>350m past stop) */}
+      {isMissedStop && pinnedStop && !isMeArrived && !missedPromptDismissed && (
+        <MissedStopPromptCard
+          pinnedStop={pinnedStop}
+          onConfirmStopped={() => handleToggleMyArrival(true)}
+          onSkipStop={() => setMissedPromptDismissed(true)}
+          onTurnBack={() => {
+            setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng });
+            setShowNavModal(true);
+            setMissedPromptDismissed(true);
+          }}
+        />
+      )}
+
+      {/* Feature F+I: Stop Pre-Alert & Arrival Card */}
+      {!dismissStopApproach && pinnedStop && (stopApproachEval.isApproaching || isMeArrived) && (
+        <StopApproachCard
+          pinnedStop={pinnedStop}
+          stage={stopApproachEval.stage}
+          distanceKm={distToPinnedStop}
+          etaFormatted={stopApproachEval.etaFormatted}
+          arrivedCount={arrivedCount}
+          totalCount={ridersWithFreshness.length}
+          isMeArrived={isMeArrived}
+          onToggleMyArrival={handleToggleMyArrival}
+          onOpenDetail={() => setShowStopDetailSheet(true)}
+          onOpenNavigation={(target) => {
+            setNavTarget(target);
+            setShowNavModal(true);
+          }}
+          onDismiss={() => setDismissStopApproach(true)}
+        />
+      )}
+
+      {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
+      <div style={{
+        flex: tab === 'map' ? 1 : 0,
+        overflow: 'hidden',
+        display: tab === 'map' ? 'flex' : 'none',
+        flexDirection: 'column',
+        position: 'relative',
+        backgroundColor: '#111316',
+        minHeight: 0,
+      }}>
+        {/* Feature E2: Planned Route Progress Strip along planned line */}
+        {splitView && activeRoute.length > 1 && (
+          <RouteProgressStrip
+            routeTitle={session?.trips?.title ? `${session.trips.title}` : 'Planned Route Progress'}
+            totalDistanceMeters={totalRouteDist}
+            riders={ridersForProgressStrip}
+            stops={stopsForProgressStrip}
+            onSelectRider={(uid) => {
+              const found = ridersWithFreshness.find((r) => r.userId === uid);
+              if (found && found.lat && found.lng) {
+                setFollowing(false);
+                setFocusTarget([found.lat, found.lng]);
+              }
+            }}
+            onSelectStop={(stopId) => {
+              const found = itineraryStops.find((s) => s.id === stopId);
+              if (found && found.lat && found.lng) {
+                setFollowing(false);
+                setFocusTarget([found.lat as number, found.lng as number]);
+              }
+            }}
+          />
+        )}
+
+        {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
+        <div className="warm-map-container" style={{
+          flex: splitView ? '0 0 38%' : '1 1 auto',
+          height: splitView ? '38%' : '100%',
+          minHeight: 0,
+          margin: splitView ? '2px 16px 8px' : '0',
+          borderRadius: splitView ? 20 : 0,
+          border: splitView ? '1.5px solid #2A2E35' : 'none',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          backgroundColor: '#111316',
+          boxShadow: splitView ? '0 4px 20px rgba(0, 0, 0, 0.35)' : 'none',
+        }}>
+          {gpsError && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 2000,
+              backgroundColor: '#111316',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '24px 20px 28px',
+              boxSizing: 'border-box',
+            }}>
+              <div>
+                {/* Status Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#9D9C9A', fontSize: 13, fontWeight: 700, marginBottom: 28 }}>
+                  <span>9:41</span>
+                  <span>5G</span>
+                </div>
+
+                {/* Brand Header matching mockup: ■ PAYANAM */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
+                  <div style={{ width: 12, height: 12, backgroundColor: '#F0C23A', borderRadius: 2 }} />
+                  <span style={{ color: '#F1EFEA', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
+                </div>
+
+                {/* Step Card matching mockup */}
+                <div style={{
+                  backgroundColor: '#1B1E23',
+                  border: '1.5px solid #2A2E35',
+                  borderRadius: 20,
+                  padding: '22px 20px',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                    STEP 2 OF 3
+                  </div>
+                  <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: '#F1EFEA', letterSpacing: -0.3 }}>
+                    Live trip tracking
+                  </h3>
+                  <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.45, margin: 0 }}>
+                    We use your location only while a trip is active, so your group can see where you are.
+                  </p>
+                </div>
+              </div>
+
+              {/* Fixed Bottom Buttons matching mockup */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGpsError('');
+                    navigator.geolocation?.getCurrentPosition(
+                      () => setGpsError(''),
+                      (err) => setGpsError(err.message || 'GPS permission needed')
+                    );
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    backgroundColor: '#F0C23A',
+                    color: '#111316',
+                    border: 'none',
+                    borderRadius: 14,
+                    fontWeight: 900,
+                    fontSize: 16,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(240, 194, 58, 0.25)',
+                    textAlign: 'center',
+                  }}
+                >
+                  Allow location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGpsError('')}
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    backgroundColor: '#1B1E23',
+                    color: '#F1EFEA',
+                    border: '1.5px solid #2A2E35',
+                    borderRadius: 14,
+                    fontWeight: 800,
+                    fontSize: 15,
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                  }}
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* View Mode Toggle: Map + Roster vs Full Map */}
+          <button
+            type="button"
+            onClick={() => setSplitView(!splitView)}
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              zIndex: 1000,
+              backgroundColor: '#1B1E23',
+              border: '1.5px solid #2A2E35',
+              color: '#F1EFEA',
+              borderRadius: 20,
+              padding: '6px 14px',
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}
+            title="Toggle split roster and map view"
+          >
+            <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
+          </button>
+
+          {/* Feature 3: Toggle nearby service pins on Ride map */}
+          <button
+            type="button"
+            onClick={() => setShowServicePins(!showServicePins)}
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: splitView ? 116 : 106,
+              zIndex: 1000,
+              backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.15)' : '#1B1E23',
+              border: showServicePins ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
+              color: showServicePins ? '#F0C23A' : '#9D9C9A',
+              borderRadius: 20,
+              padding: '6px 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}
+            title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
+          >
+            <span>🛠️</span>
+            <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Re-center button */}
+          {!following && myLat && myLng && (
+            <button
+              onClick={() => { setFollowing(true); setFocusTarget(null); }}
+              style={{
+                position: 'absolute',
+                bottom: splitView ? 12 : (pinnedStop ? 115 : 20),
+                right: 12,
+                zIndex: 1000,
+                backgroundColor: '#1B1E23',
+                border: '2px solid #F0C23A',
+                color: '#F0C23A',
+                borderRadius: '50%',
+                width: 38,
+                height: 38,
+                fontSize: 18,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
+              }}
+              title="Re-center on me"
+            >
+              📍
+            </button>
+          )}
+
+          {/* Feature G: One-tap Tell group floating button on Ride tab */}
+          {!splitView && !pinnedStop && (
+            <button
+              type="button"
+              onClick={() => setShowTellGroupSheet(true)}
+              style={{
+                position: 'absolute',
+                bottom: 20,
+                left: 12,
+                zIndex: 1000,
+                backgroundColor: '#F0C23A',
+                color: '#111316',
+                border: 'none',
+                borderRadius: 24,
+                padding: '10px 18px',
+                fontSize: 13,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
+              }}
+              title="Tell group presets"
+            >
+              <span>📢</span>
+              <span>Tell group</span>
+            </button>
+          )}
+
+          {/* Wake lock indicator */}
+          {wakeLockActive && (
+            <div style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              zIndex: 999,
+              backgroundColor: '#1B1E23',
+              border: '1.5px solid #10B981',
+              color: '#10B981',
+              fontSize: 11,
+              fontWeight: 800,
+              padding: '5px 10px',
+              borderRadius: 20,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}>
+              🔆 Screen on
+            </div>
+          )}
+
+          <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
+            {/* Auto-invalidates size whenever splitView toggles so tiles cover 100% of screen */}
+            <MapResizer splitView={splitView} />
+
+            {/* Free OpenStreetMap tiles rendered in Dark Mode via CSS filter (zero watermarks / zero API keys) */}
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+            {myLat && myLng && (
+              <MapFollow lat={myLat} lng={myLng} following={following} focusTarget={focusTarget} onDrag={() => { setFollowing(false); setFocusTarget(null); }} />
+            )}
+            {/* Road-following route (OSRM): Amber dashed route line matching mockup */}
+            {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
+              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#F0C23A" weight={5} dashArray="8, 8" opacity={0.95} />
+            )}
+
+            {/* Feature B: Rider recorded breadcrumb trails (Group map catches up) */}
+            {Object.entries(riderTrails).map(([rId, trailPts]) => {
+              if (!trailPts || trailPts.length < 2) return null;
+              const rIdx = riders.findIndex((r) => r.user_id === rId);
+              const trailColor = rId === user?.id ? '#10B981' : (rIdx >= 0 ? RIDER_COLORS[rIdx % RIDER_COLORS.length] : '#F0C23A');
+              return (
+                <Polyline
+                  key={`trail-${rId}`}
+                  positions={trailPts}
+                  pathOptions={{
+                    color: trailColor,
+                    weight: rId === user?.id ? 4 : 3,
+                    opacity: 0.65,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              );
+            })}
+            {/* Itinerary stop markers along planned line (Feature E2) */}
+            {itineraryStops.map((stop) => (
+              <Marker
+                key={stop.id}
+                position={[stop.lat as number, stop.lng as number]}
+                icon={makeStopIcon(stop.place, stop.item_type, stop.order_index)}
+              />
+            ))}
+            {/* Pinned target stop marker with pulsating alert */}
+            {pinnedStop && (
+              <Marker
+                position={[pinnedStop.lat, pinnedStop.lng]}
+                icon={makePinnedStopIcon(pinnedStop.type)}
+              />
+            )}
+            {/* Feature 3: Nearby services corridor pins on Ride map (Fuel, Repair, Food, Rest, Stay) */}
+            {showServicePins &&
+              corridorServices.map((srv) => (
+                <Marker
+                  key={srv.id}
+                  position={[srv.lat, srv.lng]}
+                  icon={makeServicePinIcon(srv.category, srv.isOpen, srv.name)}
+                  eventHandlers={{
+                    click: () => {
+                      setShowNearbyHelp(true);
+                    },
+                  }}
+                />
+              ))}
+            {/* My navigation arrow — rotates with heading and dims if stale */}
+            {myLat && myLng && (
+              <Marker
+                position={[myLat, myLng]}
+                icon={makeMyNavIcon(colorForUser(user?.id ?? ''), myHeading, myStatus, myFreshness.isStale)}
+              />
+            )}
+            {/* Other riders — dynamic Last-seen & Route Progress marker (Feature A + E2) */}
+            {ridersWithFreshness.filter((r) => !r.isMe).map((r) => (
+              <Marker
+                key={r.userId}
+                position={[r.lat, r.lng]}
+                icon={createRiderMarkerIcon(
+                  r.userName,
+                  r.color,
+                  r.quickStatus ?? '',
+                  r.freshness,
+                  r.isCaptain,
+                  r.routeStatus
+                )}
+              />
+            ))}
+          </MapContainer>
+        </div>
+
+        {/* In Split View: Alert Banner + Rider Roster (Mockup Screen 1) */}
+        {splitView && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
+            {/* Stale Riders Warning Banner */}
+            <StaleRidersAlertBanner
+              staleCount={staleRiders.length}
+              staleRiderNames={staleRiders.map((r) => r.userName)}
+              onClick={() => setTab('riders')}
+            />
+
+            {/* Rider Roster List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 2px 8px' }}>
+                <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                  Convoy Roster ({ridersWithFreshness.length})
+                </span>
+                <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>
+                  ● {ridersWithFreshness.filter(r => r.freshness.isLive).length} LIVE
+                </span>
+              </div>
+
+              {ridersWithFreshness.length === 0 && (
+                <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+                  Waiting for riders to join and share GPS...
+                </p>
+              )}
+
+              {ridersWithFreshness.map((rider) => (
+                <RiderRosterRow
+                  key={rider.userId}
+                  rider={rider}
+                  onClick={handleFocusRider}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Next Stop Bottom Dock (Screen 1 mockup signature) */}
+        {(splitView || pinnedStop) && (
+          <div style={splitView ? {} : {
+            position: 'absolute',
+            bottom: 6,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            pointerEvents: 'none',
+          }}>
+            <div style={{ pointerEvents: 'auto' }}>
+              <NextStopBottomDock
+                pinnedStop={pinnedStop}
+                distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+                arrivedCount={arrivedCount}
+                totalCount={ridersWithFreshness.length}
+                onOpenDetail={() => setShowStopDetailSheet(true)}
+                onOpenTellGroup={() => setShowTellGroupSheet(true)}
+                onPinNewStop={() => setShowPinModal(true)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Plan Tab (Mockup Screen 7: Trip detail · itinerary) */}
+      {tab === 'plan' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316', padding: '12px 16px' }}>
+          {/* Top Subheader Filter Tabs */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            <span style={{ backgroundColor: '#F0C23A', color: '#111316', padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
+              ITINERARY
+            </span>
+            <span style={{ color: '#9D9C9A', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
+              PEOPLE
+            </span>
+            <span style={{ color: '#9D9C9A', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
+              MONEY
+            </span>
+            <button
+              onClick={() => setShowNearbyHelp(true)}
+              style={{ background: 'none', border: 'none', color: '#F0C23A', padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+            >
+              HELP ↗
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Feature 2: Trip Completed Celebration Banner */}
+            {milestoneSummary && (
+              <TripCompletedBanner
+                fromPlace={session?.trips?.from_place || 'Bengaluru'}
+                toPlace={session?.trips?.to_place || 'Kasaragod'}
+                days={session?.trips?.days || 3}
+                distanceKm={milestoneSummary.totalDistanceKm}
+                onShareMilestones={() => setShowMilestoneModal(true)}
+              />
+            )}
+
+            {/* Itinerary Section Card */}
+            <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA', letterSpacing: -0.2 }}>
+                  {session?.trips?.title ?? 'Bengaluru to Kasaragod'}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#9D9C9A' }}>
+                  3 days · {ridersWithFreshness.length} riders
+                </span>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+                DAY 2 · HUBLI TO MANGALURU
+              </div>
+
+              {/* Dynamic Route Itinerary with 'FROM CHAT' tags (Feature H2 & Mockup 7) */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {allPlanStops.map((stop, idx) => (
+                  <ItineraryStopItem
+                    key={stop.id || `${stop.place}-${idx}`}
+                    stop={stop}
+                    index={idx}
+                    isPinned={pinnedStop?.name === stop.place}
+                    onPinStop={(s) => {
+                      if (s.lat && s.lng) {
+                        handlePinStop({
+                          id: s.id,
+                          name: s.place,
+                          lat: s.lat,
+                          lng: s.lng,
+                          type: s.item_type || 'stop',
+                          dayNumber: s.day_number,
+                          description: s.description,
+                        }, false);
+                        setTab('map');
+                      } else {
+                        setToast(`Location coordinates not available for ${s.place}`);
+                        setTimeout(() => setToast(''), 2500);
+                      }
+                    }}
+                    onOpenNavigation={(s) => {
+                      if (s.lat && s.lng) {
+                        setNavTarget({ name: s.place, lat: s.lat, lng: s.lng });
+                        setShowNavModal(true);
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Action row: Add planned stop & Propose edit (Feature 1A) */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPinModal(true)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#111316',
+                    border: '1.5px dashed #2A2E35',
+                    borderRadius: 10,
+                    color: '#F0C23A',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>➕</span> Add planned stop
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowProposeModal(true)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#111316',
+                    border: '1.5px dashed #F0C23A',
+                    borderRadius: 10,
+                    color: '#F0C23A',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>💡</span> Propose edit
+                </button>
+              </div>
+            </div>
+
+            {/* Feature 1A Step 4: Proposed Itinerary Edits List (Approved by Captain/Owner) */}
+            {proposals.map((prop) => (
+              <ItineraryProposalCard
+                key={prop.id}
+                proposal={prop}
+                isCaptain={isLead}
+                onAccept={handleAcceptProposal}
+                onDecline={handleDeclineProposal}
+              />
+            ))}
+
+            {/* Feature 1A Step 2: Convoy Invitation Card (Link or Code) */}
+            <ConvoyInviteCard
+              inviteCode={session?.trip_id?.slice(0, 6).toUpperCase() || 'BLR9X2'}
+              tripTitle={session?.trips?.title}
+              fromPlace={session?.trips?.from_place}
+              toPlace={session?.trips?.to_place}
+            />
+
+            {/* Feature 1B: Publish Itinerary Publicly Card */}
+            {session?.trips && isLead && (
+              <button
+                type="button"
+                onClick={() => setShowPublishModal(true)}
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: '#1B1E23',
+                  border: isTripPublished(session.trips.id) ? '1.5px solid #10B981' : '1.5px dashed #F0C23A',
+                  borderRadius: 14,
+                  color: isTripPublished(session.trips.id) ? '#10B981' : '#F0C23A',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>🌐</span>
+                <span>{isTripPublished(session.trips.id) ? '✓ Live in Discover (Settings)' : 'Publish Itinerary to Discover'}</span>
+              </button>
+            )}
+
+            {/* Feature 2: Share Trip Milestones Button */}
+            {session?.trips && milestoneSummary && (
+              <button
+                type="button"
+                onClick={() => setShowMilestoneModal(true)}
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: 'rgba(240, 194, 58, 0.1)',
+                  border: '1.5px solid #F0C23A',
+                  borderRadius: 14,
+                  color: '#F0C23A',
+                  fontWeight: 900,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>🏆</span>
+                <span>Share Trip Milestones & Commemorative Card</span>
+              </button>
+            )}
+
+            {/* Amenities Shortcut */}
+            <button
+              type="button"
+              onClick={() => setShowNearbyHelp(true)}
+              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+            >
+              🛠️ View route-cached amenities (fuel, repair, food)
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Map — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
-      <div style={{ flex: tab === 'map' ? 1 : 0, overflow: 'hidden', display: tab === 'map' ? 'block' : 'none', position: 'relative' }}>
-        {gpsError && (
-          <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 999, background: '#dc2626', color: '#fff', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-            📍 {gpsError}
-          </div>
-        )}
-        {/* Re-center button — appears when user pans away */}
-        {!following && myLat && myLng && (
-          <button
-            onClick={() => setFollowing(true)}
-            style={{ position: 'absolute', bottom: 80, right: 16, zIndex: 1000, background: '#1f2937', border: '2px solid #3b82f6', color: '#3b82f6', borderRadius: '50%', width: 48, height: 48, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}
-          >
-            📍
-          </button>
-        )}
-        {/* Wake lock indicator */}
-        {wakeLockActive && (
-          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 999, background: 'rgba(16,185,129,0.9)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 8 }}>
-            🔆 Screen on
-          </div>
-        )}
-        <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="© OpenStreetMap"
-          />
-          {myLat && myLng && (
-            <MapFollow lat={myLat} lng={myLng} following={following} onDrag={() => setFollowing(false)} />
-          )}
-          {/* Road-following route (OSRM), fallback to straight lines */}
-          {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
-            <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#3b82f6" weight={5} opacity={0.85} />
-          )}
-          {/* Itinerary stop markers */}
-          {itineraryStops.map((stop) => (
-            <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
-          ))}
-          {/* Pinned target stop marker with pulsating alert */}
-          {pinnedStop && (
-            <Marker
-              position={[pinnedStop.lat, pinnedStop.lng]}
-              icon={makePinnedStopIcon(pinnedStop.type)}
-            />
-          )}
-          {/* My navigation arrow — rotates with heading */}
-          {riders.filter((r) => r.user_id === user?.id).map((r) => (
-            <Marker
-              key={r.user_id}
-              position={[Number(r.lat), Number(r.lng)]}
-              icon={makeMyNavIcon(colorForUser(r.user_id), myHeading, myStatus)}
-            />
-          ))}
-          {/* Other riders — circle with initial */}
-          {riders.filter((r) => r.user_id !== user?.id).map((r) => (
-            <Marker
-              key={r.user_id}
-              position={[Number(r.lat), Number(r.lng)]}
-              icon={makeRiderIcon((r.user_name || '?')[0].toUpperCase(), colorForUser(r.user_id), r.quick_status ?? '')}
-            />
-          ))}
-        </MapContainer>
-      </div>
+      {/* Discover tab (Feature 1B: Discover search, verified routes, and source-attributed copying) */}
+      {tab === 'discover' && (
+        <DiscoverTab
+          currentUser={user}
+          onTripCopied={(draft) => {
+            setToast(`✓ Copied "${draft.title}" to My Trips! Draft created with credit to source`);
+            setTimeout(() => setToast(''), 3500);
+          }}
+          onOpenPublishFlow={session?.trips && isLead ? () => setShowPublishModal(true) : undefined}
+        />
+      )}
 
-      {/* Chat panel */}
+      {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards & WhatsApp Link) */}
       {tab === 'chat' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {messages.length === 0 && <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40, fontSize: 14 }}>No messages yet. Say hi or share a stop! 👋</p>}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
+          {/* Feature H2 Step 4: Chat stays trip-only banner */}
+          <div style={{ padding: '10px 16px 0' }}>
+            <TripChatWhatsAppBanner
+              tripTitle={session?.trips?.title}
+            />
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {messages.length === 0 && (
+              <div style={{ textAlign: 'center', marginTop: 40 }}>
+                <p style={{ color: '#F1EFEA', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
+                <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
+              </div>
+            )}
             {messages.map((m) => {
               const isMe = m.user_id === user?.id;
-              const isSos = m.message_type === 'sos';
+              const isPreset = m.message_type === 'preset' || Boolean(getPresetInfo(m.message));
               const isStatus = m.message_type === 'status';
               const isAnnouncement = m.message_type === 'announcement';
-              const isStopPin = m.message_type === 'stop_pin';
               const isStopArrival = m.message_type === 'stop_arrival';
-              const isLocationShare = m.message_type === 'location_share' || m.message.includes('[') && m.message.includes(']');
+
+              // Feature G: One-tap status preset cards in trip chat
+              if (isPreset) {
+                return (
+                  <PresetCard
+                    key={m.id}
+                    messageId={m.id}
+                    senderId={m.user_id}
+                    senderName={m.user_name}
+                    messageText={m.message}
+                    createdAt={m.created_at}
+                    isMe={isMe}
+                    deliveryReceipts={deliveryReceipts[m.id]}
+                    allRiders={ridersWithFreshness.map((r) => ({ userId: r.userId, userName: r.userName }))}
+                    isCaptain={session?.started_by === m.user_id || m.user_name?.toLowerCase().includes('captain')}
+                  />
+                );
+              }
 
               if (isStatus || isStopArrival) {
                 return (
                   <div key={m.id} style={{ textAlign: 'center', margin: '2px 0' }}>
                     <span style={{
-                      fontSize: 12,
-                      color: isStopArrival ? '#34d399' : '#9ca3af',
-                      background: isStopArrival ? 'rgba(16, 185, 129, 0.15)' : '#1f2937',
-                      border: isStopArrival ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid #374151',
+                      fontSize: 11,
+                      color: isStopArrival ? '#10B981' : '#9D9C9A',
+                      background: isStopArrival ? 'rgba(16, 185, 129, 0.15)' : '#1B1E23',
+                      border: isStopArrival ? '1.5px solid #10B981' : '1.5px solid #2A2E35',
                       padding: '3px 12px',
                       borderRadius: 14,
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}>
                       {m.message}
                     </span>
@@ -1020,93 +3138,72 @@ export default function RidePage() {
               if (isAnnouncement) {
                 return (
                   <div key={m.id} style={{
-                    background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))',
-                    border: '1px solid #f59e0b',
-                    borderRadius: 12,
-                    padding: '10px 14px',
+                    background: 'rgba(240, 194, 58, 0.08)',
+                    border: '1.5px solid #F0C23A',
+                    borderRadius: 16,
+                    padding: '12px 14px',
                     margin: '4px 0',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: '#F0C23A', textTransform: 'uppercase' }}>
                       <span>📢</span>
-                      <span>Captain Broadcast · {m.user_name}</span>
+                      <span>Captain Announcement · {m.user_name}</span>
                     </div>
-                    <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ color: '#F1EFEA', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
                       {m.message}
                     </div>
                   </div>
                 );
               }
 
-              // Check if message has location coordinates [lat,lng]
-              const coordMatch = m.message.match(/\[([0-9.-]+),\s*([0-9.-]+)\]/);
-              const hasCoords = !!coordMatch;
-              const parsedLat = coordMatch ? parseFloat(coordMatch[1]) : 0;
-              const parsedLng = coordMatch ? parseFloat(coordMatch[2]) : 0;
+              // Feature H2: Parse location details from message text or metadata
+              const parsedLoc = parseLocationFromMessage(m.message);
+              const hasStopMention = m.message_type === 'location_share' || parsedLoc.isLocation || m.message_type === 'stop_pin';
 
               return (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                  {!isMe && <span style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2, fontWeight: 600 }}>{m.user_name}</span>}
+                  {!isMe && (
+                    <span style={{ fontSize: 12, color: '#9D9C9A', marginBottom: 4, fontWeight: 700 }}>
+                      {m.user_name}
+                    </span>
+                  )}
                   <div style={{
-                    maxWidth: '82%', padding: '10px 14px', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    background: isSos ? '#dc2626' : isStopPin ? '#1e3a8a' : isMe ? '#2563eb' : '#374151',
-                    color: '#fff', fontSize: 14, fontWeight: isSos ? 700 : 400,
-                    border: isSos ? '2px solid #fca5a5' : isStopPin ? '1px solid #60a5fa' : 'none',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    maxWidth: '88%',
+                    padding: '12px 16px',
+                    borderRadius: 20,
+                    background: isMe ? '#22262D' : '#1B1E23',
+                    color: '#F1EFEA',
+                    border: isMe ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                   }}>
-                    <div>{m.message}</div>
+                    <div style={{ fontSize: 14, lineHeight: 1.4 }}>{m.message}</div>
 
-                    {/* Interactive Actions for Location / Stop Messages */}
-                    {(isLocationShare || hasCoords) && parsedLat !== 0 && (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNavTarget({ name: `${m.user_name}'s Shared Location`, lat: parsedLat, lng: parsedLng });
-                            setShowNavModal(true);
-                          }}
-                          style={styles.chatActionBtn}
-                        >
-                          🧭 Navigate
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handlePinStop({
-                            name: `${m.user_name}'s Shared Stop`,
-                            lat: parsedLat,
-                            lng: parsedLng,
-                            type: 'stop',
-                          }, false)}
-                          style={{ ...styles.chatActionBtn, background: '#f59e0b', color: '#111827' }}
-                        >
-                          📍 Pin Stop
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!session?.trip_id) return;
-                            try {
-                              await tripService.addStop(session.trip_id, {
-                                place: `Stop shared by ${m.user_name}`,
-                                item_type: 'stop',
-                                lat: parsedLat,
-                                lng: parsedLng,
-                                description: m.message,
-                              });
-                              setToast('✓ Added to trip itinerary!');
-                              setTimeout(() => setToast(''), 3000);
-                            } catch {
-                              setToast('Failed to add stop');
-                              setTimeout(() => setToast(''), 2500);
-                            }
-                          }}
-                          style={{ ...styles.chatActionBtn, background: '#10b981', color: '#fff' }}
-                        >
-                          ➕ Add to Plan
-                        </button>
-                      </div>
+                    {/* Feature H2: Reusable Embedded Location Card with Captain 'Confirm as stop' & 'FROM CHAT' link */}
+                    {hasStopMention && (
+                      <ChatLocationCard
+                        placeName={parsedLoc.placeName || pinnedStop?.name || 'Shared Location'}
+                        lat={parsedLoc.lat ?? (pinnedStop?.lat || null)}
+                        lng={parsedLoc.lng ?? (pinnedStop?.lng || null)}
+                        note={parsedLoc.note}
+                        createdAt={m.created_at}
+                        isCaptain={isLead}
+                        isConfirmed={isStopConfirmedInItinerary(
+                          parsedLoc.placeName || pinnedStop?.name || '',
+                          parsedLoc.lat,
+                          parsedLoc.lng,
+                          session?.itinerary
+                        )}
+                        onConfirmAsStop={async (place, lat, lng, note) => {
+                          await handleCaptainConfirmStop(place, lat, lng, note, m.id);
+                        }}
+                        onViewInPlan={() => setTab('plan')}
+                        onOpenInMaps={(lat, lng, place) => {
+                          setNavTarget({ name: place, lat, lng });
+                          setShowNavModal(true);
+                        }}
+                      />
                     )}
                   </div>
-                  <span style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>
+                  <span style={{ fontSize: 10, color: '#9D9C9A', marginTop: 3 }}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -1115,92 +3212,196 @@ export default function RidePage() {
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Quick Chat Actions (Location Share & Stop Suggest) */}
-          <div style={{ padding: '6px 12px', background: '#111827', display: 'flex', gap: 8, borderTop: '1px solid #374151', overflowX: 'auto' }}>
+          {/* Quick Chat Pill Row & Feature G Presets */}
+          <div style={{ padding: '6px 14px', background: '#111316', display: 'flex', gap: 8, borderTop: '1px solid #2A2E35', overflowX: 'auto' }}>
+            <button
+              type="button"
+              onClick={() => setShowTellGroupSheet(true)}
+              style={{
+                padding: '6px 14px',
+                background: 'rgba(240, 194, 58, 0.15)',
+                border: '1.5px solid #F0C23A',
+                borderRadius: 14,
+                color: '#F0C23A',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span>📢 Tell group</span>
+            </button>
+
+            {/* Feature H2: Direct Share Location Button */}
+            <button
+              type="button"
+              onClick={() => setShowShareLocationModal(true)}
+              style={{
+                padding: '6px 13px',
+                background: 'rgba(240, 194, 58, 0.15)',
+                border: '1.5px solid #F0C23A',
+                borderRadius: 14,
+                color: '#F0C23A',
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span>📍 Share Location</span>
+            </button>
+
+            {RIDER_STATUS_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => pickStatus(p.label)}
+                style={{
+                  padding: '6px 12px',
+                  background: '#1B1E23',
+                  border: '1.5px solid #2A2E35',
+                  borderRadius: 14,
+                  color: '#F1EFEA',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <span>{p.icon}</span>
+                <span>{p.label}</span>
+              </button>
+            ))}
             <button
               type="button"
               onClick={handleShareCurrentLocation}
-              style={styles.chatQuickPill}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📍 Share My GPS Location
+              📍 Quick GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
-              style={styles.chatQuickPill}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📌 Suggest / Pin Stop
+              📌 Propose Stop
             </button>
-            {isLead && (
-              <button
-                type="button"
-                onClick={() => setShowAnnouncementModal(true)}
-                style={{ ...styles.chatQuickPill, borderColor: '#f59e0b', color: '#fbbf24' }}
-              >
-                📢 Broadcast Alert
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowNearbyHelp(true)}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              🛠️ Nearby Amenities
+            </button>
           </div>
 
-          {/* Message Input */}
-          <div style={{ padding: '8px 12px', background: '#1f2937', display: 'flex', gap: 8, borderTop: '1px solid #374151' }}>
+          {/* Message Input matching mockup */}
+          <div style={{ padding: '8px 14px 10px', background: '#111316', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setShowShareLocationModal(true)}
+              title="Share GPS or Drop a Pin"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                backgroundColor: '#1B1E23',
+                border: '1.5px solid #2A2E35',
+                color: '#F0C23A',
+                fontSize: 18,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              📍
+            </button>
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-              placeholder="Message convoy or mention a stop..."
-              style={{ flex: 1, background: '#374151', border: 'none', borderRadius: 20, padding: '10px 16px', color: '#fff', fontSize: 14, outline: 'none' }}
+              placeholder="Trip updates only (WhatsApp for casual chat)..."
+              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: '#F1EFEA', fontSize: 14, outline: 'none' }}
             />
-            <button onClick={sendChat} disabled={sending || !chatInput.trim()} style={{ background: '#3b82f6', border: 'none', borderRadius: 20, padding: '10px 18px', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: sending || !chatInput.trim() ? 0.5 : 1 }}>
+            <button
+              onClick={sendChat}
+              disabled={sending || !chatInput.trim()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                backgroundColor: '#F0C23A',
+                color: '#111316',
+                border: 'none',
+                fontWeight: 900,
+                fontSize: 16,
+                cursor: 'pointer',
+                opacity: sending || !chatInput.trim() ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
               ➤
             </button>
           </div>
         </div>
       )}
 
-      {/* Riders panel */}
+      {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-          {riders.length === 0 && <p style={{ color: '#6b7280', textAlign: 'center', marginTop: 40 }}>No riders online yet</p>}
-          {riders.map((r, i) => {
-            const dist = distanceTo(Number(r.lat), Number(r.lng));
-            const secsAgo = Math.round((Date.now() - new Date(r.updated_at).getTime()) / 1000);
-            const color = RIDER_COLORS[i % RIDER_COLORS.length];
-            const isMe = r.user_id === user?.id;
-            return (
-              <div key={r.user_id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#1f2937', borderRadius: 12, marginBottom: 8, border: isMe ? `1px solid ${color}` : '1px solid #374151' }}>
-                <div style={{ width: 44, height: 44, background: color, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 18, flexShrink: 0 }}>
-                  {(r.user_name || '?')[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ color: '#fff', fontWeight: 600, margin: 0, fontSize: 14 }}>
-                    {r.user_name}{isMe ? ' (You)' : ''}
-                  </p>
-                  {r.quick_status && (
-                    <p style={{ color: '#f59e0b', fontSize: 12, margin: '2px 0 0', fontWeight: 600 }}>{r.quick_status}</p>
-                  )}
-                  <p style={{ color: '#6b7280', fontSize: 12, margin: '2px 0 0' }}>
-                    {r.speed_kmh > 0 ? `${Math.round(r.speed_kmh)} km/h · ` : ''}
-                    {secsAgo < 10 ? 'just now' : `${secsAgo}s ago`}
-                  </p>
-                </div>
-                {dist != null && !isMe && (
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ color: '#10b981', fontWeight: 700, fontSize: 15, margin: 0 }}>{dist.toFixed(1)} km</p>
-                    <p style={{ color: '#6b7280', fontSize: 11, margin: 0 }}>away</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#111316' }}>
+          {/* Stale Riders Warning Banner */}
+          <StaleRidersAlertBanner
+            staleCount={staleRiders.length}
+            staleRiderNames={staleRiders.map((r) => r.userName)}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 2px 10px' }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+              Convoy Roster ({ridersWithFreshness.length})
+            </span>
+            <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>
+              ● {ridersWithFreshness.filter((r) => r.freshness.isLive).length} LIVE
+            </span>
+          </div>
+
+          {ridersWithFreshness.length === 0 && (
+            <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
+              No riders online yet. Positions will appear here when riders connect.
+            </p>
+          )}
+
+          {ridersWithFreshness.map((rider) => (
+            <RiderRosterRow
+              key={rider.userId}
+              rider={rider}
+              onClick={(r) => {
+                setTab('map');
+                handleFocusRider(r);
+              }}
+            />
+          ))}
         </div>
       )}
 
       {/* Nav / Directions panel */}
       {tab === 'nav' && (
-        <div style={{ flex: 1, overflowY: 'auto', background: '#111827' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: '#111316', padding: '12px 16px' }}>
           {/* Quick Launch External Navigation Apps */}
-          <div style={{ padding: '12px 16px', background: '#1f2937', borderBottom: '1px solid #374151', display: 'flex', gap: 10 }}>
+          <div style={{ padding: '12px 16px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
             <button
               onClick={() => {
                 if (pinnedStop) {
@@ -1220,21 +3421,20 @@ export default function RidePage() {
               style={{
                 flex: 1,
                 padding: '12px 14px',
-                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                color: '#fff',
+                background: '#F0C23A',
+                color: '#111316',
                 border: 'none',
-                borderRadius: 10,
-                fontWeight: 800,
+                borderRadius: 12,
+                fontWeight: 900,
                 fontSize: 14,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
               }}
             >
-              <span>🧭 Open in Google Maps (Bike Nav) / Apple / Waze</span>
+              <span>🧭 Open in Navigation App (Google / Apple / Waze)</span>
             </button>
           </div>
 
@@ -1245,18 +3445,18 @@ export default function RidePage() {
             const hrs = Math.floor(totalSecs / 3600);
             const mins = Math.round((totalSecs % 3600) / 60);
             return (
-              <div style={{ background: '#1f2937', padding: '12px 16px', borderBottom: '1px solid #374151', display: 'flex', gap: 24 }}>
+              <div style={{ background: '#1B1E23', padding: '14px 18px', border: '1.5px solid #2A2E35', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
-                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>total distance</p>
+                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
+                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>total distance</p>
                 </div>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
-                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>est. riding time</p>
+                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
+                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>est. riding time</p>
                 </div>
                 <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
-                  <p style={{ color: '#9ca3af', fontSize: 11, margin: 0 }}>turns</p>
+                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
+                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>turns</p>
                 </div>
               </div>
             );
@@ -1264,63 +3464,165 @@ export default function RidePage() {
           {navSteps.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 16px' }}>
               <p style={{ fontSize: 32 }}>🗺️</p>
-              <p style={{ color: '#9ca3af', fontSize: 14 }}>Fetching route directions…</p>
+              <p style={{ color: '#9D9C9A', fontSize: 14 }}>Fetching route directions…</p>
             </div>
           )}
           {navSteps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #1f2937', background: i === 0 ? '#1e3a5f' : 'transparent' }}>
-              <div style={{ width: 36, height: 36, background: '#1f2937', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #2A2E35', background: i === 0 ? 'rgba(240, 194, 58, 0.08)' : 'transparent' }}>
+              <div style={{ width: 36, height: 36, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                 {stepIcon(step.instruction)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: '#fff', fontSize: 14, fontWeight: i === 0 ? 700 : 400, margin: 0 }}>{step.instruction}</p>
-                <p style={{ color: '#6b7280', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
+                <p style={{ color: '#F1EFEA', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
+                <p style={{ color: '#9D9C9A', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Bottom tab bar */}
-      <div style={{ background: '#1f2937', borderTop: '1px solid #374151', display: 'flex', flexShrink: 0 }}>
-        <button onClick={sendSOS} style={{ flex: 1, padding: '14px 8px', background: '#dc2626', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>🆘</span>SOS
+      {/* Feature D: Me / Ride Settings Tab ("Lives on Me") */}
+      {tab === 'me' && (
+        <MeRideSettingsTab
+          userName={userName}
+          userEmail={user?.email}
+          batterySaver={batterySaver}
+          onToggleBatterySaver={handleToggleBatterySaver}
+          wakeLockActive={wakeLockActive}
+          onToggleWakeLock={() => setWakeLockActive((w) => !w)}
+          onReturnToRide={() => setTab('map')}
+          onEndRide={handleEndRide}
+          isCaptain={isLead}
+        />
+      )}
+
+      {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
+      <div className="mobile-bottom-nav" style={{
+        backgroundColor: '#111316',
+        borderTop: '1.5px solid #2A2E35',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        padding: '8px 10px max(12px, env(safe-area-inset-bottom, 12px))',
+        flexShrink: 0,
+        gap: 2,
+      }}>
+        {/* Tab 1: RIDE */}
+        <button
+          type="button"
+          onClick={() => setTab('map')}
+          style={tab === 'map' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          RIDE
         </button>
-        <button onClick={() => setShowStatusDrawer(true)} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: myStatus ? '#f59e0b' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>⚡</span>{myStatus ? 'Status ●' : 'Status'}
+
+        {/* Tab 2: PLAN */}
+        <button
+          type="button"
+          onClick={() => setTab('plan')}
+          style={tab === 'plan' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          PLAN
         </button>
-        <button onClick={() => setTab(tab === 'chat' ? 'map' : 'chat')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'chat' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
-          <span style={{ fontSize: 22 }}>💬</span>
-          Chat
+
+        {/* Tab 3: DISCOVER */}
+        <button
+          type="button"
+          onClick={() => setTab('discover')}
+          style={tab === 'discover' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          DISCOVER
+        </button>
+
+        {/* Tab 4: CHAT */}
+        <button
+          type="button"
+          onClick={() => setTab('chat')}
+          style={{
+            ...(tab === 'chat' ? styles.activeNavPill : styles.inactiveNavBtn),
+            position: 'relative',
+          }}
+        >
+          CHAT
           {newMsgCount > 0 && tab !== 'chat' && (
-            <span style={{ position: 'absolute', top: 8, right: '20%', background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {newMsgCount > 9 ? '9+' : newMsgCount}
-            </span>
+            <span style={styles.chatUnreadDot} />
           )}
         </button>
-        <button onClick={() => setTab(tab === 'riders' ? 'map' : 'riders')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'riders' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>👥</span>
-          Riders
-        </button>
-        <button onClick={() => setTab(tab === 'nav' ? 'map' : 'nav')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'nav' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, position: 'relative' }}>
-          <span style={{ fontSize: 22 }}>🧭</span>
-          Nav
-          {navSteps.length > 0 && tab !== 'nav' && (
-            <span style={{ position: 'absolute', top: 8, right: '18%', width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
-          )}
-        </button>
-        <button onClick={() => setTab('map')} style={{ flex: 1, padding: '14px 8px', background: 'none', border: 'none', color: tab === 'map' ? '#3b82f6' : '#9ca3af', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-          <span style={{ fontSize: 22 }}>🗺️</span>
-          Map
+
+        {/* Tab 5: ME */}
+        <button
+          type="button"
+          onClick={() => setTab('me')}
+          style={tab === 'me' ? styles.activeNavPill : styles.inactiveNavBtn}
+        >
+          ME
         </button>
       </div>
 
-      {/* One-Tap Rider Status Drawer */}
+      {/* One-Tap Rider Status Drawer (Fallback Detailed) */}
       <QuickStatusDrawer
         isOpen={showStatusDrawer}
         onClose={() => setShowStatusDrawer(false)}
         currentStatus={myStatus}
         onSelectStatus={pickStatus}
+      />
+
+      {/* Large-target Presets Sheet ("Tell group", Mockup Screen 3) */}
+      <PresetsTellGroupSheet
+        isOpen={showTellGroupSheet}
+        onClose={() => setShowTellGroupSheet(false)}
+        onSelectStatus={(val) => pickStatus(val)}
+        isCaptain={isLead}
+        onSendAnnouncement={(label) => {
+          handleSendAnnouncement({
+            title: label,
+            message: `Lead announced: ${label}`,
+            urgency: 'high',
+            icon: '⚠️',
+          });
+        }}
+      />
+
+      {/* Next Stop Detail Bottom Sheet (Mockup Screen 2) */}
+      <StopDetailSheet
+        isOpen={showStopDetailSheet}
+        onClose={() => setShowStopDetailSheet(false)}
+        pinnedStop={pinnedStop}
+        riders={ridersForStopDetail}
+        myDistanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+        mySpeedKmh={mySpeedKmh}
+        myFreshness={myFreshness}
+        isMeArrived={user?.id ? (ridersArrival[user.id]?.status === 'arrived') : false}
+        onToggleMyArrival={handleToggleMyArrival}
+        onOpenNavigation={(target) => {
+          setNavTarget(target);
+          setShowNavModal(true);
+        }}
+        onChangeStop={() => {
+          setShowStopDetailSheet(false);
+          setShowPinModal(true);
+        }}
+      />
+
+      {/* Route-Cached Verified Amenities ("Nearby help", Mockup Screen 5) */}
+      <NearbyHelpSheet
+        isOpen={showNearbyHelp}
+        onClose={() => setShowNearbyHelp(false)}
+        currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
+        userName={userName}
+        onNavigate={(target) => {
+          setNavTarget(target);
+          setShowNavModal(true);
+        }}
+        onPinAsStop={(item) => {
+          handlePinStop({
+            id: `nearby_${Date.now()}`,
+            name: item.name,
+            lat: item.lat,
+            lng: item.lng,
+            type: item.type,
+          });
+        }}
       />
 
       {/* Target Pin Stop Modal */}
@@ -1345,6 +3647,59 @@ export default function RidePage() {
         onClose={() => setShowNavModal(false)}
         target={navTarget}
       />
+
+      {/* Feature H2: Share Location in Chat Modal */}
+      <ShareLocationModal
+        isOpen={showShareLocationModal}
+        onClose={() => setShowShareLocationModal(false)}
+        currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
+        onShareLocation={handleShareLocation}
+      />
+
+      {/* Feature 1A: Propose Itinerary Edit Modal */}
+      <ProposeEditModal
+        isOpen={showProposeModal}
+        onClose={() => setShowProposeModal(false)}
+        onSubmitProposal={handleCreateProposal}
+      />
+
+      {/* Feature 1B: Publish Itinerary Publicly Modal */}
+      {session?.trips && (
+        <PublishItineraryModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          trip={{
+            id: session.trips.id,
+            title: session.trips.title,
+            from_place: session.trips.from_place,
+            to_place: session.trips.to_place,
+            days: session.trips.days || 1,
+            bike_type: session.trips.bike_type || 'motorcycle',
+            preferences: session.trips.preferences || '',
+          }}
+          stops={allPlanStops}
+          user={user}
+          onPublishedSuccess={(published) => {
+            setToast(`✓ Published "${published.title}" publicly in Discover!`);
+            setTimeout(() => setToast(''), 3500);
+          }}
+          onUnpublishedSuccess={() => {
+            setToast('Itinerary unpublished from Discover');
+            setTimeout(() => setToast(''), 3000);
+          }}
+        />
+      )}
+
+      {/* Feature 2: Share Trip Milestones Modal */}
+      {milestoneSummary && (
+        <ShareMilestoneModal
+          isOpen={showMilestoneModal}
+          onClose={() => setShowMilestoneModal(false)}
+          summary={milestoneSummary}
+          onOpenPublishFlow={() => setShowPublishModal(true)}
+          onNavigateToDiscover={() => setTab('discover')}
+        />
+      )}
     </div>
   );
 }
@@ -1355,12 +3710,47 @@ const s: Record<string, React.CSSProperties> = {
 };
 
 const styles: Record<string, React.CSSProperties> = {
+  activeNavPill: {
+    backgroundColor: '#F0C23A',
+    color: '#111316',
+    fontWeight: 900,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    borderRadius: 999,
+    padding: '7px 13px',
+    border: 'none',
+    cursor: 'pointer',
+    boxShadow: '0 2px 10px rgba(240, 194, 58, 0.25)',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
+  },
+  inactiveNavBtn: {
+    backgroundColor: 'transparent',
+    color: '#9D9C9A',
+    fontWeight: 800,
+    fontSize: 12,
+    letterSpacing: 0.3,
+    border: 'none',
+    cursor: 'pointer',
+    padding: '7px 8px',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
+  },
+  chatUnreadDot: {
+    position: 'absolute',
+    top: 4,
+    right: 2,
+    width: 7,
+    height: 7,
+    borderRadius: '50%',
+    backgroundColor: '#F0C23A',
+  },
   chatActionBtn: {
     padding: '4px 8px',
-    background: '#374151',
-    border: 'none',
+    background: '#1B1E23',
+    border: '1px solid #2A2E35',
     borderRadius: 6,
-    color: '#60a5fa',
+    color: '#F0C23A',
     fontSize: 11,
     fontWeight: 700,
     cursor: 'pointer',
@@ -1370,10 +3760,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   chatQuickPill: {
     padding: '6px 12px',
-    background: '#1f2937',
-    border: '1px solid #374151',
+    background: '#1B1E23',
+    border: '1px solid #2A2E35',
     borderRadius: 14,
-    color: '#9ca3af',
+    color: '#9D9C9A',
     fontSize: 12,
     fontWeight: 700,
     cursor: 'pointer',

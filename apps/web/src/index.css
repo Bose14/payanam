@@ -604,4 +604,20 @@ html, body {
   .responsive-route-text {
     font-size: 12px !important;
   }
+
+  /* Mobile responsive helpers for ride screen & features */
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .mobile-tight-padding {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .mobile-bottom-nav {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+  .mobile-header-title {
+    font-size: 18px !important;
+  }
 }

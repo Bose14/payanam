@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,20 @@ import PlaceInput from '../components/PlaceInput';
 import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
 import NavigationAppModal from '../components/NavigationAppModal';
+import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
+import {
+  ItineraryProposalCard,
+  ProposeEditModal,
+  getStoredProposals,
+  addProposal,
+  resolveProposal,
+  ItineraryProposal,
+  PublishItineraryModal,
+  isTripPublished,
+  ShareMilestoneModal,
+  TripCompletedBanner,
+  buildTripMilestoneSummary,
+} from '../components';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: '⛽',
@@ -171,6 +185,62 @@ export default function TripDetailPage() {
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
+  const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
+  const [showProposeModal, setShowProposeModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+
+  const milestoneSummary = useMemo(() => {
+    if (!trip) return null;
+    return buildTripMilestoneSummary({
+      trip,
+      stops,
+      coRiders: approvedMembers.map((m) => ({ name: m.users?.full_name || 'Rider' })),
+      bikeModel: trip.bike_type,
+    });
+  }, [trip, stops, approvedMembers]);
+
+  useEffect(() => {
+    if (id) {
+      setProposals(getStoredProposals(id));
+    }
+  }, [id]);
+
+  const handleCreateProposal = (data: { title: string; description?: string }) => {
+    if (!id) return;
+    const newProp = addProposal(id, {
+      tripId: id,
+      proposerId: user?.id || 'anon',
+      proposerName: user?.fullName || 'Rider',
+      proposerInitials: (user?.fullName || 'Rider').slice(0, 2).toUpperCase(),
+      title: data.title,
+      description: data.description,
+    });
+    setProposals((prev) => [newProp, ...prev]);
+    setToast('✓ Proposal submitted to Captain!');
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const handleAcceptProposal = (prop: ItineraryProposal) => {
+    if (!id) return;
+    resolveProposal(id, prop.id, 'accepted', user?.fullName || 'Captain');
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'accepted', resolvedBy: user?.fullName || 'Captain' } : p))
+    );
+    setToast(`✓ Approved proposal from ${prop.proposerName}`);
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const handleDeclineProposal = (prop: ItineraryProposal) => {
+    if (!id) return;
+    resolveProposal(id, prop.id, 'declined', user?.fullName || 'Captain');
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'declined', resolvedBy: user?.fullName || 'Captain' } : p))
+    );
+    setToast('Proposal declined');
+    setTimeout(() => setToast(''), 2500);
+  };
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -531,6 +601,21 @@ export default function TripDetailPage() {
                 <span>{copied ? 'Copied!' : 'Share Convoy Link'}</span>
               </button>
             )}
+
+            {trip?.isOwner && (
+              <button
+                onClick={() => setShowPublishModal(true)}
+                style={{
+                  ...styles.btnShare,
+                  borderColor: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
+                  color: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
+                }}
+                title="Feature 1B: Publish itinerary publicly to Discover"
+              >
+                <span>🌐</span>
+                <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish Itinerary'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -564,12 +649,53 @@ export default function TripDetailPage() {
                 <span>🔗</span>
                 <span>{copied ? '✅ Link Copied' : 'Copy Link'}</span>
               </button>
+              <button onClick={() => setShowNearbyHelp(true)} style={styles.passBtnAction} title="Verified fuel, repair, food & rest along route">
+                <span>🛠️</span>
+                <span>Nearby Help</span>
+              </button>
               <button onClick={handleNativeShare} style={styles.passBtnAction}>
                 <span>↗️</span>
                 <span>Share</span>
               </button>
+              {trip?.isOwner && (
+                <button
+                  onClick={() => setShowPublishModal(true)}
+                  style={{
+                    ...styles.passBtnAction,
+                    borderColor: isTripPublished(trip.id) ? '#10B981' : 'var(--border-subtle)',
+                    color: isTripPublished(trip.id) ? '#10B981' : 'var(--text-primary)',
+                  }}
+                  title="Feature 1B: Publish itinerary publicly to Discover"
+                >
+                  <span>🌐</span>
+                  <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish'}</span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowMilestoneModal(true)}
+                style={{
+                  ...styles.passBtnAction,
+                  borderColor: '#F0C23A',
+                  color: '#F0C23A',
+                }}
+                title="Feature 2: Share trip completion milestones"
+              >
+                <span>🏆</span>
+                <span>Milestones</span>
+              </button>
             </div>
           </div>
+        )}
+
+        {/* Feature 2: Trip Completed Celebration & Milestones Banner */}
+        {milestoneSummary && (
+          <TripCompletedBanner
+            fromPlace={trip.from_place}
+            toPlace={trip.to_place}
+            days={trip.days}
+            distanceKm={milestoneSummary.totalDistanceKm}
+            onShareMilestones={() => setShowMilestoneModal(true)}
+          />
         )}
 
         {/* Convoy Roster (Visible to both Leader and Co-riders) */}
@@ -748,15 +874,51 @@ export default function TripDetailPage() {
 
         {/* Day-by-Day Itinerary */}
         <div style={{ marginTop: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Day-by-Day Route Itinerary</h2>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>Fuel stops, food breaks, scenic lookouts, and night stays</p>
             </div>
-            {trip?.isOwner && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Changes auto-save automatically</span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowProposeModal(true)}
+                style={{
+                  padding: '7px 14px',
+                  backgroundColor: 'rgba(240, 194, 58, 0.15)',
+                  border: '1.5px solid #F0C23A',
+                  borderRadius: 10,
+                  color: '#F0C23A',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <span>💡</span> Propose Itinerary Edit
+              </button>
+              {trip?.isOwner && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Changes auto-save automatically</span>
+              )}
+            </div>
           </div>
+
+          {/* Feature 1A Step 4: Proposed Itinerary Edits List */}
+          {proposals.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {proposals.map((prop) => (
+                <ItineraryProposalCard
+                  key={prop.id}
+                  proposal={prop}
+                  isCaptain={Boolean(trip?.isOwner)}
+                  onAccept={handleAcceptProposal}
+                  onDecline={handleDeclineProposal}
+                />
+              ))}
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
@@ -1013,6 +1175,74 @@ export default function TripDetailPage() {
         onClose={() => setShowNavModal(false)}
         target={navTarget}
       />
+
+      {/* Route-Cached Verified Amenities ("Nearby help", Mockup Screen 3) */}
+      <NearbyHelpSheet
+        isOpen={showNearbyHelp}
+        onClose={() => setShowNearbyHelp(false)}
+        userName={user?.fullName || 'Convoy Leader'}
+        onNavigate={(target) => {
+          setNavTarget(target);
+          setShowNavModal(true);
+        }}
+        onPinAsStop={async (item) => {
+          if (!trip?.id) return;
+          try {
+            await tripService.addStop(trip.id, {
+              place: item.name,
+              item_type: item.type,
+              description: 'Verified nearby help stop',
+              lat: item.lat,
+              lng: item.lng,
+            });
+            showToast(`✓ Added ${item.name} to itinerary!`);
+            // reload trip data
+            tripService.getTripById(trip.id).then((data) => {
+              setTrip(data.trip);
+              setStops(data.trip.itinerary ?? []);
+            }).catch(() => {});
+          } catch (err) {
+            console.warn(err);
+          }
+        }}
+      />
+
+      {/* Feature 1A: Propose Itinerary Edit Modal */}
+      <ProposeEditModal
+        isOpen={showProposeModal}
+        onClose={() => setShowProposeModal(false)}
+        onSubmitProposal={handleCreateProposal}
+      />
+
+      {/* Feature 1B: Publish Itinerary Publicly Modal */}
+      {trip && (
+        <PublishItineraryModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          trip={trip}
+          stops={stops}
+          user={user}
+          onPublishedSuccess={(published) => {
+            setToast(`✓ Published "${published.title}" publicly in Discover!`);
+            setTimeout(() => setToast(''), 3500);
+          }}
+          onUnpublishedSuccess={() => {
+            setToast('Itinerary unpublished from Discover');
+            setTimeout(() => setToast(''), 3000);
+          }}
+        />
+      )}
+
+      {/* Feature 2: Share Trip Milestones Modal */}
+      {milestoneSummary && (
+        <ShareMilestoneModal
+          isOpen={showMilestoneModal}
+          onClose={() => setShowMilestoneModal(false)}
+          summary={milestoneSummary}
+          onOpenPublishFlow={() => setShowPublishModal(true)}
+          onNavigateToDiscover={() => navigate('/dashboard')}
+        />
+      )}
     </div>
   );
 }

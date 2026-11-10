@@ -232,6 +232,26 @@ export const rideService = {
     const response = await api.put(`/api/rides/${sessionId}/location`, data);
     return response.data.data;
   },
+  uploadLocationBatch: async (
+    sessionId: string,
+    fixes: Array<{
+      lat: number;
+      lng: number;
+      speedKmh?: number;
+      heading?: number;
+      userName?: string;
+      seq: number;
+      timestamp: string;
+    }>,
+    userName?: string,
+  ) => {
+    const response = await api.post(`/api/rides/${sessionId}/locations/batch`, { fixes, userName });
+    return response.data.data;
+  },
+  getRiderTrails: async (sessionId: string) => {
+    const response = await api.get(`/api/rides/${sessionId}/trails`);
+    return response.data.data;
+  },
   updateQuickStatus: async (sessionId: string, quickStatus: string) => {
     const response = await api.put(`/api/rides/${sessionId}/status`, { quickStatus });
     return response.data.data;

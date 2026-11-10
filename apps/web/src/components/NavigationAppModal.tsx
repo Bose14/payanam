@@ -1,4 +1,11 @@
 import React, { useState } from 'react';
+import {
+  launchNavigationHandoff,
+  NAVIGATION_APP_OPTIONS,
+  NavigationAppType,
+  getPreferredNavigationApp,
+  setPreferredNavigationApp,
+} from '../utils/navigationHandoff';
 
 export interface NavigationTarget {
   name: string;
@@ -14,31 +21,16 @@ interface NavigationAppModalProps {
 
 export default function NavigationAppModal({ isOpen, onClose, target }: NavigationAppModalProps) {
   const [copied, setCopied] = useState(false);
+  const [preferredApp, setPreferredAppState] = useState<NavigationAppType>(getPreferredNavigationApp());
 
   if (!isOpen || !target) return null;
 
   const { name, lat, lng } = target;
 
-  const handleGoogleMaps = (mode: 'motorcycle' | 'driving' = 'motorcycle') => {
-    // Google Maps universal web / app URL with travel mode
-    const travelParam = mode === 'motorcycle' ? 'two-wheeler' : 'driving';
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=${travelParam}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-    onClose();
-  };
-
-  const handleAppleMaps = () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const url = isIOS
-      ? `maps://?daddr=${lat},${lng}&dirflg=d`
-      : `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-    onClose();
-  };
-
-  const handleWaze = () => {
-    const url = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const handleLaunch = (appType: NavigationAppType) => {
+    setPreferredNavigationApp(appType);
+    setPreferredAppState(appType);
+    launchNavigationHandoff({ lat, lng, name }, appType);
     onClose();
   };
 
@@ -47,7 +39,9 @@ export default function NavigationAppModal({ isOpen, onClose, target }: Navigati
       await navigator.clipboard.writeText(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* silent */ }
+    } catch {
+      /* silent */
+    }
   };
 
   return (
@@ -61,74 +55,68 @@ export default function NavigationAppModal({ isOpen, onClose, target }: Navigati
       <div style={styles.sheet} onClick={(e) => e.stopPropagation()}>
         <div style={styles.dragHandle} />
 
+        {/* Header */}
         <div style={styles.header}>
-          <div style={{ fontSize: 24 }}>🧭</div>
+          <div style={styles.headerIcon}>🧭</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h3 style={styles.title}>Navigate to Stop</h3>
-            <p style={styles.subtitle}>{name}</p>
+            <h3 style={styles.title}>Open in navigation app</h3>
+            <p style={styles.subtitle}>{name || 'Destination / Stop'}</p>
           </div>
           <button onClick={onClose} style={styles.closeBtn} aria-label="Close">✕</button>
         </div>
 
+        {/* Coordinates bar */}
         <div style={styles.coordBar}>
-          <span style={styles.coordText}>📍 {lat.toFixed(4)}, {lng.toFixed(4)}</span>
+          <span style={styles.coordText}>📍 {lat.toFixed(5)}, {lng.toFixed(5)}</span>
           <button onClick={handleCopyCoords} style={styles.copyBtn}>
             {copied ? '✓ Copied' : '📋 Copy'}
           </button>
         </div>
 
+        <p style={styles.hintText}>
+          Coordinates handed over to your preferred navigation app. Turn-by-turn guidance happens there.
+        </p>
+
+        {/* Apps List */}
         <div style={styles.appsGrid}>
-          {/* Google Maps - 2 Wheeler */}
-          <button
-            onClick={() => handleGoogleMaps('motorcycle')}
-            style={{ ...styles.appBtn, borderColor: '#4285F4', background: 'rgba(66, 133, 244, 0.12)' }}
-          >
-            <div style={styles.appIcon}>🏍️</div>
-            <div style={styles.appInfo}>
-              <div style={styles.appName}>Google Maps (Bike)</div>
-              <div style={styles.appDesc}>Two-wheeler fastest route & shortcuts</div>
-            </div>
-            <span style={styles.chevron}>➔</span>
-          </button>
-
-          {/* Google Maps - Standard */}
-          <button
-            onClick={() => handleGoogleMaps('driving')}
-            style={styles.appBtn}
-          >
-            <div style={styles.appIcon}>🗺️</div>
-            <div style={styles.appInfo}>
-              <div style={styles.appName}>Google Maps (Drive)</div>
-              <div style={styles.appDesc}>Standard navigation with live traffic</div>
-            </div>
-            <span style={styles.chevron}>➔</span>
-          </button>
-
-          {/* Apple Maps */}
-          <button
-            onClick={handleAppleMaps}
-            style={styles.appBtn}
-          >
-            <div style={styles.appIcon}>🍏</div>
-            <div style={styles.appInfo}>
-              <div style={styles.appName}>Apple Maps</div>
-              <div style={styles.appDesc}>Native iOS turn-by-turn guidance</div>
-            </div>
-            <span style={styles.chevron}>➔</span>
-          </button>
-
-          {/* Waze */}
-          <button
-            onClick={handleWaze}
-            style={styles.appBtn}
-          >
-            <div style={styles.appIcon}>🚙</div>
-            <div style={styles.appInfo}>
-              <div style={styles.appName}>Waze</div>
-              <div style={styles.appDesc}>Community alerts for police & hazards</div>
-            </div>
-            <span style={styles.chevron}>➔</span>
-          </button>
+          {NAVIGATION_APP_OPTIONS.map((opt) => {
+            const isPreferred = preferredApp === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => handleLaunch(opt.id)}
+                style={{
+                  ...styles.appBtn,
+                  borderColor: isPreferred ? opt.accentColor : '#2A2E35',
+                  backgroundColor: isPreferred ? opt.accentBg : '#1B1E23',
+                }}
+              >
+                <div style={styles.appIcon}>{opt.icon}</div>
+                <div style={styles.appInfo}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={styles.appName}>{opt.name}</span>
+                    {isPreferred && (
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 900,
+                          color: opt.accentColor,
+                          border: `1px solid ${opt.accentColor}`,
+                          padding: '1px 5px',
+                          borderRadius: 4,
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        DEFAULT
+                      </span>
+                    )}
+                  </div>
+                  <div style={styles.appDesc}>{opt.desc}</div>
+                </div>
+                <span style={{ ...styles.chevron, color: opt.accentColor }}>➔</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -148,49 +136,63 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'fadeIn 0.2s ease-out',
   },
   sheet: {
-    backgroundColor: '#1f2937',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: '#111316',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     width: '100%',
     maxWidth: 500,
     padding: '16px 20px 32px',
-    boxShadow: '0 -10px 25px rgba(0,0,0,0.5)',
-    border: '1px solid #374151',
+    boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.7)',
+    border: '1.5px solid #2A2E35',
     boxSizing: 'border-box',
     maxHeight: '85vh',
     overflowY: 'auto',
   },
   dragHandle: {
-    width: 40,
+    width: 44,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#4b5563',
+    backgroundColor: '#3A3F47',
     margin: '0 auto 16px',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 14,
+    marginBottom: 12,
+  },
+  headerIcon: {
+    fontSize: 26,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(240, 194, 58, 0.12)',
+    border: '1px solid #F0C23A',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   title: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 700,
+    color: '#F1EFEA',
+    fontSize: 17,
+    fontWeight: 900,
     margin: 0,
+    letterSpacing: -0.2,
   },
   subtitle: {
-    color: '#9ca3af',
+    color: '#9D9C9A',
     fontSize: 13,
+    fontWeight: 600,
     margin: '2px 0 0',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
   closeBtn: {
-    background: '#374151',
-    border: 'none',
-    color: '#9ca3af',
+    background: '#1B1E23',
+    border: '1px solid #2A2E35',
+    color: '#9D9C9A',
     borderRadius: '50%',
     width: 32,
     height: 32,
@@ -205,26 +207,33 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    background: '#111827',
+    backgroundColor: '#1B1E23',
     padding: '8px 12px',
-    borderRadius: 8,
-    marginBottom: 16,
-    border: '1px solid #374151',
+    borderRadius: 10,
+    marginBottom: 10,
+    border: '1px solid #2A2E35',
   },
   coordText: {
-    color: '#9ca3af',
+    color: '#D4D2CD',
     fontSize: 12,
     fontFamily: 'monospace',
+    fontWeight: 700,
   },
   copyBtn: {
-    background: '#374151',
-    border: 'none',
-    color: '#60a5fa',
+    background: '#111316',
+    border: '1px solid #2A2E35',
+    color: '#F0C23A',
     borderRadius: 6,
     padding: '4px 10px',
-    fontSize: 12,
-    fontWeight: 600,
+    fontSize: 11,
+    fontWeight: 800,
     cursor: 'pointer',
+  },
+  hintText: {
+    color: '#9D9C9A',
+    fontSize: 12,
+    lineHeight: 1.4,
+    margin: '0 0 14px',
   },
   appsGrid: {
     display: 'flex',
@@ -235,18 +244,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 14,
-    padding: '12px 16px',
-    backgroundColor: '#111827',
-    border: '1px solid #374151',
-    borderRadius: 12,
+    padding: '12px 14px',
+    border: '1.5px solid #2A2E35',
+    borderRadius: 14,
     cursor: 'pointer',
     textAlign: 'left',
     transition: 'all 0.15s ease',
   },
   appIcon: {
-    fontSize: 26,
-    width: 38,
-    height: 38,
+    fontSize: 24,
+    width: 36,
+    height: 36,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -257,18 +265,18 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
   },
   appName: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: 700,
+    color: '#F1EFEA',
+    fontSize: 14,
+    fontWeight: 800,
   },
   appDesc: {
-    color: '#9ca3af',
-    fontSize: 12,
+    color: '#9D9C9A',
+    fontSize: 11,
     marginTop: 2,
+    lineHeight: 1.2,
   },
   chevron: {
-    color: '#6b7280',
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: 900,
   },
 };
-

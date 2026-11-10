@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { tripService } from '../services/api';
-import { Navbar, JoinConvoyModal, QuickJoinCard } from '../components';
+import { Navbar, JoinConvoyModal, QuickJoinCard, isTripPublished } from '../components';
 
 interface Trip {
   id: string;
@@ -276,6 +276,18 @@ export default function DashboardPage() {
                       <span style={{ textTransform: 'capitalize' }}>{trip.bike_type}</span>
                     </div>
                     <div style={styles.cardHeaderActions}>
+                      {isTripPublished(trip.id) && (
+                        <span style={{
+                          ...styles.statusBadge,
+                          background: 'rgba(240, 194, 58, 0.15)',
+                          color: '#F0C23A',
+                          border: '1px solid #F0C23A',
+                          fontSize: 11,
+                          fontWeight: 800,
+                        }}>
+                          🌐 Public in Discover
+                        </span>
+                      )}
                       <span style={{
                         ...styles.statusBadge,
                         background: trip.isJoined ? 'var(--accent-green-bg)' : 'var(--accent-cyan-bg)',
