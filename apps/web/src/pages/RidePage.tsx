@@ -64,8 +64,10 @@ import {
   parseLocationFromMessage,
   isStopConfirmedInItinerary,
   formatLocationShareMessage,
+  getCachedNearbyServices,
+  makeServicePinIcon,
 } from '../components';
-import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
@@ -363,6 +365,12 @@ export default function RidePage() {
   const [showStopDetailSheet, setShowStopDetailSheet] = useState(false);
   const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [showServicePins, setShowServicePins] = useState(true);
+  const [corridorServices, setCorridorServices] = useState<NearbyServiceItem[]>([]);
+
+  useEffect(() => {
+    setCorridorServices(getCachedNearbyServices());
+  }, [showNearbyHelp]);
   const [showShareLocationModal, setShowShareLocationModal] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -2542,6 +2550,34 @@ export default function RidePage() {
             <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
           </button>
 
+          {/* Feature 3: Toggle nearby service pins on Ride map */}
+          <button
+            type="button"
+            onClick={() => setShowServicePins(!showServicePins)}
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: splitView ? 116 : 106,
+              zIndex: 1000,
+              backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.15)' : '#1B1E23',
+              border: showServicePins ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
+              color: showServicePins ? '#F0C23A' : '#9D9C9A',
+              borderRadius: 20,
+              padding: '6px 12px',
+              fontSize: 11,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}
+            title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
+          >
+            <span>🛠️</span>
+            <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
+          </button>
+
           {/* Re-center button */}
           {!following && myLat && myLng && (
             <button
@@ -2671,6 +2707,20 @@ export default function RidePage() {
                 icon={makePinnedStopIcon(pinnedStop.type)}
               />
             )}
+            {/* Feature 3: Nearby services corridor pins on Ride map (Fuel, Repair, Food, Rest, Stay) */}
+            {showServicePins &&
+              corridorServices.map((srv) => (
+                <Marker
+                  key={srv.id}
+                  position={[srv.lat, srv.lng]}
+                  icon={makeServicePinIcon(srv.category, srv.isOpen, srv.name)}
+                  eventHandlers={{
+                    click: () => {
+                      setShowNearbyHelp(true);
+                    },
+                  }}
+                />
+              ))}
             {/* My navigation arrow — rotates with heading and dims if stale */}
             {myLat && myLng && (
               <Marker
@@ -3516,6 +3566,7 @@ export default function RidePage() {
         isOpen={showNearbyHelp}
         onClose={() => setShowNearbyHelp(false)}
         currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
+        userName={userName}
         onNavigate={(target) => {
           setNavTarget(target);
           setShowNavModal(true);

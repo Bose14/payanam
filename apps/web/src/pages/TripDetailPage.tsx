@@ -1180,6 +1180,7 @@ export default function TripDetailPage() {
       <NearbyHelpSheet
         isOpen={showNearbyHelp}
         onClose={() => setShowNearbyHelp(false)}
+        userName={user?.fullName || 'Convoy Leader'}
         onNavigate={(target) => {
           setNavTarget(target);
           setShowNavModal(true);

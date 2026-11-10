@@ -270,3 +270,4 @@ const styles: Record<string, React.CSSProperties> = {
     marginLeft: 'auto',
   },
 };
+
