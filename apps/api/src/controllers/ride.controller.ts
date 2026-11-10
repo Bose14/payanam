@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { sendSuccess, sendError } from '../utils/response';
 import {
   startRide, endRide, getActiveSession, getSessionById,
-  updateLocation, updateQuickStatus, getAllLocations,
-  sendMessage, getMessages,
+  updateLocation, updateLocationBatch, updateQuickStatus, getAllLocations,
+  getRiderTrails, sendMessage, getMessages,
 } from '../services/ride.service';
 
 export async function startRideHandler(req: Request, res: Response, next: NextFunction) {
@@ -57,6 +57,24 @@ export async function getAllLocationsHandler(req: Request, res: Response, next: 
   try {
     const locations = await getAllLocations(req.params.sessionId);
     return sendSuccess(res, { locations });
+  } catch (err) { next(err); }
+}
+
+export async function updateLocationBatchHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { fixes = [], userName = '' } = req.body;
+    if (!Array.isArray(fixes)) {
+      return sendError(res, 'fixes must be an array', 400, 'VALIDATION_ERROR');
+    }
+    const result = await updateLocationBatch(req.params.sessionId, req.userId!, userName, fixes);
+    return sendSuccess(res, result);
+  } catch (err) { next(err); }
+}
+
+export async function getRiderTrailsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const trails = await getRiderTrails(req.params.sessionId);
+    return sendSuccess(res, { trails });
   } catch (err) { next(err); }
 }
 

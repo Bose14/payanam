@@ -19,6 +19,7 @@ export { default as StopDetailSheet } from './StopDetailSheet';
 export { default as NextStopBottomDock } from './NextStopBottomDock';
 export { default as PresetsTellGroupSheet } from './PresetsTellGroupSheet';
 export { NearbyHelpSheet } from './NearbyHelpSheet';
+export { OfflineSignalBanner } from './OfflineSignalBanner';
 export * from '../utils/lastSeen';
 
 

@@ -20,8 +20,10 @@ import {
   NextStopBottomDock,
   PresetsTellGroupSheet,
   NearbyHelpSheet,
+  OfflineSignalBanner,
   getFreshness,
 } from '../components';
+import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
@@ -281,7 +283,6 @@ export default function RidePage() {
   const [navSteps, setNavSteps] = useState<NavStep[]>([]);
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
-  const [backgroundWarning, setBackgroundWarning] = useState(false);
 
   // High Priority Stops & Communication State
   const [pinnedStop, setPinnedStop] = useState<PinnedStopData | null>(null);
@@ -306,6 +307,17 @@ export default function RidePage() {
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
   const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
   const myLastUpdatedRef = useRef<string | null>(null);
+
+  // Feature B: Offline Position Queue & Rider Trails State
+  const [queueState, setQueueState] = useState<OfflineQueueState>({
+    isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+    pendingCount: 0,
+    lastSyncedAt: null,
+    isSyncing: false,
+  });
+  const [justSynced, setJustSynced] = useState(false);
+  const [riderTrails, setRiderTrails] = useState<Record<string, Array<[number, number]>>>({});
+  const isSyncingBatchRef = useRef(false);
 
   // Auto-refresh interval (5s) for real-time age badges and hollow markers
   const [, setTicker] = useState(0);
@@ -396,7 +408,8 @@ export default function RidePage() {
       if (document.visibilityState === 'visible') {
         // Re-acquire wake lock (it auto-releases when screen locks)
         acquireWakeLock();
-        setBackgroundWarning(false);
+        // Immediately sync any fixes queued while in background/screen locked
+        syncPendingBatch();
         // Re-broadcast current position immediately after coming back
         if (myPosRef.current && channelRef.current) {
           channelRef.current.send({
@@ -404,8 +417,6 @@ export default function RidePage() {
             payload: { userId: user?.id, userName, lat: myPosRef.current.lat, lng: myPosRef.current.lng, speedKmh: 0, heading: 0, updatedAt: new Date().toISOString() },
           });
         }
-      } else {
-        setBackgroundWarning(true);
       }
     };
 
@@ -416,17 +427,125 @@ export default function RidePage() {
     };
   }, [session, ended, userName, user?.id]);
 
+  // Feature B: Sync queued positions in batches and in sequence order
+  const syncPendingBatch = useCallback(async () => {
+    if (!sessionId || !user?.id || isSyncingBatchRef.current) return;
+    if (!navigator.onLine) {
+      offlinePositionQueue.setOnlineStatus(false);
+      return;
+    }
+
+    const pending = await offlinePositionQueue.getPendingFixes(sessionId, 50);
+    if (pending.length === 0) return;
+
+    isSyncingBatchRef.current = true;
+    offlinePositionQueue.setSyncing(true);
+
+    try {
+      const res = await rideService.uploadLocationBatch(
+        sessionId,
+        pending.map((p) => ({
+          lat: p.lat,
+          lng: p.lng,
+          speedKmh: p.speedKmh,
+          heading: p.heading,
+          userName: p.userName,
+          seq: p.seq,
+          timestamp: p.timestamp,
+        })),
+        userName,
+      );
+
+      const ids = pending.map((p) => p.id!).filter(Boolean);
+      await offlinePositionQueue.markFixesSynced(sessionId, ids);
+
+      // Requirement 5: Group map catches up: Riders' trails fill in and their markers move to current position
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'trail_catchup',
+        payload: {
+          userId: user.id,
+          userName,
+          latestLocation: res?.latestLocation || {
+            lat: pending[pending.length - 1].lat,
+            lng: pending[pending.length - 1].lng,
+            speed_kmh: pending[pending.length - 1].speedKmh,
+            heading: pending[pending.length - 1].heading,
+            updated_at: pending[pending.length - 1].timestamp,
+          },
+          trailPoints: pending.map((p) => [p.lat, p.lng]),
+        },
+      });
+
+      setJustSynced(true);
+      setTimeout(() => setJustSynced(false), 3500);
+    } catch (err) {
+      console.warn('Batch upload paused due to connection error:', err);
+      offlinePositionQueue.setOnlineStatus(false);
+    } finally {
+      isSyncingBatchRef.current = false;
+      offlinePositionQueue.setSyncing(false);
+      await offlinePositionQueue.refreshPendingCount(sessionId);
+    }
+  }, [sessionId, user?.id, userName]);
+
+  // Feature B: Queue listener, network change hooks, and initial trail loading
+  useEffect(() => {
+    if (!sessionId || !user?.id) return;
+
+    const unsubscribe = offlinePositionQueue.subscribe((st) => {
+      setQueueState(st);
+    });
+    offlinePositionQueue.refreshPendingCount(sessionId);
+
+    // Load local recorded trail from IndexedDB
+    offlinePositionQueue.getLocalTrail(sessionId, user.id).then((pts) => {
+      if (pts.length > 0) {
+        setRiderTrails((prev) => ({ ...prev, [user.id]: pts }));
+      }
+    });
+
+    // Load group trails from server
+    rideService.getRiderTrails(sessionId).then((d) => {
+      if (d?.trails) {
+        setRiderTrails((prev) => ({ ...d.trails, ...prev }));
+      }
+    }).catch(() => {});
+
+    const handleOnline = () => {
+      offlinePositionQueue.setOnlineStatus(true);
+      syncPendingBatch();
+    };
+    const handleOffline = () => {
+      offlinePositionQueue.setOnlineStatus(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    const queueTimer = setInterval(() => {
+      syncPendingBatch();
+    }, 15000);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      clearInterval(queueTimer);
+    };
+  }, [sessionId, user?.id, syncPendingBatch]);
+
   // Start GPS watch — broadcast on every fix, DB upsert every 15s
   useEffect(() => {
     if (!sessionId || !session || ended) return;
     if (!navigator.geolocation) { setGpsError('GPS not supported on this device'); return; }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
+      async (pos) => {
         const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
         setMyLat(lat); setMyLng(lng);
         myPosRef.current = { lat, lng };
-        myLastUpdatedRef.current = new Date().toISOString();
+        const nowIso = new Date().toISOString();
+        myLastUpdatedRef.current = nowIso;
         const speedKmh = speed != null ? speed * 3.6 : 0;
         const hdg = heading ?? 0;
         if (heading != null) setMyHeading(heading);
@@ -438,11 +557,43 @@ export default function RidePage() {
             handleToggleMyArrival(true);
           }
         }
-        // Instant broadcast — zero DB write, real-time for all riders
-        channelRef.current?.send({
-          type: 'broadcast', event: 'location',
-          payload: { userId: user?.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: new Date().toISOString() },
-        });
+
+        if (!user?.id) return;
+
+        // STEP 1: GPS fix recorded — written to phone's local database before app treats it as saved
+        try {
+          const seq = await offlinePositionQueue.getNextSequence(sessionId, user.id);
+          await offlinePositionQueue.enqueueFix({
+            sessionId,
+            userId: user.id,
+            userName,
+            lat,
+            lng,
+            speedKmh,
+            heading: hdg,
+            seq,
+            timestamp: nowIso,
+          });
+        } catch (err) {
+          console.warn('Local position queue write error:', err);
+        }
+
+        // STEP 5: Add point to local rider trail immediately so rider sees path even offline
+        setRiderTrails((prev) => ({
+          ...prev,
+          [user.id]: [...(prev[user.id] || []), [lat, lng]],
+        }));
+
+        // Instant broadcast if online
+        if (navigator.onLine) {
+          channelRef.current?.send({
+            type: 'broadcast', event: 'location',
+            payload: { userId: user?.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: nowIso },
+          });
+          syncPendingBatch();
+        } else {
+          offlinePositionQueue.setOnlineStatus(false);
+        }
       },
       (err) => {
         if (err.code === 1) setGpsError('Location permission denied. Please enable GPS.');
@@ -453,7 +604,7 @@ export default function RidePage() {
 
     // DB upsert every 15s — so late joiners see your last position
     dbSyncRef.current = setInterval(() => {
-      if (myPosRef.current) {
+      if (myPosRef.current && navigator.onLine) {
         rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => {});
       }
     }, 15000);
@@ -462,7 +613,7 @@ export default function RidePage() {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);
       if (dbSyncRef.current) clearInterval(dbSyncRef.current);
     };
-  }, [session, ended, sessionId, userName, user?.id]);
+  }, [session, ended, sessionId, userName, user?.id, syncPendingBatch, pinnedStop, ridersArrival]);
 
   // Load initial state + subscribe to Broadcast channel
   useEffect(() => {
@@ -520,6 +671,40 @@ export default function RidePage() {
           return [...prev, entry];
         });
         if (payload.quickStatus?.includes('🆘')) setSosActive(true);
+        // Requirement 5: Append point to rider's trail
+        if (payload.lat && payload.lng && payload.userId) {
+          setRiderTrails((prev) => ({
+            ...prev,
+            [payload.userId]: [...(prev[payload.userId] || []), [payload.lat, payload.lng]],
+          }));
+        }
+      })
+      .on('broadcast', { event: 'trail_catchup' }, ({ payload }) => {
+        if (!payload || !payload.userId) return;
+        // Requirement 5: Group map catches up: Riders' trails fill in and their markers move to current position
+        if (payload.latestLocation) {
+          setRiders((prev) => {
+            const idx = prev.findIndex((r) => r.user_id === payload.userId);
+            const entry: RiderLocation = {
+              user_id: payload.userId,
+              user_name: payload.userName,
+              lat: payload.latestLocation.lat,
+              lng: payload.latestLocation.lng,
+              speed_kmh: payload.latestLocation.speed_kmh ?? 0,
+              heading: payload.latestLocation.heading ?? 0,
+              quick_status: idx >= 0 ? prev[idx].quick_status : '',
+              updated_at: payload.latestLocation.updated_at || new Date().toISOString(),
+            };
+            if (idx >= 0) { const u = [...prev]; u[idx] = entry; return u; }
+            return [...prev, entry];
+          });
+        }
+        if (Array.isArray(payload.trailPoints) && payload.trailPoints.length > 0) {
+          setRiderTrails((prev) => ({
+            ...prev,
+            [payload.userId]: [...(prev[payload.userId] || []), ...payload.trailPoints],
+          }));
+        }
       })
       .on('broadcast', { event: 'message' }, ({ payload }) => {
         setMessages((prev) => {
@@ -1194,13 +1379,14 @@ export default function RidePage() {
         />
       )}
 
-      {/* Background warning banner */}
-      {backgroundWarning && (
-        <div style={{ background: '#92400e', color: '#fef3c7', padding: '8px 16px', fontSize: 13, fontWeight: 600, textAlign: 'center', flexShrink: 0 }}>
-          ⚠️ App was in background — location may have paused. Keep this screen open while riding.
-          <button onClick={() => setBackgroundWarning(false)} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#fef3c7', cursor: 'pointer', fontSize: 16, lineHeight: 1 }}>✕</button>
-        </div>
-      )}
+      {/* Feature B: Offline Position Queue Ride Banner ("No signal. Your position is saved and will sync.") */}
+      <OfflineSignalBanner
+        isOnline={queueState.isOnline}
+        pendingCount={queueState.pendingCount}
+        isSyncing={queueState.isSyncing}
+        justSynced={justSynced}
+        onForceSync={syncPendingBatch}
+      />
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
@@ -1411,6 +1597,26 @@ export default function RidePage() {
             {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
               <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#F0C23A" weight={5} dashArray="8, 8" opacity={0.95} />
             )}
+
+            {/* Feature B: Rider recorded breadcrumb trails (Group map catches up) */}
+            {Object.entries(riderTrails).map(([rId, trailPts]) => {
+              if (!trailPts || trailPts.length < 2) return null;
+              const rIdx = riders.findIndex((r) => r.user_id === rId);
+              const trailColor = rId === user?.id ? '#10B981' : (rIdx >= 0 ? RIDER_COLORS[rIdx % RIDER_COLORS.length] : '#F0C23A');
+              return (
+                <Polyline
+                  key={`trail-${rId}`}
+                  positions={trailPts}
+                  pathOptions={{
+                    color: trailColor,
+                    weight: rId === user?.id ? 4 : 3,
+                    opacity: 0.65,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              );
+            })}
             {/* Itinerary stop markers */}
             {itineraryStops.map((stop) => (
               <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
