@@ -20,6 +20,8 @@ export { default as NextStopBottomDock } from './NextStopBottomDock';
 export { default as PresetsTellGroupSheet } from './PresetsTellGroupSheet';
 export { NearbyHelpSheet } from './NearbyHelpSheet';
 export { OfflineSignalBanner } from './OfflineSignalBanner';
+export { RouteDeviationCard } from './RouteDeviationCard';
 export * from '../utils/lastSeen';
+export * from '../utils/routeDeviation';
 
 

@@ -21,8 +21,13 @@ import {
   PresetsTellGroupSheet,
   NearbyHelpSheet,
   OfflineSignalBanner,
+  RouteDeviationCard,
   getFreshness,
+  evaluateRiderDeviation,
+  getMinDistanceToRoute,
+  formatOffRouteDistance,
 } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
@@ -152,7 +157,7 @@ function makePinnedStopIcon(type: string) {
   });
 }
 
-function playAlertChime(type: 'urgent' | 'chime' = 'chime') {
+function playAlertChime(type: 'urgent' | 'chime' | 'alert' = 'chime') {
   try {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
@@ -160,9 +165,9 @@ function playAlertChime(type: 'urgent' | 'chime' = 'chime') {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = type === 'urgent' ? 'sawtooth' : 'sine';
-    osc.frequency.setValueAtTime(type === 'urgent' ? 784 : 587.33, ctx.currentTime);
-    osc.frequency.setValueAtTime(type === 'urgent' ? 880 : 880, ctx.currentTime + 0.12);
+    osc.type = type === 'urgent' || type === 'alert' ? 'sawtooth' : 'sine';
+    osc.frequency.setValueAtTime(type === 'alert' ? 659.25 : (type === 'urgent' ? 784 : 587.33), ctx.currentTime);
+    osc.frequency.setValueAtTime(type === 'alert' ? 523.25 : (type === 'urgent' ? 880 : 880), ctx.currentTime + 0.12);
 
     gain.gain.setValueAtTime(0.18, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
@@ -318,6 +323,10 @@ export default function RidePage() {
   const [justSynced, setJustSynced] = useState(false);
   const [riderTrails, setRiderTrails] = useState<Record<string, Array<[number, number]>>>({});
   const isSyncingBatchRef = useRef(false);
+
+  // Feature C: Route Deviation Tracker State
+  const [deviationTrackers, setDeviationTrackers] = useState<Record<string, RiderDeviationTracker>>({});
+  const [dismissedDeviations, setDismissedDeviations] = useState<Set<string>>(new Set());
 
   // Auto-refresh interval (5s) for real-time age badges and hollow markers
   const [, setTicker] = useState(0);
@@ -749,6 +758,37 @@ export default function RidePage() {
         setActiveAnnouncement(payload);
         playAlertChime('urgent');
       })
+      .on('broadcast', { event: 'route_deviation' }, ({ payload }) => {
+        if (!payload || !payload.userId) return;
+        playAlertChime('alert');
+        setToast(`⚠️ Route Deviation: ${payload.userName} is ${formatOffRouteDistance(payload.distanceMeters)} off the route`);
+        setTimeout(() => setToast(''), 4000);
+        setDeviationTrackers((prev) => ({
+          ...prev,
+          [payload.userId]: {
+            userId: payload.userId,
+            userName: payload.userName,
+            lat: payload.lat,
+            lng: payload.lng,
+            distanceMeters: payload.distanceMeters,
+            firstOffRouteAt: Date.now() - ((payload.durationSeconds || 120) * 1000),
+            durationSeconds: payload.durationSeconds || 120,
+            isDeviated: true,
+            lastEvaluatedAt: Date.now(),
+          },
+        }));
+      })
+      .on('broadcast', { event: 'route_restored' }, ({ payload }) => {
+        if (!payload || !payload.userId) return;
+        setDeviationTrackers((prev) => {
+          if (!prev[payload.userId]) return prev;
+          const updated = { ...prev };
+          delete updated[payload.userId];
+          return updated;
+        });
+        setToast(`✓ ${payload.userName} returned to the route`);
+        setTimeout(() => setToast(''), 3000);
+      })
       .subscribe();
 
     channelRef.current = channel;
@@ -1041,6 +1081,113 @@ export default function RidePage() {
   const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
   const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
   const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
+
+  const activeRoute = useMemo(
+    () => (osrmRoute.length > 1 ? osrmRoute : routeCoords),
+    [osrmRoute, routeCoords]
+  );
+
+  // Feature C: Evaluate route deviation for all riders against active route
+  useEffect(() => {
+    if (!activeRoute || activeRoute.length < 2) return;
+
+    setDeviationTrackers((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      // 1. Evaluate current user
+      if (user?.id && myLat && myLng) {
+        const myTracker = evaluateRiderDeviation(
+          { userId: user.id, userName, lat: myLat, lng: myLng },
+          activeRoute,
+          prev[user.id]
+        );
+        // Requirement 2 & 3: Check if crossed threshold (> 300m for 2min)
+        if (myTracker.isDeviated && !prev[user.id]?.isDeviated) {
+          channelRef.current?.send({
+            type: 'broadcast',
+            event: 'route_deviation',
+            payload: {
+              userId: user.id,
+              userName,
+              distanceMeters: Math.round(myTracker.distanceMeters),
+              durationSeconds: myTracker.durationSeconds,
+              lat: myLat,
+              lng: myLng,
+              timestamp: new Date().toISOString(),
+            },
+          });
+          playAlertChime('alert');
+          setToast(`⚠️ You are ${formatOffRouteDistance(myTracker.distanceMeters)} off the planned route`);
+          setTimeout(() => setToast(''), 4000);
+        } else if (!myTracker.isDeviated && prev[user.id]?.isDeviated) {
+          // Requirement 5: Alert clears when back on line
+          channelRef.current?.send({
+            type: 'broadcast',
+            event: 'route_restored',
+            payload: { userId: user.id, userName },
+          });
+        }
+        next[user.id] = myTracker;
+        changed = true;
+      }
+
+      // 2. Evaluate all other riders in convoy
+      riders.forEach((r) => {
+        if (!r.user_id || r.user_id === user?.id || !r.lat || !r.lng) return;
+        const rTracker = evaluateRiderDeviation(
+          { userId: r.user_id, userName: r.user_name || 'Rider', lat: Number(r.lat), lng: Number(r.lng) },
+          activeRoute,
+          prev[r.user_id]
+        );
+        if (rTracker.isDeviated && !prev[r.user_id]?.isDeviated) {
+          playAlertChime('alert');
+          setToast(`⚠️ ${r.user_name || 'Rider'} is ${formatOffRouteDistance(rTracker.distanceMeters)} off the route`);
+          setTimeout(() => setToast(''), 4000);
+        }
+        next[r.user_id] = rTracker;
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [activeRoute, myLat, myLng, riders, user?.id, userName]);
+
+  // Active deviation alerts
+  const activeDeviationAlerts: OffRouteAlert[] = useMemo(() => {
+    if (!activeRoute || activeRoute.length < 2) return [];
+    return Object.values(deviationTrackers)
+      .filter((t) => t.isDeviated && !dismissedDeviations.has(t.userId))
+      .map((t) => {
+        const { nearestPoint } = getMinDistanceToRoute(t.lat, t.lng, activeRoute);
+        return {
+          userId: t.userId,
+          userName: t.userName,
+          lat: t.lat,
+          lng: t.lng,
+          distanceMeters: t.distanceMeters,
+          durationSeconds: t.durationSeconds,
+          firstOffRouteAt: t.firstOffRouteAt || Date.now(),
+          nearestRoutePoint: nearestPoint,
+        };
+      })
+      .sort((a, b) => b.distanceMeters - a.distanceMeters);
+  }, [deviationTrackers, dismissedDeviations, activeRoute]);
+
+  // Requirement 4: Captain acts -> tap Regroup sends announcement to everyone
+  const handleRegroup = useCallback(
+    (alert: OffRouteAlert) => {
+      handleSendAnnouncement({
+        title: 'Regroup Convoy',
+        message: `${alert.userName} is ${formatOffRouteDistance(alert.distanceMeters)} off the route. Slow down or wait at next junction.`,
+        icon: '🛑',
+        urgency: 'high',
+      });
+      setToast(`📢 Regroup announcement broadcasted to convoy!`);
+      setTimeout(() => setToast(''), 3000);
+    },
+    [handleSendAnnouncement]
+  );
 
   if (loading) return (
     <div style={s.fullCenter}>
@@ -1386,6 +1533,26 @@ export default function RidePage() {
         isSyncing={queueState.isSyncing}
         justSynced={justSynced}
         onForceSync={syncPendingBatch}
+      />
+
+      {/* Feature C: Route-deviation alert card */}
+      <RouteDeviationCard
+        alerts={activeDeviationAlerts}
+        isCaptain={isLead}
+        currentUserId={user?.id}
+        onRegroup={handleRegroup}
+        onFocusRider={(lat, lng) => {
+          setFocusTarget([lat, lng]);
+          setFollowing(false);
+          setToast('Focused on off-route rider');
+        }}
+        onNavigateBack={(lat, lng) => {
+          setNavTarget({ name: 'Planned Route Rejoin Point', lat, lng });
+          setShowNavModal(true);
+        }}
+        onDismiss={(userId) => {
+          setDismissedDeviations((prev) => new Set([...prev, userId]));
+        }}
       />
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}

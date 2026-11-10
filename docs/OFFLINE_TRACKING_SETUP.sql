@@ -29,3 +29,4 @@ CREATE INDEX IF NOT EXISTS idx_rider_pos_hist_session_time
 
 -- Disable Row Level Security for seamless convoy telemetry access
 ALTER TABLE IF EXISTS rider_position_history DISABLE ROW LEVEL SECURITY;
+

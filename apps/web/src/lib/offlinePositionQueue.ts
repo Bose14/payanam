@@ -318,3 +318,4 @@ class OfflinePositionQueue {
 }
 
 export const offlinePositionQueue = new OfflinePositionQueue();
+
