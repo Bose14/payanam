@@ -771,7 +771,7 @@ const styles: Record<string, React.CSSProperties> = {
   footer: {
     display: 'flex',
     alignItems: 'center',
-    padding: '16px 24px',
+    padding: '16px 24px max(16px, env(safe-area-inset-bottom, 16px))',
     borderTop: '1px solid #2A2E35',
     backgroundColor: '#1B1E23',
   },

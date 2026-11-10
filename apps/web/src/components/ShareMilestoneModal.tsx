@@ -433,7 +433,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '12px 16px',
+    padding: '12px 16px max(14px, env(safe-area-inset-bottom, 14px))',
     borderTop: '1px solid #2A2E35',
     backgroundColor: '#1B1E23',
     flexWrap: 'wrap',

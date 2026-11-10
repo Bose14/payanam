@@ -126,63 +126,17 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   return null;
 }
 
-async function requestLocationPermission(): Promise<{ granted: boolean; reason?: 'denied' | 'unsupported' | 'timeout' }> {
-  if (typeof navigator === 'undefined' || !navigator.geolocation) {
-    return { granted: false, reason: 'unsupported' };
-  }
-
-  // 1. Quick check via Permissions API if available (Chrome, Android, modern Safari)
-  if ('permissions' in navigator && navigator.permissions?.query) {
-    try {
-      const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
-      if (status.state === 'granted') {
-        return { granted: true };
-      }
-      if (status.state === 'denied') {
-        return { granted: false, reason: 'denied' };
-      }
-    } catch {
-      // iOS Safari might throw for geolocation query, safe to fall through
-    }
-  }
-
-  // 2. Fast check via getCurrentPosition
-  // Use enableHighAccuracy: false and maximumAge: Infinity so iOS returns immediately if allowed
-  return new Promise((resolve) => {
-    let settled = false;
-
-    // Safety timeout: if iOS takes long to acquire satellite lock, do NOT block the rider
-    const fallbackTimer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        resolve({ granted: true });
-      }
-    }, 4000);
-
+function warmUpGeolocation(): void {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+  try {
     navigator.geolocation.getCurrentPosition(
-      () => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(fallbackTimer);
-          resolve({ granted: true });
-        }
-      },
-      (err) => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(fallbackTimer);
-          // err.code === 1: PERMISSION_DENIED (User explicitly blocked location)
-          // err.code === 2 (POSITION_UNAVAILABLE) or 3 (TIMEOUT): Permission IS granted, but satellites acquiring
-          if (err.code === 1) {
-            resolve({ granted: false, reason: 'denied' });
-          } else {
-            resolve({ granted: true });
-          }
-        }
-      },
-      { enableHighAccuracy: false, timeout: 3500, maximumAge: Infinity },
+      () => {},
+      () => {},
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: Infinity }
     );
-  });
+  } catch {
+    // silent
+  }
 }
 
 function playNotificationSound() {
@@ -611,15 +565,8 @@ export default function TripDetailPage() {
           <div className="responsive-hero-actions" style={styles.heroActions}>
             {activeSession ? (
               <button
-                onClick={async () => {
-                  const res = await requestLocationPermission();
-                  if (!res.granted && res.reason === 'denied') {
-                    showToast('📍 Location is blocked. In Safari, tap "aA" > Website Settings > Location > Allow');
-                    setTimeout(() => {
-                      navigate(`/ride/${activeSession.id}`);
-                    }, 2200);
-                    return;
-                  }
+                onClick={() => {
+                  warmUpGeolocation();
                   navigate(`/ride/${activeSession.id}`);
                 }}
                 style={styles.btnActiveRide}
@@ -631,16 +578,14 @@ export default function TripDetailPage() {
               <button
                 onClick={async () => {
                   if (!id) return;
-                  const res = await requestLocationPermission();
-                  if (!res.granted && res.reason === 'denied') {
-                    showToast('📍 Location is blocked. In Safari, tap "aA" > Website Settings > Location > Allow');
-                  }
+                  warmUpGeolocation();
                   setStartingRide(true);
                   try {
                     const d = await rideService.startRide(id);
                     navigate(`/ride/${d.session.id}`);
                   } catch {
                     setStartingRide(false);
+                    showToast('Failed to start ride');
                   }
                 }}
                 disabled={startingRide}
@@ -1323,22 +1268,27 @@ const styles: Record<string, React.CSSProperties> = {
   main: {
     maxWidth: 960,
     margin: '0 auto',
-    padding: '32px 20px 80px',
+    padding: '24px 16px max(110px, calc(env(safe-area-inset-bottom, 0px) + 90px))',
   },
   toast: {
     position: 'fixed',
-    top: 24,
+    top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 12px))',
     left: '50%',
     transform: 'translateX(-50%)',
     background: '#059669',
     color: '#ffffff',
-    padding: '12px 24px',
-    borderRadius: 10,
+    padding: '12px 20px',
+    borderRadius: 12,
     fontWeight: 700,
     fontSize: 14,
     zIndex: 10000,
     boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
-    whiteSpace: 'nowrap',
+    maxWidth: 'calc(100vw - 32px)',
+    textAlign: 'center',
+    boxSizing: 'border-box',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroCard: {
     background: 'var(--bg-hero)',

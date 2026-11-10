@@ -4,6 +4,14 @@
   box-sizing: border-box;
 }
 
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --app-height: 100dvh;
+}
+
 :root,
 :root[data-theme='night'],
 [data-theme='night'] {
@@ -75,6 +83,13 @@
   --btn-primary-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   --btn-primary-text: #ffffff;
   --card-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+}
+
+html, body {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 html, body, #root {
@@ -192,6 +207,11 @@ html, body {
 }
 
 @media (max-width: 768px) {
+  /* Prevent iOS Safari from auto-zooming into inputs when font-size is < 16px */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
   /* Hide desktop center links, activate bottom navigation bar */
   .desktop-nav-links {
     display: none !important;
