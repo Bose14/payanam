@@ -198,8 +198,8 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                   <div style={styles.itemName}>{item.name}</div>
                   <div style={styles.itemSubtitle}>{item.subtitle}</div>
 
-                  {/* Verified Date Badge (Last-seen for amenities) */}
-                  <div style={{ marginTop: 4 }}>
+                  {/* Verified Date Badge (Last-seen for amenities) & Nav Handoff */}
+                  <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <span
                       style={{
                         ...styles.verifiedBadge,
@@ -210,6 +210,30 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                     >
                       {verifiedLabel}
                     </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onNavigate) {
+                          onNavigate({ name: item.name, lat: item.lat, lng: item.lng });
+                        }
+                      }}
+                      style={{
+                        padding: '2px 8px',
+                        backgroundColor: '#111316',
+                        border: '1px solid #2A2E35',
+                        borderRadius: 6,
+                        color: '#F0C23A',
+                        fontSize: 10,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                      }}
+                    >
+                      <span>🧭</span> Open in navigation app
+                    </button>
                   </div>
                 </div>
 
@@ -239,7 +263,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
             disabled={!selectedItem}
             style={styles.btnPrimary}
           >
-            🧭 Navigate to selected
+            🧭 Open in navigation app
           </button>
           {onPinAsStop && (
             <button

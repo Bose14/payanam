@@ -32,6 +32,7 @@ export { default as TripChatWhatsAppBanner } from './TripChatWhatsAppBanner';
 export { default as ChatLocationCard } from './ChatLocationCard';
 export { default as ShareLocationModal } from './ShareLocationModal';
 export { default as ItineraryStopItem } from './ItineraryStopItem';
+export { default as NavigationHandoffButton } from './NavigationHandoffButton';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
@@ -41,5 +42,6 @@ export * from '../utils/stopPinning';
 export * from '../utils/statusPresets';
 export * from '../utils/captainAnnouncement';
 export * from '../utils/tripChatItinerary';
+export * from '../utils/navigationHandoff';
 
 

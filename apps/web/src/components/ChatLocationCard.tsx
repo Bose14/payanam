@@ -145,6 +145,33 @@ export default function ChatLocationCard({
         )}
       </div>
 
+      {/* Feature L: Open stop in navigation app button */}
+      {lat != null && lng != null && (
+        <button
+          type="button"
+          onClick={handleOpenMaps}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            backgroundColor: '#1B1E23',
+            border: '1.5px solid #2A2E35',
+            borderRadius: 10,
+            color: '#F1EFEA',
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'background-color 0.2s',
+          }}
+        >
+          <span>🧭</span>
+          <span>Open in navigation app</span>
+        </button>
+      )}
+
       {/* Confirmation State & Actions */}
       {isConfirmed ? (
         <div

@@ -89,7 +89,7 @@ export default function ItineraryStopItem({
           )}
         </div>
 
-        <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span>
             {stop.description || `Stop ${index + 1} · Day ${stop.day_number ?? 1}`}
           </span>
@@ -98,17 +98,20 @@ export default function ItineraryStopItem({
               type="button"
               onClick={() => onOpenNavigation(stop)}
               style={{
-                background: 'none',
-                border: 'none',
+                padding: '2px 8px',
+                backgroundColor: '#111316',
+                border: '1px solid #2A2E35',
+                borderRadius: 6,
                 color: '#F0C23A',
                 fontSize: 10,
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: 'pointer',
-                padding: 0,
-                textDecoration: 'underline',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
               }}
             >
-              open in maps ↗
+              <span>🧭</span> Open in navigation app
             </button>
           )}
         </div>
