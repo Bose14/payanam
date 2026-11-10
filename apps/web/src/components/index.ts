@@ -33,6 +33,9 @@ export { default as ChatLocationCard } from './ChatLocationCard';
 export { default as ShareLocationModal } from './ShareLocationModal';
 export { default as ItineraryStopItem } from './ItineraryStopItem';
 export { default as NavigationHandoffButton } from './NavigationHandoffButton';
+export { default as ItineraryProposalCard } from './ItineraryProposalCard';
+export { default as ProposeEditModal } from './ProposeEditModal';
+export { default as ConvoyInviteCard } from './ConvoyInviteCard';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
@@ -43,5 +46,6 @@ export * from '../utils/statusPresets';
 export * from '../utils/captainAnnouncement';
 export * from '../utils/tripChatItinerary';
 export * from '../utils/navigationHandoff';
+export * from '../utils/itineraryProposals';
 
 

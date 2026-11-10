@@ -8,6 +8,14 @@ import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
 import NavigationAppModal from '../components/NavigationAppModal';
 import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
+import {
+  ItineraryProposalCard,
+  ProposeEditModal,
+  getStoredProposals,
+  addProposal,
+  resolveProposal,
+  ItineraryProposal,
+} from '../components';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: '⛽',
@@ -173,6 +181,49 @@ export default function TripDetailPage() {
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
+  const [showProposeModal, setShowProposeModal] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      setProposals(getStoredProposals(id));
+    }
+  }, [id]);
+
+  const handleCreateProposal = (data: { title: string; description?: string }) => {
+    if (!id) return;
+    const newProp = addProposal(id, {
+      tripId: id,
+      proposerId: user?.id || 'anon',
+      proposerName: user?.fullName || 'Rider',
+      proposerInitials: (user?.fullName || 'Rider').slice(0, 2).toUpperCase(),
+      title: data.title,
+      description: data.description,
+    });
+    setProposals((prev) => [newProp, ...prev]);
+    setToast('✓ Proposal submitted to Captain!');
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const handleAcceptProposal = (prop: ItineraryProposal) => {
+    if (!id) return;
+    resolveProposal(id, prop.id, 'accepted', user?.fullName || 'Captain');
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'accepted', resolvedBy: user?.fullName || 'Captain' } : p))
+    );
+    setToast(`✓ Approved proposal from ${prop.proposerName}`);
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  const handleDeclineProposal = (prop: ItineraryProposal) => {
+    if (!id) return;
+    resolveProposal(id, prop.id, 'declined', user?.fullName || 'Captain');
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'declined', resolvedBy: user?.fullName || 'Captain' } : p))
+    );
+    setToast('Proposal declined');
+    setTimeout(() => setToast(''), 2500);
+  };
 
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -754,15 +805,51 @@ export default function TripDetailPage() {
 
         {/* Day-by-Day Itinerary */}
         <div style={{ marginTop: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
             <div>
               <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Day-by-Day Route Itinerary</h2>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '4px 0 0' }}>Fuel stops, food breaks, scenic lookouts, and night stays</p>
             </div>
-            {trip?.isOwner && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Changes auto-save automatically</span>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowProposeModal(true)}
+                style={{
+                  padding: '7px 14px',
+                  backgroundColor: 'rgba(240, 194, 58, 0.15)',
+                  border: '1.5px solid #F0C23A',
+                  borderRadius: 10,
+                  color: '#F0C23A',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <span>💡</span> Propose Itinerary Edit
+              </button>
+              {trip?.isOwner && (
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Changes auto-save automatically</span>
+              )}
+            </div>
           </div>
+
+          {/* Feature 1A Step 4: Proposed Itinerary Edits List */}
+          {proposals.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {proposals.map((prop) => (
+                <ItineraryProposalCard
+                  key={prop.id}
+                  proposal={prop}
+                  isCaptain={Boolean(trip?.isOwner)}
+                  onAccept={handleAcceptProposal}
+                  onDecline={handleDeclineProposal}
+                />
+              ))}
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {Array.from({ length: trip.days }, (_, i) => i + 1).map((day) => {
@@ -1048,6 +1135,13 @@ export default function TripDetailPage() {
             console.warn(err);
           }
         }}
+      />
+
+      {/* Feature 1A: Propose Itinerary Edit Modal */}
+      <ProposeEditModal
+        isOpen={showProposeModal}
+        onClose={() => setShowProposeModal(false)}
+        onSubmitProposal={handleCreateProposal}
       />
     </div>
   );

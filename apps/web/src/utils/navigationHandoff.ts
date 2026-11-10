@@ -131,3 +131,4 @@ export function launchNavigationHandoff(
   const url = buildNavigationHandoffUrl(target, chosenApp);
   window.open(url, '_blank', 'noopener,noreferrer');
 }
+

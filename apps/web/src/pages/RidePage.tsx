@@ -33,6 +33,12 @@ import {
   ChatLocationCard,
   ShareLocationModal,
   ItineraryStopItem,
+  ItineraryProposalCard,
+  ProposeEditModal,
+  ConvoyInviteCard,
+  getStoredProposals,
+  addProposal,
+  resolveProposal,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
@@ -53,7 +59,7 @@ import {
   isStopConfirmedInItinerary,
   formatLocationShareMessage,
 } from '../components';
-import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
@@ -349,6 +355,8 @@ export default function RidePage() {
   const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
   const [showShareLocationModal, setShowShareLocationModal] = useState(false);
+  const [showProposeModal, setShowProposeModal] = useState(false);
+  const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
   const myLastUpdatedRef = useRef<string | null>(null);
 
@@ -419,6 +427,12 @@ export default function RidePage() {
       .catch(() => setEnded(true))
       .finally(() => setLoading(false));
   }, [sessionId]);
+
+  // Feature 1A: Load itinerary proposals for current trip
+  useEffect(() => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    setProposals(getStoredProposals(tripId));
+  }, [session?.trip_id, sessionId]);
 
   // Fetch road-following route from trip plan: start → itinerary stops → destination
   // Loads immediately from trip plan (Plan tab) even before GPS, and refreshes every 2 min
@@ -946,6 +960,45 @@ export default function RidePage() {
           setTimeout(() => setToast(''), 3500);
         }
       })
+      .on('broadcast', { event: 'itinerary_proposal' }, ({ payload }) => {
+        const prop = payload?.proposal;
+        if (prop) {
+          setProposals((prev) => {
+            if (prev.some((p) => p.id === prop.id)) return prev;
+            return [prop, ...prev];
+          });
+          playAlertChime('chime');
+          setToast(`💡 ${prop.proposerName} proposed: "${prop.title}"`);
+          setTimeout(() => setToast(''), 4000);
+        }
+      })
+      .on('broadcast', { event: 'proposal_resolved' }, ({ payload }) => {
+        const { proposalId, status, resolverName, updatedStop } = payload || {};
+        if (proposalId) {
+          setProposals((prev) =>
+            prev.map((p) =>
+              p.id === proposalId
+                ? { ...p, status, resolvedAt: new Date().toISOString(), resolvedBy: resolverName }
+                : p
+            )
+          );
+          if (status === 'accepted') {
+            playAlertChime('chime');
+            setToast(`✓ Proposal accepted by ${resolverName || 'Captain'}!`);
+            if (updatedStop) {
+              setSession((prev) => {
+                if (!prev) return prev;
+                const list = prev.itinerary ?? [];
+                if (list.some((s) => s.place === updatedStop.place)) return prev;
+                return { ...prev, itinerary: [...list, updatedStop] };
+              });
+            }
+          } else {
+            setToast(`Proposal declined by ${resolverName || 'Captain'}`);
+          }
+          setTimeout(() => setToast(''), 3500);
+        }
+      })
       .subscribe();
 
     channelRef.current = channel;
@@ -1313,6 +1366,152 @@ export default function RidePage() {
       navigate(`/trips/${session?.trip_id}`, { replace: true });
     } finally { setEndingRide(false); }
   }, [sessionId, session, navigate]);
+
+  // Feature 1A Step 4: Member proposes an edit to itinerary
+  const handleCreateProposal = useCallback(async (data: { title: string; description?: string }) => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    const newProp = addProposal(tripId, {
+      tripId,
+      proposerId: user?.id || 'anon',
+      proposerName: userName,
+      proposerInitials: userName.slice(0, 2).toUpperCase(),
+      title: data.title,
+      description: data.description,
+    });
+
+    setProposals((prev) => [newProp, ...prev]);
+
+    // Broadcast proposal to convoy
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'itinerary_proposal',
+      payload: { proposal: newProp },
+    });
+
+    // Send chat status message
+    if (sessionId) {
+      await rideService.sendMessage(sessionId, {
+        message: `💡 ${userName} proposed itinerary edit: "${data.title}"`,
+        messageType: 'status',
+        userName,
+      }).catch(() => null);
+    }
+
+    setToast('✓ Proposal submitted to Captain!');
+    setTimeout(() => setToast(''), 3000);
+  }, [session?.trip_id, sessionId, user?.id, userName]);
+
+  // Feature 1A Step 4: Owner or captain approves proposed edit
+  const handleAcceptProposal = useCallback(async (prop: ItineraryProposal) => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    const isCaptain = session?.started_by === user?.id;
+    if (!isCaptain) {
+      setToast('Only the Captain / Owner can approve proposals.');
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    resolveProposal(tripId, prop.id, 'accepted', userName);
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'accepted', resolvedBy: userName } : p))
+    );
+
+    // If proposal describes a stop or time, add/update in itinerary
+    let newStop: ItineraryStop | undefined;
+    if (prop.title) {
+      const orderIndex = (session?.itinerary?.length || 0) + 1;
+      newStop = {
+        id: `prop_stop_${Date.now()}`,
+        place: prop.title,
+        lat: prop.proposedLat ?? 13.5000,
+        lng: prop.proposedLng ?? 74.8000,
+        day_number: 2,
+        order_index: orderIndex,
+        item_type: 'stop',
+        description: `Approved proposal from ${prop.proposerName}: ${prop.description || prop.title}`,
+      };
+
+      setSession((prev) => {
+        if (!prev) return prev;
+        const list = prev.itinerary ?? [];
+        return { ...prev, itinerary: [...list, newStop!] };
+      });
+
+      if (session?.trip_id) {
+        tripService.addStop(session.trip_id, {
+          place: newStop.place,
+          item_type: 'stop',
+          description: newStop.description,
+          day_number: newStop.day_number,
+          order_index: newStop.order_index,
+          lat: newStop.lat,
+          lng: newStop.lng,
+        }).catch(() => null);
+      }
+    }
+
+    // Broadcast resolution to convoy
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'proposal_resolved',
+      payload: {
+        proposalId: prop.id,
+        status: 'accepted',
+        resolverName: userName,
+        updatedStop: newStop,
+      },
+    });
+
+    // Send chat status message
+    if (sessionId) {
+      await rideService.sendMessage(sessionId, {
+        message: `👑 Captain approved ${prop.proposerName}'s proposal: "${prop.title}"`,
+        messageType: 'status',
+        userName,
+      }).catch(() => null);
+    }
+
+    setToast(`✓ Approved proposal from ${prop.proposerName}`);
+    setTimeout(() => setToast(''), 3000);
+  }, [session?.trip_id, session?.started_by, session?.itinerary, sessionId, user?.id, userName]);
+
+  // Feature 1A Step 4: Owner or captain declines proposed edit
+  const handleDeclineProposal = useCallback(async (prop: ItineraryProposal) => {
+    const tripId = session?.trip_id || sessionId || 'default_trip';
+    const isCaptain = session?.started_by === user?.id;
+    if (!isCaptain) {
+      setToast('Only the Captain / Owner can decline proposals.');
+      setTimeout(() => setToast(''), 3000);
+      return;
+    }
+
+    resolveProposal(tripId, prop.id, 'declined', userName);
+    setProposals((prev) =>
+      prev.map((p) => (p.id === prop.id ? { ...p, status: 'declined', resolvedBy: userName } : p))
+    );
+
+    // Broadcast decline
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'proposal_resolved',
+      payload: {
+        proposalId: prop.id,
+        status: 'declined',
+        resolverName: userName,
+      },
+    });
+
+    if (sessionId) {
+      await rideService.sendMessage(sessionId, {
+        message: `Captain declined proposal: "${prop.title}"`,
+        messageType: 'status',
+        userName,
+      }).catch(() => null);
+    }
+
+    setToast('Proposal declined');
+    setTimeout(() => setToast(''), 2500);
+  }, [session?.trip_id, session?.started_by, sessionId, user?.id, userName]);
 
   const colorForUser = useCallback((uid: string) => {
     const allIds = [user?.id ?? '', ...riders.filter(r => r.user_id !== user?.id).map(r => r.user_id)];
@@ -2604,44 +2803,72 @@ export default function RidePage() {
                 ))}
               </div>
 
-              {/* Add planned stop button */}
-              <button
-                type="button"
-                onClick={() => setShowPinModal(true)}
-                style={{ width: '100%', marginTop: 14, padding: '10px', backgroundColor: '#111316', border: '1.5px dashed #2A2E35', borderRadius: 10, color: '#F0C23A', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >
-                <span>➕</span> Add planned stop to itinerary
-              </button>
+              {/* Action row: Add planned stop & Propose edit (Feature 1A) */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPinModal(true)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#111316',
+                    border: '1.5px dashed #2A2E35',
+                    borderRadius: 10,
+                    color: '#F0C23A',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>➕</span> Add planned stop
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowProposeModal(true)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    backgroundColor: '#111316',
+                    border: '1.5px dashed #F0C23A',
+                    borderRadius: 10,
+                    color: '#F0C23A',
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span>💡</span> Propose edit
+                </button>
+              </div>
             </div>
 
-            {/* Propose Card */}
-            <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#22262D', color: '#F1EFEA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, border: '1px solid #3A3F47' }}>
-                  MR
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#F1EFEA' }}>Meera proposed</div>
-                  <div style={{ fontSize: 12, color: '#9D9C9A' }}>Lunch at 13:30 instead</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button
-                  type="button"
-                  onClick={() => { setToast('Proposal accepted'); setTimeout(() => setToast(''), 2500); }}
-                  style={{ flex: 1, padding: '10px', backgroundColor: '#F0C23A', color: '#111316', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Accept
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setToast('Proposal declined'); setTimeout(() => setToast(''), 2500); }}
-                  style={{ flex: 1, padding: '10px', backgroundColor: '#1B1E23', color: '#F1EFEA', border: '1.5px solid #2A2E35', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Decline
-                </button>
-              </div>
-            </div>
+            {/* Feature 1A Step 4: Proposed Itinerary Edits List (Approved by Captain/Owner) */}
+            {proposals.map((prop) => (
+              <ItineraryProposalCard
+                key={prop.id}
+                proposal={prop}
+                isCaptain={isLead}
+                onAccept={handleAcceptProposal}
+                onDecline={handleDeclineProposal}
+              />
+            ))}
+
+            {/* Feature 1A Step 2: Convoy Invitation Card (Link or Code) */}
+            <ConvoyInviteCard
+              inviteCode={session?.trip_id?.slice(0, 6).toUpperCase() || 'BLR9X2'}
+              tripTitle={session?.trips?.title}
+              fromPlace={session?.trips?.from_place}
+              toPlace={session?.trips?.to_place}
+            />
 
             {/* Amenities Shortcut */}
             <button
@@ -3282,6 +3509,13 @@ export default function RidePage() {
         onClose={() => setShowShareLocationModal(false)}
         currentGps={myLat && myLng ? { lat: myLat, lng: myLng } : null}
         onShareLocation={handleShareLocation}
+      />
+
+      {/* Feature 1A: Propose Itinerary Edit Modal */}
+      <ProposeEditModal
+        isOpen={showProposeModal}
+        onClose={() => setShowProposeModal(false)}
+        onSubmitProposal={handleCreateProposal}
       />
     </div>
   );
