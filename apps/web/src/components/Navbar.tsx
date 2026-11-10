@@ -140,6 +140,7 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitBackdropFilter: 'blur(12px)',
     borderBottom: '1px solid var(--border-nav)',
     transition: 'background-color 0.3s ease, border-color 0.3s ease',
+    paddingTop: 'env(safe-area-inset-top, 0px)',
   },
   inner: {
     maxWidth: 1200,

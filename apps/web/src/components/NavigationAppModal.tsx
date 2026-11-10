@@ -141,7 +141,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderTopRightRadius: 24,
     width: '100%',
     maxWidth: 500,
-    padding: '16px 20px 32px',
+    padding: '16px 20px max(32px, calc(env(safe-area-inset-bottom, 0px) + 20px))',
     boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.7)',
     border: '1.5px solid #2A2E35',
     boxSizing: 'border-box',

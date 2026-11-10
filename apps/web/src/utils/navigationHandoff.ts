@@ -129,6 +129,10 @@ export function launchNavigationHandoff(
 ): void {
   const chosenApp = app || getPreferredNavigationApp();
   const url = buildNavigationHandoffUrl(target, chosenApp);
-  window.open(url, '_blank', 'noopener,noreferrer');
+  if (url.startsWith('maps:') || url.startsWith('geo:') || url.startsWith('waze:')) {
+    window.location.href = url;
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
 

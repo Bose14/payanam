@@ -126,15 +126,17 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   return null;
 }
 
-function requestLocationPermission(): Promise<boolean> {
-  if (!navigator.geolocation) return Promise.resolve(false);
-  return new Promise((resolve) => {
+function warmUpGeolocation(): void {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+  try {
     navigator.geolocation.getCurrentPosition(
-      () => resolve(true),
-      () => resolve(false),
-      { timeout: 8000, maximumAge: 60000 },
+      () => {},
+      () => {},
+      { enableHighAccuracy: false, timeout: 3000, maximumAge: Infinity }
     );
-  });
+  } catch {
+    // silent
+  }
 }
 
 function playNotificationSound() {
@@ -563,9 +565,8 @@ export default function TripDetailPage() {
           <div className="responsive-hero-actions" style={styles.heroActions}>
             {activeSession ? (
               <button
-                onClick={async () => {
-                  const ok = await requestLocationPermission();
-                  if (!ok) { showToast('📍 Enable location permission to join the ride.'); return; }
+                onClick={() => {
+                  warmUpGeolocation();
                   navigate(`/ride/${activeSession.id}`);
                 }}
                 style={styles.btnActiveRide}
@@ -577,14 +578,14 @@ export default function TripDetailPage() {
               <button
                 onClick={async () => {
                   if (!id) return;
-                  const ok = await requestLocationPermission();
-                  if (!ok) { showToast('📍 Enable location permission to start the ride.'); return; }
+                  warmUpGeolocation();
                   setStartingRide(true);
                   try {
                     const d = await rideService.startRide(id);
                     navigate(`/ride/${d.session.id}`);
                   } catch {
                     setStartingRide(false);
+                    showToast('Failed to start ride');
                   }
                 }}
                 disabled={startingRide}
@@ -1267,22 +1268,27 @@ const styles: Record<string, React.CSSProperties> = {
   main: {
     maxWidth: 960,
     margin: '0 auto',
-    padding: '32px 20px 80px',
+    padding: '24px 16px max(110px, calc(env(safe-area-inset-bottom, 0px) + 90px))',
   },
   toast: {
     position: 'fixed',
-    top: 24,
+    top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 12px))',
     left: '50%',
     transform: 'translateX(-50%)',
     background: '#059669',
     color: '#ffffff',
-    padding: '12px 24px',
-    borderRadius: 10,
+    padding: '12px 20px',
+    borderRadius: 12,
     fontWeight: 700,
     fontSize: 14,
     zIndex: 10000,
     boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
-    whiteSpace: 'nowrap',
+    maxWidth: 'calc(100vw - 32px)',
+    textAlign: 'center',
+    boxSizing: 'border-box',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroCard: {
     background: 'var(--bg-hero)',

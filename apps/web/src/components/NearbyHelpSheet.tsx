@@ -626,7 +626,7 @@ const styles: Record<string, React.CSSProperties> = {
   actionRow: {
     display: 'flex',
     gap: 10,
-    padding: '10px 14px',
+    padding: '10px 14px max(14px, env(safe-area-inset-bottom, 14px))',
     borderTop: '1px solid #2A2E35',
     backgroundColor: '#1B1E23',
     flexWrap: 'wrap',

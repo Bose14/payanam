@@ -674,6 +674,7 @@ export default function RidePage() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
+        setGpsError('');
         const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
         setMyLat(lat); setMyLng(lng);
         myPosRef.current = { lat, lng };
@@ -738,8 +739,12 @@ export default function RidePage() {
         }
       },
       (err) => {
-        if (err.code === 1) setGpsError('Location permission denied. Please enable GPS.');
-        else setGpsError('Unable to get your location.');
+        if (err.code === 1) {
+          setGpsError('Location permission denied. Please enable GPS.');
+        } else if (!myPosRef.current) {
+          // err.code 2 (unavailable) or 3 (timeout) during GPS warmup: keep watching, don't block UI
+          console.warn('GPS warmup / acquiring fix:', err.message);
+        }
       },
       { enableHighAccuracy: !batterySaver, maximumAge: batterySaver ? 15000 : 2000, timeout: 10000 },
     );
@@ -1991,7 +1996,19 @@ export default function RidePage() {
 
       {/* SOS Banner */}
       {sosActive && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: '#DC2626', color: '#FFFFFF', padding: '12px 16px', textAlign: 'center', fontWeight: 800, fontSize: 14 }}>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          background: '#DC2626',
+          color: '#FFFFFF',
+          padding: 'max(12px, env(safe-area-inset-top, 12px)) 16px 12px',
+          textAlign: 'center',
+          fontWeight: 800,
+          fontSize: 14,
+        }}>
           🆘 SOS ALERT — A rider needs help!
           <button onClick={() => setSosActive(false)} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.25)', border: 'none', color: '#FFFFFF', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontWeight: 700 }}>Dismiss</button>
         </div>
@@ -2000,7 +2017,7 @@ export default function RidePage() {
       {/* Header — Matte Obsidian Dark matching Mockup */}
       <div style={{
         backgroundColor: '#111316',
-        padding: '14px 18px 8px',
+        padding: 'max(14px, env(safe-area-inset-top, 14px)) 18px 8px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -2217,7 +2234,7 @@ export default function RidePage() {
       {toast && (
         <div style={{
           position: 'fixed',
-          top: 60,
+          top: 'max(60px, calc(env(safe-area-inset-top, 0px) + 16px))',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 9999,
@@ -2230,7 +2247,9 @@ export default function RidePage() {
           fontWeight: 700,
           boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
           animation: 'fadeIn 0.2s ease-out',
-          whiteSpace: 'nowrap',
+          maxWidth: 'calc(100vw - 32px)',
+          textAlign: 'center',
+          boxSizing: 'border-box',
         }}>
           {toast}
         </div>
@@ -2480,23 +2499,18 @@ export default function RidePage() {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
-              padding: '24px 20px 28px',
+              padding: 'max(24px, env(safe-area-inset-top, 24px)) 20px max(28px, env(safe-area-inset-bottom, 28px))',
               boxSizing: 'border-box',
+              overflowY: 'auto',
             }}>
               <div>
-                {/* Status Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#9D9C9A', fontSize: 13, fontWeight: 700, marginBottom: 28 }}>
-                  <span>9:41</span>
-                  <span>5G</span>
-                </div>
-
-                {/* Brand Header matching mockup: ■ PAYANAM */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
+                {/* Brand Header: ■ PAYANAM */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, marginTop: 4 }}>
                   <div style={{ width: 12, height: 12, backgroundColor: '#F0C23A', borderRadius: 2 }} />
                   <span style={{ color: '#F1EFEA', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
                 </div>
 
-                {/* Step Card matching mockup */}
+                {/* Step Card */}
                 <div style={{
                   backgroundColor: '#1B1E23',
                   border: '1.5px solid #2A2E35',
@@ -2504,20 +2518,31 @@ export default function RidePage() {
                   padding: '22px 20px',
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
-                    STEP 2 OF 3
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                    CONVOY GPS READY
                   </div>
                   <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: '#F1EFEA', letterSpacing: -0.3 }}>
-                    Live trip tracking
+                    Live convoy tracking
                   </h3>
-                  <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.45, margin: 0 }}>
-                    We use your location only while a trip is active, so your group can see where you are.
+                  <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.5, margin: '0 0 14px' }}>
+                    We use your location only while the ride is active so your convoy can see your live position and keep the group together.
                   </p>
+                  <div style={{
+                    backgroundColor: 'rgba(240, 194, 58, 0.08)',
+                    border: '1px solid rgba(240, 194, 58, 0.25)',
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    fontSize: 12,
+                    color: '#F1EFEA',
+                    lineHeight: 1.45,
+                  }}>
+                    💡 <strong>iPhone Safari Tip:</strong> If location is blocked, tap the <strong>aA</strong> icon in your address bar → <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>, then tap Allow below.
+                  </div>
                 </div>
               </div>
 
-              {/* Fixed Bottom Buttons matching mockup */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+              {/* Fixed Bottom Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', marginTop: 24 }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -2541,7 +2566,7 @@ export default function RidePage() {
                     textAlign: 'center',
                   }}
                 >
-                  Allow location
+                  Allow location & share live
                 </button>
                 <button
                   type="button"
@@ -2559,7 +2584,7 @@ export default function RidePage() {
                     textAlign: 'center',
                   }}
                 >
-                  Not now
+                  View map anyway without GPS
                 </button>
               </div>
             </div>
