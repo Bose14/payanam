@@ -43,6 +43,8 @@ import {
   detectMissedStop,
   getPresetInfo,
   RIDER_STATUS_PRESETS,
+  CAPTAIN_ALERT_VIBRATION_PATTERN,
+  CAPTAIN_SENT_VIBRATION_PATTERN,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
@@ -880,6 +882,10 @@ export default function RidePage() {
       .on('broadcast', { event: 'announcement' }, ({ payload }) => {
         setActiveAnnouncement(payload);
         playAlertChime('urgent');
+        // Feature K Requirement 4: Members get the alert with a distinct vibration pattern
+        if ('vibrate' in navigator) {
+          navigator.vibrate(CAPTAIN_ALERT_VIBRATION_PATTERN);
+        }
       })
       .on('broadcast', { event: 'route_deviation' }, ({ payload }) => {
         if (!payload || !payload.userId) return;
@@ -1094,6 +1100,9 @@ export default function RidePage() {
 
     setActiveAnnouncement(payload);
     playAlertChime('urgent');
+    if ('vibrate' in navigator) {
+      navigator.vibrate(CAPTAIN_SENT_VIBRATION_PATTERN);
+    }
 
     channelRef.current?.send({
       type: 'broadcast',
@@ -1643,26 +1652,29 @@ export default function RidePage() {
             🛠️
           </button>
 
-          {/* Captain Broadcast Alert */}
+          {/* Feature K: Captain-only announcement control on Ride tab */}
           {isLead && (
             <button
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: '50%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
-                fontSize: 14,
+                padding: '4px 10px',
+                borderRadius: 20,
+                backgroundColor: 'rgba(240, 194, 58, 0.15)',
+                border: '1.5px solid #F0C23A',
+                color: '#F0C23A',
+                fontSize: 12,
+                fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 5,
+                boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
               }}
-              title="Broadcast alert to all riders"
+              title="Captain announcement sheet (Feature K)"
             >
-              📢
+              <span>👑</span>
+              <span>Announce</span>
             </button>
           )}
 
@@ -1795,43 +1807,76 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Captain Announcement Top Banner */}
+      {/* Feature K: Captain Announcement Alert Card (Members see the announcement as an alert) */}
       {activeAnnouncement && (
         <div style={{
-          background: activeAnnouncement.urgency === 'high' ? 'linear-gradient(135deg, #991b1b, #b91c1c)' : 'linear-gradient(135deg, #b45309, #d97706)',
-          color: '#fff',
-          padding: '8px 14px',
+          margin: '0 16px 8px 16px',
+          padding: '12px 14px',
+          borderRadius: 18,
+          backgroundColor: '#1B1E23',
+          border: activeAnnouncement.urgency === 'high' ? '1.5px solid #EF4444' : '1.5px solid #F0C23A',
+          boxShadow: activeAnnouncement.urgency === 'high' ? '0 4px 20px rgba(239, 68, 68, 0.35)' : '0 4px 20px rgba(240, 194, 58, 0.35)',
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
+          gap: 12,
           flexShrink: 0,
-          borderBottom: '2px solid rgba(255,255,255,0.2)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          zIndex: 35,
+          animation: 'slideDown 0.25s ease-out',
         }}>
-          <span style={{ fontSize: 22, flexShrink: 0 }}>{activeAnnouncement.icon}</span>
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: activeAnnouncement.urgency === 'high' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(240, 194, 58, 0.15)',
+            border: activeAnnouncement.urgency === 'high' ? '1px solid #EF4444' : '1px solid #F0C23A',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            flexShrink: 0,
+          }}>
+            {activeAnnouncement.icon}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: '#fef08a' }}>
-              📢 CAPTAIN ANNOUNCEMENT ({activeAnnouncement.timestamp})
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <span style={{
+                fontSize: 9,
+                fontWeight: 900,
+                color: activeAnnouncement.urgency === 'high' ? '#EF4444' : '#F0C23A',
+                letterSpacing: 0.8,
+                textTransform: 'uppercase',
+              }}>
+                📢 CAPTAIN ANNOUNCEMENT
+              </span>
+              <span style={{ fontSize: 9.5, color: '#9D9C9A', fontWeight: 600 }}>
+                {activeAnnouncement.timestamp}
+              </span>
             </div>
-            <div style={{ fontSize: 13, fontWeight: 700, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {activeAnnouncement.title}: {activeAnnouncement.message}
+            <div style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA', lineHeight: 1.2 }}>
+              {activeAnnouncement.title}
             </div>
+            {activeAnnouncement.message && (
+              <div style={{ fontSize: 11.5, color: '#9D9C9A', fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
+                {activeAnnouncement.message}
+              </div>
+            )}
           </div>
           <button
+            type="button"
             onClick={() => setActiveAnnouncement(null)}
             style={{
-              background: 'rgba(255,255,255,0.25)',
-              border: 'none',
-              color: '#fff',
-              borderRadius: 6,
-              padding: '3px 8px',
+              padding: '6px 12px',
+              backgroundColor: '#111316',
+              border: '1.5px solid #2A2E35',
+              borderRadius: 10,
+              color: '#F1EFEA',
               fontSize: 11,
-              fontWeight: 700,
+              fontWeight: 800,
               cursor: 'pointer',
               flexShrink: 0,
             }}
           >
-            Dismiss
+            Got it ✓
           </button>
         </div>
       )}

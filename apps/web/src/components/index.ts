@@ -35,5 +35,6 @@ export * from '../utils/batterySaver';
 export * from '../utils/plannedRouteProgress';
 export * from '../utils/stopPinning';
 export * from '../utils/statusPresets';
+export * from '../utils/captainAnnouncement';
 
 

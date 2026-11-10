@@ -17,6 +17,8 @@ const CAPTAIN_PRESETS = [
   { id: 'gravel_ahead', label: 'Gravel ahead', icon: '⚠️' },
   { id: 'slow_down', label: 'Slow down', icon: '🛑' },
   { id: 'regroup_junction', label: 'Regroup at junction', icon: '🚨' },
+  { id: 'police_check', label: 'Police check ahead', icon: '👮' },
+  { id: 'change_plan', label: 'Change of plan', icon: '🔀' },
 ];
 
 export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
