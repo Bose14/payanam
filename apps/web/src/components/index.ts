@@ -24,10 +24,12 @@ export { RouteDeviationCard } from './RouteDeviationCard';
 export { BatterySaverNote } from './BatterySaverNote';
 export { MeRideSettingsTab } from './MeRideSettingsTab';
 export { RouteProgressStrip } from './RouteProgressStrip';
+export { StopApproachCard } from './StopApproachCard';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
 export * from '../utils/batterySaver';
 export * from '../utils/plannedRouteProgress';
+export * from '../utils/stopPinning';
 
 

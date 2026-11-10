@@ -25,6 +25,7 @@ import {
   BatterySaverNote,
   MeRideSettingsTab,
   RouteProgressStrip,
+  StopApproachCard,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
@@ -34,6 +35,7 @@ import {
   calculateRouteProgress,
   getRouteTotalDistance,
   evaluateRiderRouteStatus,
+  evaluateStopApproach,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
@@ -303,6 +305,7 @@ export default function RidePage() {
   const [newMsgCount, setNewMsgCount] = useState(0);
   const [following, setFollowing] = useState(true);
   const [myHeading, setMyHeading] = useState(0);
+  const [mySpeedKmh, setMySpeedKmh] = useState(0);
   const [osrmRoute, setOsrmRoute] = useState<[number, number][]>([]);
   const [navSteps, setNavSteps] = useState<NavStep[]>([]);
   const [endingRide, setEndingRide] = useState(false);
@@ -593,6 +596,7 @@ export default function RidePage() {
         const nowIso = new Date().toISOString();
         myLastUpdatedRef.current = nowIso;
         const speedKmh = speed != null ? speed * 3.6 : 0;
+        setMySpeedKmh(speedKmh);
         const hdg = heading ?? 0;
         if (heading != null) setMyHeading(heading);
 
@@ -797,6 +801,16 @@ export default function RidePage() {
           setTimeout(() => setToast(''), 3500);
         }
       })
+      .on('broadcast', { event: 'stop_prealert' }, ({ payload }) => {
+        playAlertChime('chime');
+        setToast(`⛽ Pre-alert: Approaching ${payload.stopName} in ${payload.distanceKm ? `${payload.distanceKm.toFixed(1)} km` : '2 km'} (~${payload.etaMinutes || 4} min) · Prepare to regroup!`);
+        setTimeout(() => setToast(''), 4500);
+      })
+      .on('broadcast', { event: 'stop_arrival_alert' }, ({ payload }) => {
+        playAlertChime('urgent');
+        setToast(`🏁 Convoy reached ${payload.stopName}! (${payload.userName} is here)`);
+        setTimeout(() => setToast(''), 4500);
+      })
       .on('broadcast', { event: 'announcement' }, ({ payload }) => {
         setActiveAnnouncement(payload);
         playAlertChime('urgent');
@@ -959,9 +973,16 @@ export default function RidePage() {
     });
 
     if (isArrived) {
-      playAlertChime('chime');
+      playAlertChime('urgent');
       setToast(`🏁 Marked as arrived at ${pinnedStop.name}!`);
       setTimeout(() => setToast(''), 3500);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'stop_arrival_alert',
+        payload: { stopName: pinnedStop.name, userId: user.id, userName },
+      });
+
       await rideService.sendMessage(sessionId, {
         message: `🏁 I have arrived at ${pinnedStop.name}!`,
         messageType: 'stop_arrival',
@@ -1208,6 +1229,48 @@ export default function RidePage() {
       setFocusTarget(null);
     }, 2500);
   }, []);
+
+  // Feature F+I: Stop approach evaluation (pre-alert & arrival detection)
+  const distToPinnedStop = useMemo(() => {
+    if (!pinnedStop || !myLat || !myLng) return null;
+    return haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng);
+  }, [pinnedStop, myLat, myLng]);
+
+  const isMeArrived = useMemo(() => {
+    return user?.id ? ridersArrival[user.id]?.status === 'arrived' : false;
+  }, [user?.id, ridersArrival]);
+
+  const stopApproachEval = useMemo(() => {
+    return evaluateStopApproach(distToPinnedStop, mySpeedKmh, isMeArrived);
+  }, [distToPinnedStop, mySpeedKmh, isMeArrived]);
+
+  const [dismissStopApproach, setDismissStopApproach] = useState(false);
+  const preAlertTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!pinnedStop) {
+      preAlertTriggeredRef.current = false;
+      setDismissStopApproach(false);
+      return;
+    }
+    // Pre-alert detection (2 km / 5 min threshold)
+    if (stopApproachEval.isApproaching && !preAlertTriggeredRef.current) {
+      preAlertTriggeredRef.current = true;
+      playAlertChime('chime');
+      setToast(`⛽ Pre-alert: Approaching ${pinnedStop.name} in ${distToPinnedStop?.toFixed(1) ?? '2'} km · Prepare to regroup!`);
+      setTimeout(() => setToast(''), 4500);
+
+      channelRef.current?.send({
+        type: 'broadcast',
+        event: 'stop_prealert',
+        payload: {
+          stopName: pinnedStop.name,
+          distanceKm: distToPinnedStop,
+          etaMinutes: stopApproachEval.etaMinutes,
+        },
+      });
+    }
+  }, [stopApproachEval.isApproaching, pinnedStop, distToPinnedStop, stopApproachEval.etaMinutes]);
 
   // Feature C: Evaluate route deviation for all riders against active route
   useEffect(() => {
@@ -1683,6 +1746,26 @@ export default function RidePage() {
         onOpenSettings={() => setTab('me')}
       />
 
+      {/* Feature F+I: Stop Pre-Alert & Arrival Card */}
+      {!dismissStopApproach && pinnedStop && (stopApproachEval.isApproaching || isMeArrived) && (
+        <StopApproachCard
+          pinnedStop={pinnedStop}
+          stage={stopApproachEval.stage}
+          distanceKm={distToPinnedStop}
+          etaFormatted={stopApproachEval.etaFormatted}
+          arrivedCount={arrivedCount}
+          totalCount={ridersWithFreshness.length}
+          isMeArrived={isMeArrived}
+          onToggleMyArrival={handleToggleMyArrival}
+          onOpenDetail={() => setShowStopDetailSheet(true)}
+          onOpenNavigation={(target) => {
+            setNavTarget(target);
+            setShowNavModal(true);
+          }}
+          onDismiss={() => setDismissStopApproach(true)}
+        />
+      )}
+
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
         flex: tab === 'map' ? 1 : 0,
@@ -2077,18 +2160,90 @@ export default function RidePage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>07:30 Start from Hubli</span>
+                {/* Hubli Origin */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #22262E' }}>
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>07:30 Start from Hubli</span>
+                    <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>Origin waypoint</div>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', border: '1px solid #10B981', padding: '2px 6px', borderRadius: 4 }}>STARTED</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>10:30 Sagar Highway Dhaba</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', border: '1px solid #10B981', padding: '2px 6px', borderRadius: 4 }}>FROM CHAT</span>
+
+                {/* Sagar Highway Dhaba */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #22262E' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>10:30 Sagar Highway Dhaba</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', border: '1px solid #10B981', padding: '1px 6px', borderRadius: 4 }}>FROM CHAT</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>Chai & breakfast stop · 45 km marker</div>
+                  </div>
+                  {pinnedStop?.name === 'Sagar Highway Dhaba' ? (
+                    <span style={{ fontSize: 10, fontWeight: 900, color: '#111316', backgroundColor: '#F0C23A', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span>📌</span> PINNED TARGET
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePinStop({
+                          name: 'Sagar Highway Dhaba',
+                          lat: 14.1670,
+                          lng: 75.0400,
+                          type: 'meal',
+                          dayNumber: 2,
+                        }, false);
+                        setTab('map');
+                      }}
+                      style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', backgroundColor: 'rgba(240, 194, 58, 0.12)', border: '1px solid #F0C23A', padding: '4px 10px', borderRadius: 8, cursor: 'pointer' }}
+                    >
+                      📌 Pin as next stop
+                    </button>
+                  )}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>13:00 Lunch, Udupi</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, color: '#F0C23A', border: '1px solid #F0C23A', padding: '2px 6px', borderRadius: 4 }}>PROPOSED</span>
+
+                {/* Lunch, Udupi */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>13:00 Lunch, Udupi</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#F0C23A', border: '1px solid #F0C23A', padding: '1px 6px', borderRadius: 4 }}>PROPOSED</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>Coastline regroup · 112 km marker</div>
+                  </div>
+                  {pinnedStop?.name === 'Lunch, Udupi' ? (
+                    <span style={{ fontSize: 10, fontWeight: 900, color: '#111316', backgroundColor: '#F0C23A', padding: '3px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <span>📌</span> PINNED TARGET
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handlePinStop({
+                          name: 'Lunch, Udupi',
+                          lat: 13.3409,
+                          lng: 74.7421,
+                          type: 'meal',
+                          dayNumber: 2,
+                        }, false);
+                        setTab('map');
+                      }}
+                      style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', backgroundColor: 'rgba(240, 194, 58, 0.12)', border: '1px solid #F0C23A', padding: '4px 10px', borderRadius: 8, cursor: 'pointer' }}
+                    >
+                      📌 Pin as next stop
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* Add planned stop button */}
+              <button
+                type="button"
+                onClick={() => setShowPinModal(true)}
+                style={{ width: '100%', marginTop: 14, padding: '10px', backgroundColor: '#111316', border: '1.5px dashed #2A2E35', borderRadius: 10, color: '#F0C23A', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >
+                <span>➕</span> Add planned stop to itinerary
+              </button>
             </div>
 
             {/* Propose Card */}
@@ -2611,7 +2766,7 @@ export default function RidePage() {
         pinnedStop={pinnedStop}
         riders={ridersForStopDetail}
         myDistanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
-        mySpeedKmh={myPosRef.current ? 0 : 0}
+        mySpeedKmh={mySpeedKmh}
         myFreshness={myFreshness}
         isMeArrived={user?.id ? (ridersArrival[user.id]?.status === 'arrived') : false}
         onToggleMyArrival={handleToggleMyArrival}

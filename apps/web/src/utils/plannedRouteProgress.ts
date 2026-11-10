@@ -242,3 +242,4 @@ export function evaluateRiderRouteStatus(params: {
     distanceAlongMeters: riderProgressMeters,
   };
 }
+
