@@ -39,6 +39,9 @@ import {
   PublishItineraryModal,
   DiscoverTab,
   isTripPublished,
+  ShareMilestoneModal,
+  TripCompletedBanner,
+  buildTripMilestoneSummary,
   getStoredProposals,
   addProposal,
   resolveProposal,
@@ -363,6 +366,7 @@ export default function RidePage() {
   const [showShareLocationModal, setShowShareLocationModal] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
   const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
   const myLastUpdatedRef = useRef<string | null>(null);
@@ -1538,6 +1542,23 @@ export default function RidePage() {
   }, [session?.itinerary]);
   const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
   const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
+
+  const milestoneSummary = useMemo(() => {
+    if (!session?.trips) return null;
+    return buildTripMilestoneSummary({
+      trip: {
+        id: session.trips.id,
+        title: session.trips.title,
+        from_place: session.trips.from_place,
+        to_place: session.trips.to_place,
+        days: session.trips.days || 1,
+        bike_type: session.trips.bike_type,
+      },
+      stops: allPlanStops,
+      coRiders: riders.map((r) => ({ name: r.user_name || 'Co-Rider' })),
+      bikeModel: session.trips.bike_type,
+    });
+  }, [session?.trips, allPlanStops, riders]);
 
   const activeRoute = useMemo(
     () => (osrmRoute.length > 1 ? osrmRoute : routeCoords),
@@ -2761,6 +2782,17 @@ export default function RidePage() {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Feature 2: Trip Completed Celebration Banner */}
+            {milestoneSummary && (
+              <TripCompletedBanner
+                fromPlace={session?.trips?.from_place || 'Bengaluru'}
+                toPlace={session?.trips?.to_place || 'Kasaragod'}
+                days={session?.trips?.days || 3}
+                distanceKm={milestoneSummary.totalDistanceKm}
+                onShareMilestones={() => setShowMilestoneModal(true)}
+              />
+            )}
+
             {/* Itinerary Section Card */}
             <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -2899,6 +2931,31 @@ export default function RidePage() {
               >
                 <span>🌐</span>
                 <span>{isTripPublished(session.trips.id) ? '✓ Live in Discover (Settings)' : 'Publish Itinerary to Discover'}</span>
+              </button>
+            )}
+
+            {/* Feature 2: Share Trip Milestones Button */}
+            {session?.trips && milestoneSummary && (
+              <button
+                type="button"
+                onClick={() => setShowMilestoneModal(true)}
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: 'rgba(240, 194, 58, 0.1)',
+                  border: '1.5px solid #F0C23A',
+                  borderRadius: 14,
+                  color: '#F0C23A',
+                  fontWeight: 900,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>🏆</span>
+                <span>Share Trip Milestones & Commemorative Card</span>
               </button>
             )}
 
@@ -3536,6 +3593,17 @@ export default function RidePage() {
             setToast('Itinerary unpublished from Discover');
             setTimeout(() => setToast(''), 3000);
           }}
+        />
+      )}
+
+      {/* Feature 2: Share Trip Milestones Modal */}
+      {milestoneSummary && (
+        <ShareMilestoneModal
+          isOpen={showMilestoneModal}
+          onClose={() => setShowMilestoneModal(false)}
+          summary={milestoneSummary}
+          onOpenPublishFlow={() => setShowPublishModal(true)}
+          onNavigateToDiscover={() => setTab('discover')}
         />
       )}
     </div>

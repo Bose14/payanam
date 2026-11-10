@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,9 @@ import {
   ItineraryProposal,
   PublishItineraryModal,
   isTripPublished,
+  ShareMilestoneModal,
+  TripCompletedBanner,
+  buildTripMilestoneSummary,
 } from '../components';
 
 const typeIcons: Record<string, string> = {
@@ -186,6 +189,17 @@ export default function TripDetailPage() {
   const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showMilestoneModal, setShowMilestoneModal] = useState(false);
+
+  const milestoneSummary = useMemo(() => {
+    if (!trip) return null;
+    return buildTripMilestoneSummary({
+      trip,
+      stops,
+      coRiders: approvedMembers.map((m) => ({ name: m.users?.full_name || 'Rider' })),
+      bikeModel: trip.bike_type,
+    });
+  }, [trip, stops, approvedMembers]);
 
   useEffect(() => {
     if (id) {
@@ -657,8 +671,31 @@ export default function TripDetailPage() {
                   <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish'}</span>
                 </button>
               )}
+              <button
+                onClick={() => setShowMilestoneModal(true)}
+                style={{
+                  ...styles.passBtnAction,
+                  borderColor: '#F0C23A',
+                  color: '#F0C23A',
+                }}
+                title="Feature 2: Share trip completion milestones"
+              >
+                <span>🏆</span>
+                <span>Milestones</span>
+              </button>
             </div>
           </div>
+        )}
+
+        {/* Feature 2: Trip Completed Celebration & Milestones Banner */}
+        {milestoneSummary && (
+          <TripCompletedBanner
+            fromPlace={trip.from_place}
+            toPlace={trip.to_place}
+            days={trip.days}
+            distanceKm={milestoneSummary.totalDistanceKm}
+            onShareMilestones={() => setShowMilestoneModal(true)}
+          />
         )}
 
         {/* Convoy Roster (Visible to both Leader and Co-riders) */}
@@ -1192,6 +1229,17 @@ export default function TripDetailPage() {
             setToast('Itinerary unpublished from Discover');
             setTimeout(() => setToast(''), 3000);
           }}
+        />
+      )}
+
+      {/* Feature 2: Share Trip Milestones Modal */}
+      {milestoneSummary && (
+        <ShareMilestoneModal
+          isOpen={showMilestoneModal}
+          onClose={() => setShowMilestoneModal(false)}
+          summary={milestoneSummary}
+          onOpenPublishFlow={() => setShowPublishModal(true)}
+          onNavigateToDiscover={() => navigate('/dashboard')}
         />
       )}
     </div>

@@ -40,6 +40,9 @@ export { default as PublishItineraryModal } from './PublishItineraryModal';
 export { default as DiscoverTripCard } from './DiscoverTripCard';
 export { default as DiscoverTripDetailModal } from './DiscoverTripDetailModal';
 export { default as DiscoverTab } from './DiscoverTab';
+export { default as TripMilestoneCard } from './TripMilestoneCard';
+export { default as ShareMilestoneModal } from './ShareMilestoneModal';
+export { default as TripCompletedBanner } from './TripCompletedBanner';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
@@ -52,5 +55,6 @@ export * from '../utils/tripChatItinerary';
 export * from '../utils/navigationHandoff';
 export * from '../utils/itineraryProposals';
 export * from '../utils/publicItinerary';
+export * from '../utils/tripMilestones';
 
 
