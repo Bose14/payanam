@@ -15,6 +15,8 @@ import {
   addProposal,
   resolveProposal,
   ItineraryProposal,
+  PublishItineraryModal,
+  isTripPublished,
 } from '../components';
 
 const typeIcons: Record<string, string> = {
@@ -183,6 +185,7 @@ export default function TripDetailPage() {
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
   const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -584,6 +587,21 @@ export default function TripDetailPage() {
                 <span>{copied ? 'Copied!' : 'Share Convoy Link'}</span>
               </button>
             )}
+
+            {trip?.isOwner && (
+              <button
+                onClick={() => setShowPublishModal(true)}
+                style={{
+                  ...styles.btnShare,
+                  borderColor: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
+                  color: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
+                }}
+                title="Feature 1B: Publish itinerary publicly to Discover"
+              >
+                <span>🌐</span>
+                <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish Itinerary'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -625,6 +643,20 @@ export default function TripDetailPage() {
                 <span>↗️</span>
                 <span>Share</span>
               </button>
+              {trip?.isOwner && (
+                <button
+                  onClick={() => setShowPublishModal(true)}
+                  style={{
+                    ...styles.passBtnAction,
+                    borderColor: isTripPublished(trip.id) ? '#10B981' : 'var(--border-subtle)',
+                    color: isTripPublished(trip.id) ? '#10B981' : 'var(--text-primary)',
+                  }}
+                  title="Feature 1B: Publish itinerary publicly to Discover"
+                >
+                  <span>🌐</span>
+                  <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1143,6 +1175,25 @@ export default function TripDetailPage() {
         onClose={() => setShowProposeModal(false)}
         onSubmitProposal={handleCreateProposal}
       />
+
+      {/* Feature 1B: Publish Itinerary Publicly Modal */}
+      {trip && (
+        <PublishItineraryModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          trip={trip}
+          stops={stops}
+          user={user}
+          onPublishedSuccess={(published) => {
+            setToast(`✓ Published "${published.title}" publicly in Discover!`);
+            setTimeout(() => setToast(''), 3500);
+          }}
+          onUnpublishedSuccess={() => {
+            setToast('Itinerary unpublished from Discover');
+            setTimeout(() => setToast(''), 3000);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -36,6 +36,10 @@ export { default as NavigationHandoffButton } from './NavigationHandoffButton';
 export { default as ItineraryProposalCard } from './ItineraryProposalCard';
 export { default as ProposeEditModal } from './ProposeEditModal';
 export { default as ConvoyInviteCard } from './ConvoyInviteCard';
+export { default as PublishItineraryModal } from './PublishItineraryModal';
+export { default as DiscoverTripCard } from './DiscoverTripCard';
+export { default as DiscoverTripDetailModal } from './DiscoverTripDetailModal';
+export { default as DiscoverTab } from './DiscoverTab';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
@@ -47,5 +51,6 @@ export * from '../utils/captainAnnouncement';
 export * from '../utils/tripChatItinerary';
 export * from '../utils/navigationHandoff';
 export * from '../utils/itineraryProposals';
+export * from '../utils/publicItinerary';
 
 

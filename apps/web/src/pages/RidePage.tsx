@@ -36,6 +36,9 @@ import {
   ItineraryProposalCard,
   ProposeEditModal,
   ConvoyInviteCard,
+  PublishItineraryModal,
+  DiscoverTab,
+  isTripPublished,
   getStoredProposals,
   addProposal,
   resolveProposal,
@@ -244,6 +247,9 @@ interface Session {
     id: string; title: string; from_place: string; to_place: string;
     from_lat?: number | null; from_lng?: number | null;
     to_lat?: number | null; to_lng?: number | null;
+    days?: number;
+    bike_type?: string;
+    preferences?: string;
   };
   itinerary: ItineraryStop[];
 }
@@ -356,6 +362,7 @@ export default function RidePage() {
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
   const [showShareLocationModal, setShowShareLocationModal] = useState(false);
   const [showProposeModal, setShowProposeModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [focusTarget, setFocusTarget] = useState<[number, number] | null>(null);
   const myLastUpdatedRef = useRef<string | null>(null);
@@ -2870,6 +2877,31 @@ export default function RidePage() {
               toPlace={session?.trips?.to_place}
             />
 
+            {/* Feature 1B: Publish Itinerary Publicly Card */}
+            {session?.trips && isLead && (
+              <button
+                type="button"
+                onClick={() => setShowPublishModal(true)}
+                style={{
+                  padding: '12px 14px',
+                  backgroundColor: '#1B1E23',
+                  border: isTripPublished(session.trips.id) ? '1.5px solid #10B981' : '1.5px dashed #F0C23A',
+                  borderRadius: 14,
+                  color: isTripPublished(session.trips.id) ? '#10B981' : '#F0C23A',
+                  fontWeight: 800,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}
+              >
+                <span>🌐</span>
+                <span>{isTripPublished(session.trips.id) ? '✓ Live in Discover (Settings)' : 'Publish Itinerary to Discover'}</span>
+              </button>
+            )}
+
             {/* Amenities Shortcut */}
             <button
               type="button"
@@ -2882,54 +2914,16 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Discover tab (Mockup Screen 8: Discover search) */}
+      {/* Discover tab (Feature 1B: Discover search, verified routes, and source-attributed copying) */}
       {tab === 'discover' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316', padding: '12px 16px' }}>
-          {/* Search box */}
-          <input
-            type="text"
-            readOnly
-            value="Search: Bengaluru to Kasaragod"
-            style={{ width: '100%', padding: '12px 16px', borderRadius: 16, border: '1.5px solid #2A2E35', backgroundColor: '#1B1E23', color: '#F1EFEA', fontSize: 14, fontWeight: 600, outline: 'none', marginBottom: 12 }}
-          />
-
-          {/* Tags */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#10B981', border: '1.5px solid #10B981', padding: '3px 8px', borderRadius: 6 }}>TWISTY</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', border: '1.5px solid #2A2E35', padding: '3px 8px', borderRadius: 6 }}>3-5 DAYS</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', border: '1.5px solid #2A2E35', padding: '3px 8px', borderRadius: 6 }}>MIXED</span>
-          </div>
-
-          {/* Route cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, overflowY: 'auto' }}>
-            <div style={{ backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 18, padding: '16px 18px' }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA' }}>Bengaluru to Kasaragod, 3 days</div>
-              <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 4 }}>by Arjun · 412 copies · 4.7 from riders who finished</div>
-              <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 2 }}>Stops: fuel 5 · food 9 · rest 2</div>
-              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-                <button
-                  type="button"
-                  onClick={() => { setToast('Route copied to trips'); setTimeout(() => setToast(''), 2500); }}
-                  style={{ padding: '9px 16px', backgroundColor: '#F0C23A', color: '#111316', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Copy to my trips
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTab('chat')}
-                  style={{ padding: '9px 16px', backgroundColor: '#1B1E23', color: '#F1EFEA', border: '1.5px solid #2A2E35', borderRadius: 10, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Message
-                </button>
-              </div>
-            </div>
-
-            <div style={{ backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 18, padding: '16px 18px' }}>
-              <div style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA' }}>Coorg loop, 2 days</div>
-              <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 4 }}>by Meera · 128 copies</div>
-            </div>
-          </div>
-        </div>
+        <DiscoverTab
+          currentUser={user}
+          onTripCopied={(draft) => {
+            setToast(`✓ Copied "${draft.title}" to My Trips! Draft created with credit to source`);
+            setTimeout(() => setToast(''), 3500);
+          }}
+          onOpenPublishFlow={session?.trips && isLead ? () => setShowPublishModal(true) : undefined}
+        />
       )}
 
       {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards & WhatsApp Link) */}
@@ -3517,6 +3511,33 @@ export default function RidePage() {
         onClose={() => setShowProposeModal(false)}
         onSubmitProposal={handleCreateProposal}
       />
+
+      {/* Feature 1B: Publish Itinerary Publicly Modal */}
+      {session?.trips && (
+        <PublishItineraryModal
+          isOpen={showPublishModal}
+          onClose={() => setShowPublishModal(false)}
+          trip={{
+            id: session.trips.id,
+            title: session.trips.title,
+            from_place: session.trips.from_place,
+            to_place: session.trips.to_place,
+            days: session.trips.days || 1,
+            bike_type: session.trips.bike_type || 'motorcycle',
+            preferences: session.trips.preferences || '',
+          }}
+          stops={allPlanStops}
+          user={user}
+          onPublishedSuccess={(published) => {
+            setToast(`✓ Published "${published.title}" publicly in Discover!`);
+            setTimeout(() => setToast(''), 3500);
+          }}
+          onUnpublishedSuccess={() => {
+            setToast('Itinerary unpublished from Discover');
+            setTimeout(() => setToast(''), 3000);
+          }}
+        />
+      )}
     </div>
   );
 }
