@@ -126,13 +126,61 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   return null;
 }
 
-function requestLocationPermission(): Promise<boolean> {
-  if (!navigator.geolocation) return Promise.resolve(false);
+async function requestLocationPermission(): Promise<{ granted: boolean; reason?: 'denied' | 'unsupported' | 'timeout' }> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return { granted: false, reason: 'unsupported' };
+  }
+
+  // 1. Quick check via Permissions API if available (Chrome, Android, modern Safari)
+  if ('permissions' in navigator && navigator.permissions?.query) {
+    try {
+      const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+      if (status.state === 'granted') {
+        return { granted: true };
+      }
+      if (status.state === 'denied') {
+        return { granted: false, reason: 'denied' };
+      }
+    } catch {
+      // iOS Safari might throw for geolocation query, safe to fall through
+    }
+  }
+
+  // 2. Fast check via getCurrentPosition
+  // Use enableHighAccuracy: false and maximumAge: Infinity so iOS returns immediately if allowed
   return new Promise((resolve) => {
+    let settled = false;
+
+    // Safety timeout: if iOS takes long to acquire satellite lock, do NOT block the rider
+    const fallbackTimer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve({ granted: true });
+      }
+    }, 4000);
+
     navigator.geolocation.getCurrentPosition(
-      () => resolve(true),
-      () => resolve(false),
-      { timeout: 8000, maximumAge: 60000 },
+      () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(fallbackTimer);
+          resolve({ granted: true });
+        }
+      },
+      (err) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(fallbackTimer);
+          // err.code === 1: PERMISSION_DENIED (User explicitly blocked location)
+          // err.code === 2 (POSITION_UNAVAILABLE) or 3 (TIMEOUT): Permission IS granted, but satellites acquiring
+          if (err.code === 1) {
+            resolve({ granted: false, reason: 'denied' });
+          } else {
+            resolve({ granted: true });
+          }
+        }
+      },
+      { enableHighAccuracy: false, timeout: 3500, maximumAge: Infinity },
     );
   });
 }
@@ -564,8 +612,14 @@ export default function TripDetailPage() {
             {activeSession ? (
               <button
                 onClick={async () => {
-                  const ok = await requestLocationPermission();
-                  if (!ok) { showToast('📍 Enable location permission to join the ride.'); return; }
+                  const res = await requestLocationPermission();
+                  if (!res.granted && res.reason === 'denied') {
+                    showToast('📍 Location is blocked. In Safari, tap "aA" > Website Settings > Location > Allow');
+                    setTimeout(() => {
+                      navigate(`/ride/${activeSession.id}`);
+                    }, 2200);
+                    return;
+                  }
                   navigate(`/ride/${activeSession.id}`);
                 }}
                 style={styles.btnActiveRide}
@@ -577,8 +631,10 @@ export default function TripDetailPage() {
               <button
                 onClick={async () => {
                   if (!id) return;
-                  const ok = await requestLocationPermission();
-                  if (!ok) { showToast('📍 Enable location permission to start the ride.'); return; }
+                  const res = await requestLocationPermission();
+                  if (!res.granted && res.reason === 'denied') {
+                    showToast('📍 Location is blocked. In Safari, tap "aA" > Website Settings > Location > Allow');
+                  }
                   setStartingRide(true);
                   try {
                     const d = await rideService.startRide(id);

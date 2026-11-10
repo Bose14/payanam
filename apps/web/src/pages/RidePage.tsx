@@ -674,6 +674,7 @@ export default function RidePage() {
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
+        setGpsError('');
         const { latitude: lat, longitude: lng, speed, heading } = pos.coords;
         setMyLat(lat); setMyLng(lng);
         myPosRef.current = { lat, lng };
@@ -738,8 +739,12 @@ export default function RidePage() {
         }
       },
       (err) => {
-        if (err.code === 1) setGpsError('Location permission denied. Please enable GPS.');
-        else setGpsError('Unable to get your location.');
+        if (err.code === 1) {
+          setGpsError('Location permission denied. Please enable GPS.');
+        } else if (!myPosRef.current) {
+          // err.code 2 (unavailable) or 3 (timeout) during GPS warmup: keep watching, don't block UI
+          console.warn('GPS warmup / acquiring fix:', err.message);
+        }
       },
       { enableHighAccuracy: !batterySaver, maximumAge: batterySaver ? 15000 : 2000, timeout: 10000 },
     );
