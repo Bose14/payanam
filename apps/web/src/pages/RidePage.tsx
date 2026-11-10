@@ -26,6 +26,8 @@ import {
   MeRideSettingsTab,
   RouteProgressStrip,
   StopApproachCard,
+  MissedStopPromptCard,
+  ArrivalOfferBanner,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
@@ -36,6 +38,8 @@ import {
   getRouteTotalDistance,
   evaluateRiderRouteStatus,
   evaluateStopApproach,
+  detectArrivalZone,
+  detectMissedStop,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
@@ -360,6 +364,17 @@ export default function RidePage() {
     setToast(enabled ? '⚡ Battery saver enabled (30s update rate)' : '⚡ Standard telemetry restored (10s rate)');
     setTimeout(() => setToast(''), 3000);
   }, []);
+
+  // Feature J: Arrival detection offer and Missed stop prompt states
+  const [arrivalOfferDismissed, setArrivalOfferDismissed] = useState(false);
+  const [missedPromptDismissed, setMissedPromptDismissed] = useState(false);
+  const minDistToPinnedStopKmRef = useRef<number>(Infinity);
+
+  useEffect(() => {
+    setArrivalOfferDismissed(false);
+    setMissedPromptDismissed(false);
+    minDistToPinnedStopKmRef.current = Infinity;
+  }, [pinnedStop?.name, pinnedStop?.lat, pinnedStop?.lng]);
 
   // Auto-refresh interval (5s) for real-time age badges and hollow markers
   const [, setTicker] = useState(0);
@@ -1186,22 +1201,87 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
-  // Format riders for StopDetailSheet
+  // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop)
+  const distToPinnedStop = useMemo(() => {
+    if (!pinnedStop || !myLat || !myLng) return null;
+    return haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng);
+  }, [pinnedStop, myLat, myLng]);
+
+  // Track minimum distance approached to pinned stop (for missed stop detection)
+  useEffect(() => {
+    if (distToPinnedStop != null && distToPinnedStop < minDistToPinnedStopKmRef.current) {
+      minDistToPinnedStopKmRef.current = distToPinnedStop;
+    }
+  }, [distToPinnedStop]);
+
+  // Stop & rider progress along active route
+  const pinnedStopRouteProgressMeters = useMemo(() => {
+    if (!pinnedStop || activeRoute.length < 2) return null;
+    const prog = calculateRouteProgress([pinnedStop.lat, pinnedStop.lng], activeRoute, totalRouteDist);
+    return prog.distanceAlongMeters;
+  }, [pinnedStop, activeRoute, totalRouteDist]);
+
+  const myRouteProgressMeters = useMemo(() => {
+    if (!myLat || !myLng || activeRoute.length < 2) return null;
+    const prog = calculateRouteProgress([myLat, myLng], activeRoute, totalRouteDist);
+    return prog.distanceAlongMeters;
+  }, [myLat, myLng, activeRoute, totalRouteDist]);
+
+  // Format riders for StopDetailSheet (Feature J arrival status)
   const ridersForStopDetail = useMemo(() => {
     return ridersWithFreshness.map((r) => {
       const arrival = ridersArrival[r.userId];
+      const distKm = pinnedStop ? haversineKm(r.lat, r.lng, pinnedStop.lat, pinnedStop.lng) : null;
+
+      const riderProg = (activeRoute.length > 1)
+        ? calculateRouteProgress([r.lat, r.lng], activeRoute, totalRouteDist).distanceAlongMeters
+        : null;
+
+      const isMissed = Boolean(
+        arrival?.status !== 'arrived' &&
+        riderProg != null &&
+        pinnedStopRouteProgressMeters != null &&
+        pinnedStopRouteProgressMeters > 0 &&
+        riderProg > pinnedStopRouteProgressMeters + 350
+      );
+
       return {
         userId: r.userId,
         userName: r.userName,
         isMe: r.isMe,
         freshness: r.freshness,
-        distanceKm: pinnedStop ? haversineKm(r.lat, r.lng, pinnedStop.lat, pinnedStop.lng) : null,
+        distanceKm: distKm,
         speedKmh: r.speedKmh,
-        arrivalStatus: arrival?.status ?? 'en_route',
+        arrivalStatus: (arrival?.status ?? (isMissed ? 'missed' : 'en_route')) as 'arrived' | 'en_route' | 'departed' | 'missed',
         arrivedAt: arrival?.arrivedAt,
+        isMissed,
       };
     });
-  }, [ridersWithFreshness, ridersArrival, pinnedStop]);
+  }, [ridersWithFreshness, ridersArrival, pinnedStop, activeRoute, totalRouteDist, pinnedStopRouteProgressMeters]);
+
+  const isMeArrived = useMemo(() => {
+    return user?.id ? ridersArrival[user.id]?.status === 'arrived' : false;
+  }, [user?.id, ridersArrival]);
+
+  // Feature J: Auto-detect arrival zone (< 200m)
+  const isArrivalZone = useMemo(() => {
+    if (isMeArrived || arrivalOfferDismissed || distToPinnedStop == null) return false;
+    return detectArrivalZone(distToPinnedStop, 0.2);
+  }, [isMeArrived, arrivalOfferDismissed, distToPinnedStop]);
+
+  // Feature J: Auto-detect missed stop (> 350m past stop)
+  const isMissedStop = useMemo(() => {
+    if (isMeArrived || missedPromptDismissed) return false;
+    return detectMissedStop({
+      riderProgressMeters: myRouteProgressMeters ?? undefined,
+      stopProgressMeters: pinnedStopRouteProgressMeters ?? undefined,
+      distanceToStopKm: distToPinnedStop,
+      minDistanceRecordedKm: minDistToPinnedStopKmRef.current,
+      isArrived: isMeArrived,
+      isDismissed: missedPromptDismissed,
+      thresholdMeters: 350,
+    });
+  }, [isMeArrived, missedPromptDismissed, myRouteProgressMeters, pinnedStopRouteProgressMeters, distToPinnedStop]);
 
   const arrivedCount = useMemo(() => {
     return Object.values(ridersArrival).filter((r) => r.status === 'arrived').length;
@@ -1229,16 +1309,6 @@ export default function RidePage() {
       setFocusTarget(null);
     }, 2500);
   }, []);
-
-  // Feature F+I: Stop approach evaluation (pre-alert & arrival detection)
-  const distToPinnedStop = useMemo(() => {
-    if (!pinnedStop || !myLat || !myLng) return null;
-    return haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng);
-  }, [pinnedStop, myLat, myLng]);
-
-  const isMeArrived = useMemo(() => {
-    return user?.id ? ridersArrival[user.id]?.status === 'arrived' : false;
-  }, [user?.id, ridersArrival]);
 
   const stopApproachEval = useMemo(() => {
     return evaluateStopApproach(distToPinnedStop, mySpeedKmh, isMeArrived);
@@ -1745,6 +1815,30 @@ export default function RidePage() {
         enabled={batterySaver}
         onOpenSettings={() => setTab('me')}
       />
+
+      {/* Feature J: Arrival detection offer (<200m) */}
+      {isArrivalZone && pinnedStop && !isMeArrived && !arrivalOfferDismissed && (
+        <ArrivalOfferBanner
+          stopName={pinnedStop.name}
+          distanceMeters={(distToPinnedStop ?? 0.1) * 1000}
+          onConfirmArrival={() => handleToggleMyArrival(true)}
+          onDismiss={() => setArrivalOfferDismissed(true)}
+        />
+      )}
+
+      {/* Feature J: Missed stop prompt (>350m past stop) */}
+      {isMissedStop && pinnedStop && !isMeArrived && !missedPromptDismissed && (
+        <MissedStopPromptCard
+          pinnedStop={pinnedStop}
+          onConfirmStopped={() => handleToggleMyArrival(true)}
+          onSkipStop={() => setMissedPromptDismissed(true)}
+          onTurnBack={() => {
+            setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng });
+            setShowNavModal(true);
+            setMissedPromptDismissed(true);
+          }}
+        />
+      )}
 
       {/* Feature F+I: Stop Pre-Alert & Arrival Card */}
       {!dismissStopApproach && pinnedStop && (stopApproachEval.isApproaching || isMeArrived) && (

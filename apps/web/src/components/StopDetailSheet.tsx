@@ -9,8 +9,9 @@ export interface RiderWithFreshness {
   freshness: FreshnessInfo;
   distanceKm?: number | null;
   speedKmh?: number;
-  arrivalStatus?: 'arrived' | 'en_route' | 'departed';
+  arrivalStatus?: 'arrived' | 'en_route' | 'departed' | 'missed';
   arrivedAt?: string;
+  isMissed?: boolean;
 }
 
 interface StopDetailSheetProps {
@@ -90,16 +91,20 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
   // - UNKNOWN: Riders with stale or unknown position (> 30s)
   const hereRiders: string[] = [];
   const enRouteRiders: { name: string; eta: string }[] = [];
+  const passedRiders: string[] = [];
   const unknownRiders: string[] = [];
 
   riders.forEach((r) => {
     if (r.arrivalStatus === 'arrived') {
       hereRiders.push(r.userName);
+    } else if (r.isMissed || r.arrivalStatus === 'missed') {
+      passedRiders.push(r.userName);
     } else if (r.freshness.isStale || r.freshness.isUnknown) {
       unknownRiders.push(r.userName);
     } else {
       const dist = r.distanceKm;
-      const etaStr = dist != null ? `~${Math.max(1, Math.round((dist / 50) * 60))} min` : 'En route';
+      const speed = r.speedKmh && r.speedKmh > 10 ? r.speedKmh : 50;
+      const etaStr = dist != null ? `~${Math.max(1, Math.round((dist / speed) * 60))} min` : 'En route';
       enRouteRiders.push({ name: r.userName, eta: etaStr });
     }
   });
@@ -188,7 +193,17 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             </div>
           )}
 
-          {/* Row 3: UNKNOWN (Stale riders) */}
+          {/* Row 3: PASSED / MISSED (Feature J) */}
+          {passedRiders.length > 0 && (
+            <div style={styles.arrivalRow}>
+              <span style={styles.badgePassed}>PASSED</span>
+              <span style={{ ...styles.arrivalNames, color: '#EF4444' }}>
+                {passedRiders.join(', ')} (passed stop)
+              </span>
+            </div>
+          )}
+
+          {/* Row 4: UNKNOWN (Stale riders) */}
           <div style={{ ...styles.arrivalRow, borderBottom: 'none' }}>
             <span style={styles.badgeUnknown}>UNKNOWN</span>
             <span style={{ ...styles.arrivalNames, color: '#9D9C9A' }}>
@@ -395,6 +410,18 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(157, 156, 154, 0.15)',
     color: '#9D9C9A',
     border: '1.5px solid #9D9C9A',
+    fontWeight: 900,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    minWidth: 55,
+    textAlign: 'center',
+  },
+  badgePassed: {
+    padding: '3px 8px',
+    borderRadius: 999,
+    background: 'rgba(239, 68, 68, 0.15)',
+    color: '#EF4444',
+    border: '1.5px solid #EF4444',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
