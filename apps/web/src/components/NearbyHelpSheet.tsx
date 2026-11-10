@@ -421,7 +421,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '6px 20px 10px',
+    padding: '6px 14px 10px',
     borderBottom: '1px solid #2A2E35',
   },
   title: {
@@ -469,7 +469,7 @@ const styles: Record<string, React.CSSProperties> = {
   filterRow: {
     display: 'flex',
     gap: 8,
-    padding: '10px 20px',
+    padding: '8px 14px',
     borderBottom: '1px solid #2A2E35',
     backgroundColor: '#111316',
     overflowX: 'auto',
@@ -490,7 +490,7 @@ const styles: Record<string, React.CSSProperties> = {
   listingsScroll: {
     flex: 1,
     overflowY: 'auto',
-    padding: '12px 20px',
+    padding: '10px 14px',
     display: 'flex',
     flexDirection: 'column',
     gap: 10,
@@ -617,7 +617,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '8px 20px',
+    padding: '8px 14px',
     backgroundColor: '#111316',
     borderTop: '1px solid #2A2E35',
     fontSize: 11,
@@ -626,7 +626,7 @@ const styles: Record<string, React.CSSProperties> = {
   actionRow: {
     display: 'flex',
     gap: 10,
-    padding: '12px 20px',
+    padding: '10px 14px',
     borderTop: '1px solid #2A2E35',
     backgroundColor: '#1B1E23',
     flexWrap: 'wrap',

@@ -309,7 +309,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: '20px 24px 14px',
+    padding: '16px 18px 12px',
     borderBottom: '1px solid #2A2E35',
   },
   title: {
@@ -343,7 +343,7 @@ const styles: Record<string, React.CSSProperties> = {
   body: {
     flex: 1,
     overflowY: 'auto',
-    padding: '20px 24px',
+    padding: '16px',
   },
   privacyShieldCard: {
     display: 'flex',
@@ -364,7 +364,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   presetsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
     gap: 8,
   },
   presetBtn: {
@@ -379,7 +379,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   togglesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
     gap: 8,
   },
   toggleRow: {
@@ -433,7 +433,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '16px 24px',
+    padding: '12px 16px',
     borderTop: '1px solid #2A2E35',
     backgroundColor: '#1B1E23',
     flexWrap: 'wrap',

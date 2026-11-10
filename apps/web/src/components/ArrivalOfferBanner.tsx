@@ -50,7 +50,7 @@ export const ArrivalOfferBanner: React.FC<ArrivalOfferBannerProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    margin: '0 16px 8px 16px',
+    margin: '0 12px 8px 12px',
     padding: '10px 14px',
     borderRadius: 18,
     border: '1.5px solid #10B981',

@@ -37,7 +37,7 @@ export const BatterySaverNote: React.FC<BatterySaverNoteProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    margin: '0 16px 6px',
+    margin: '0 12px 6px',
     padding: '6px 12px',
     backgroundColor: '#16191D',
     border: '1px solid #2A2E35',

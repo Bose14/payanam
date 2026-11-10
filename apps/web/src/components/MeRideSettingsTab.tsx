@@ -276,7 +276,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           {/* Status Diagnostic Grid (Step 4: Status logged) */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gap: 8,
             marginBottom: 12,
           }}>
@@ -383,7 +383,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 </div>
               ) : (
                 trackingStatus.logs.map((item, idx) => (
-                  <div key={idx} style={{ marginBottom: 4, lineHeight: 1.35 }}>
+                  <div key={idx} style={{ marginBottom: 4, lineHeight: 1.35, wordBreak: 'break-word' }}>
                     <span style={{ color: '#9D9C9A' }}>[{item.timestamp}] </span>
                     <span style={{
                       color: item.level === 'ERROR' ? '#EF4444' : (item.level === 'WARN' ? '#F0C23A' : '#10B981'),

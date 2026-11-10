@@ -121,7 +121,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   cardContainer: {
-    margin: '4px 16px 8px',
+    margin: '4px 12px 8px',
     padding: '12px 14px',
     backgroundColor: '#1B1E23',
     border: '1.5px solid #EF4444',

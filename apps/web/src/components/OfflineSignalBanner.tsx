@@ -100,7 +100,7 @@ export const OfflineSignalBanner: React.FC<OfflineSignalBannerProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   noSignalBanner: {
-    margin: '4px 16px 8px',
+    margin: '4px 12px 8px',
     padding: '9px 14px',
     borderRadius: 16,
     backgroundColor: '#1B1E23',
@@ -113,7 +113,7 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 900,
   },
   syncBanner: {
-    margin: '4px 16px 8px',
+    margin: '4px 12px 8px',
     padding: '9px 14px',
     borderRadius: 16,
     backgroundColor: '#1B1E23',
@@ -126,7 +126,7 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 900,
   },
   justSyncedBanner: {
-    margin: '4px 16px 8px',
+    margin: '4px 12px 8px',
     padding: '8px 14px',
     borderRadius: 16,
     backgroundColor: '#1B1E23',

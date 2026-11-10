@@ -2009,7 +2009,7 @@ export default function RidePage() {
         marginTop: sosActive ? 48 : 0,
       }}>
         {/* Left: Clean Minimal Back Arrow + Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
           <button
             onClick={() => navigate(-1)}
             style={{
@@ -2018,19 +2018,20 @@ export default function RidePage() {
               color: '#F1EFEA',
               fontSize: 22,
               cursor: 'pointer',
-              padding: 0,
+              padding: '0 4px 0 0',
               fontWeight: 800,
               lineHeight: 1,
+              flexShrink: 0,
             }}
             title="Leave Ride Screen"
           >
             ←
           </button>
-          <div style={{ minWidth: 0 }}>
-            <h1 style={{
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h1 className="mobile-header-title" style={{
               color: '#F1EFEA',
               fontWeight: 900,
-              fontSize: 22,
+              fontSize: 20,
               margin: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -2043,11 +2044,11 @@ export default function RidePage() {
         </div>
 
         {/* Right: Subtitle & Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {tab !== 'map' && (
-            <span style={{
+            <span className="hide-on-mobile" style={{
               color: '#9D9C9A',
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               whiteSpace: 'nowrap',
             }}>
@@ -2060,16 +2061,17 @@ export default function RidePage() {
             type="button"
             onClick={() => setShowNearbyHelp(true)}
             style={{
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
               backgroundColor: '#1B1E23',
               border: '1.5px solid #2A2E35',
-              fontSize: 14,
+              fontSize: 13,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
             title="Verified Nearby Help (Fuel, Repair, Food, Rest)"
           >
@@ -2082,23 +2084,24 @@ export default function RidePage() {
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                padding: '4px 10px',
-                borderRadius: 20,
+                padding: '4px 8px',
+                borderRadius: 18,
                 backgroundColor: 'rgba(240, 194, 58, 0.15)',
                 border: '1.5px solid #F0C23A',
                 color: '#F0C23A',
-                fontSize: 12,
+                fontSize: 11.5,
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 5,
+                gap: 4,
                 boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+                flexShrink: 0,
               }}
               title="Captain announcement sheet (Feature K)"
             >
               <span>👑</span>
-              <span>Announce</span>
+              <span className="hide-on-mobile">Announce</span>
             </button>
           )}
 
@@ -2107,14 +2110,15 @@ export default function RidePage() {
             type="button"
             onClick={sendSOS}
             style={{
-              padding: '5px 10px',
+              padding: '4px 8px',
               backgroundColor: 'rgba(239, 68, 68, 0.15)',
               border: '1.5px solid #EF4444',
               color: '#EF4444',
-              borderRadius: 16,
+              borderRadius: 14,
               fontSize: 11,
               fontWeight: 900,
               cursor: 'pointer',
+              flexShrink: 0,
             }}
             title="Emergency SOS"
           >
@@ -2128,18 +2132,19 @@ export default function RidePage() {
               onClick={handleEndRide}
               disabled={endingRide}
               style={{
-                width: 34,
-                height: 34,
+                width: 32,
+                height: 32,
                 borderRadius: '50%',
                 backgroundColor: '#1B1E23',
                 border: '1.5px solid #2A2E35',
                 color: '#EF4444',
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                flexShrink: 0,
               }}
               title="End ride for everyone"
             >
@@ -3492,14 +3497,15 @@ export default function RidePage() {
       )}
 
       {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
-      <div style={{
+      <div className="mobile-bottom-nav" style={{
         backgroundColor: '#111316',
         borderTop: '1.5px solid #2A2E35',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 18px 14px',
+        justifyContent: 'space-around',
+        padding: '8px 10px max(12px, env(safe-area-inset-bottom, 12px))',
         flexShrink: 0,
+        gap: 2,
       }}>
         {/* Tab 1: RIDE */}
         <button
@@ -3708,25 +3714,27 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#F0C23A',
     color: '#111316',
     fontWeight: 900,
-    fontSize: 13,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    letterSpacing: 0.3,
     borderRadius: 999,
-    padding: '8px 18px',
+    padding: '7px 13px',
     border: 'none',
     cursor: 'pointer',
     boxShadow: '0 2px 10px rgba(240, 194, 58, 0.25)',
     transition: 'all 0.15s ease',
+    flexShrink: 0,
   },
   inactiveNavBtn: {
     backgroundColor: 'transparent',
     color: '#9D9C9A',
     fontWeight: 800,
-    fontSize: 13,
-    letterSpacing: 0.5,
+    fontSize: 12,
+    letterSpacing: 0.3,
     border: 'none',
     cursor: 'pointer',
-    padding: '8px 10px',
+    padding: '7px 8px',
     transition: 'all 0.15s ease',
+    flexShrink: 0,
   },
   chatUnreadDot: {
     position: 'absolute',

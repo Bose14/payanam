@@ -57,8 +57,8 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#7F1D1D', // Dark amber/red background
     border: '2px solid #EF4444',
     borderRadius: 16,
-    padding: '12px 16px',
-    margin: '10px 16px',
+    padding: '10px 14px',
+    margin: '8px 12px',
     display: 'flex',
     alignItems: 'center',
     gap: 12,

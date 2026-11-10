@@ -94,9 +94,11 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     boxShadow: '0 4px 14px rgba(240, 194, 58, 0.3)',
     whiteSpace: 'nowrap',
+    minWidth: 140,
   },
 };
 

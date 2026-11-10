@@ -70,7 +70,7 @@ export const MissedStopPromptCard: React.FC<MissedStopPromptCardProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    margin: '0 16px 8px 16px',
+    margin: '0 12px 8px 12px',
     padding: '12px 14px',
     borderRadius: 18,
     border: '1.5px solid #F59E0B',
