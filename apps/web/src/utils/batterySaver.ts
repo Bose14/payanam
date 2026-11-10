@@ -43,3 +43,4 @@ export function setBatterySaverPreference(enabled: boolean): void {
 export function getEffectiveTrackingInterval(batterySaver: boolean): number {
   return batterySaver ? BATTERY_SAVER_TRACKING_INTERVAL_MS : NORMAL_TRACKING_INTERVAL_MS;
 }
+

@@ -23,8 +23,11 @@ export { OfflineSignalBanner } from './OfflineSignalBanner';
 export { RouteDeviationCard } from './RouteDeviationCard';
 export { BatterySaverNote } from './BatterySaverNote';
 export { MeRideSettingsTab } from './MeRideSettingsTab';
+export { RouteProgressStrip } from './RouteProgressStrip';
+export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
 export * from '../utils/batterySaver';
+export * from '../utils/plannedRouteProgress';
 
 

@@ -86,3 +86,4 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
 };
+

@@ -24,14 +24,18 @@ import {
   RouteDeviationCard,
   BatterySaverNote,
   MeRideSettingsTab,
+  RouteProgressStrip,
   getFreshness,
   evaluateRiderDeviation,
   getMinDistanceToRoute,
   formatOffRouteDistance,
   getBatterySaverPreference,
   setBatterySaverPreference,
+  calculateRouteProgress,
+  getRouteTotalDistance,
+  evaluateRiderRouteStatus,
 } from '../components';
-import type { RiderDeviationTracker, OffRouteAlert } from '../components';
+import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop } from '../components';
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
@@ -137,12 +141,23 @@ function makeMyNavIcon(color: string, heading: number, status: string, isStale: 
 
 // Circle icon for other riders - replaced by createRiderMarkerIcon
 
-function makeStopIcon() {
+function makeStopIcon(placeName?: string, itemType?: string, orderIndex?: number) {
+  const iconEmoji = itemType === 'fuel' ? '⛽' : itemType === 'food' ? '🍲' : itemType === 'rest' ? '☕' : '📍';
+  const label = placeName ? placeName.slice(0, 14) : `Stop ${orderIndex ?? ''}`;
   return L.divIcon({
-    className: '',
-    iconAnchor: [6, 6],
-    iconSize: [12, 12],
-    html: `<div style="width:12px;height:12px;background:#9ca3af;border-radius:50%;border:2px solid #fff;"></div>`,
+    className: 'stop-milestone-marker',
+    iconAnchor: [12, 12],
+    iconSize: [24, 24],
+    html: `
+      <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:24px;height:24px;background:#1B1E23;border:2px solid #F0C23A;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.6);font-size:11px;">
+          ${iconEmoji}
+        </div>
+        <div style="position:absolute;top:26px;background:#111316;color:#F1EFEA;border:1px solid #2A2E35;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);letter-spacing:-0.2px;">
+          ${label}
+        </div>
+      </div>
+    `,
   });
 }
 
@@ -371,29 +386,36 @@ export default function RidePage() {
       .finally(() => setLoading(false));
   }, [sessionId]);
 
-  // Fetch road-following route: GPS position → itinerary stops → destination
-  // Runs once when session + first GPS fix are both ready; refreshes every 2 min
+  // Fetch road-following route from trip plan: start → itinerary stops → destination
+  // Loads immediately from trip plan (Plan tab) even before GPS, and refreshes every 2 min
   const routeFetchedRef = useRef(false);
   useEffect(() => {
     if (!session) return;
 
     const buildRoute = async () => {
-      const pos = myPosRef.current;
-      if (!pos) return; // GPS not ready yet
       const { trips } = session;
       const stopCoords: [number, number][] = (session.itinerary ?? [])
         .filter((s) => s.lat && s.lng)
         .map((s) => [s.lat as number, s.lng as number]);
 
+      let startPoint: [number, number] | null = null;
+      if (myPosRef.current) {
+        startPoint = [myPosRef.current.lat, myPosRef.current.lng];
+      } else if (trips.from_lat && trips.from_lng) {
+        startPoint = [trips.from_lat, trips.from_lng];
+      } else if (trips.from_place) {
+        startPoint = await geocodePlaceName(trips.from_place);
+      }
+
       let destination: [number, number] | null = null;
       if (trips.to_lat && trips.to_lng) {
         destination = [trips.to_lat, trips.to_lng];
-      } else {
+      } else if (trips.to_place) {
         destination = await geocodePlaceName(trips.to_place);
       }
 
       const waypoints: [number, number][] = [
-        [pos.lat, pos.lng],
+        ...(startPoint ? [startPoint] : []),
         ...stopCoords,
         ...(destination ? [destination] : []),
       ];
@@ -405,11 +427,11 @@ export default function RidePage() {
       routeFetchedRef.current = true;
     };
 
-    // Initial fetch — wait up to 10s for GPS
-    const timer = setTimeout(buildRoute, 2000);
+    // Initial fetch — immediately load planned route from trip plan
+    buildRoute();
     // Refresh every 2 min so route updates as you progress
     const interval = setInterval(buildRoute, 120_000);
-    return () => { clearTimeout(timer); clearInterval(interval); };
+    return () => { clearInterval(interval); };
   }, [session]);
 
   // Wake Lock + background visibility tracking
@@ -1021,16 +1043,74 @@ export default function RidePage() {
     return RIDER_COLORS[idx >= 0 ? idx % RIDER_COLORS.length : 0];
   }, [riders, user]);
 
+  const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
+  const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
+  const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
+
+  const activeRoute = useMemo(
+    () => (osrmRoute.length > 1 ? osrmRoute : routeCoords),
+    [osrmRoute, routeCoords]
+  );
+
+  const totalRouteDist = useMemo(() => getRouteTotalDistance(activeRoute), [activeRoute]);
+
   const myFreshness = getFreshness(myLastUpdatedRef.current ?? (myLat ? new Date().toISOString() : null));
 
-  // Compute freshness for all riders (Last-seen Engine)
+  // Feature E2 & A: Compute freshness and planned route progress status for all riders
   const ridersWithFreshness: RiderRosterData[] = useMemo(() => {
+    // 1. Calculate raw progress for all valid positions along activeRoute
+    const progressMap: Record<string, { distanceAlong: number; percent: number; crossTrack: number }> = {};
+    if (activeRoute.length >= 2) {
+      if (myLat && myLng && user?.id) {
+        const myProg = calculateRouteProgress([myLat, myLng], activeRoute, totalRouteDist);
+        progressMap[user.id] = {
+          distanceAlong: myProg.distanceAlongMeters,
+          percent: myProg.progressPercent,
+          crossTrack: myProg.crossTrackDistanceMeters,
+        };
+      }
+      riders.forEach((r) => {
+        if (r.user_id && r.lat && r.lng) {
+          const prog = calculateRouteProgress([Number(r.lat), Number(r.lng)], activeRoute, totalRouteDist);
+          progressMap[r.user_id] = {
+            distanceAlong: prog.distanceAlongMeters,
+            percent: prog.progressPercent,
+            crossTrack: prog.crossTrackDistanceMeters,
+          };
+        }
+      });
+    }
+
+    // 2. Reference progress: Captain's progress or current user's progress
+    const captainId = session?.started_by;
+    const refProgressMeters = (captainId && progressMap[captainId])
+      ? progressMap[captainId].distanceAlong
+      : (user?.id && progressMap[user.id])
+        ? progressMap[user.id].distanceAlong
+        : 0;
+
     return riders.map((r, i) => {
       const isMe = r.user_id === user?.id;
       const freshness = isMe ? myFreshness : getFreshness(r.updated_at);
       const isCaptain = session?.started_by === r.user_id;
       const dist = myLat && myLng && r.lat && r.lng ? haversineKm(myLat, myLng, Number(r.lat), Number(r.lng)) : null;
       const color = RIDER_COLORS[i % RIDER_COLORS.length];
+      const prog = r.user_id ? progressMap[r.user_id] : null;
+
+      // Feature C deviation alert status
+      const isOffRoute = r.user_id ? !!deviationTrackers[r.user_id]?.isDeviated : false;
+
+      // Feature E2 route status (Ahead, on plan, behind, off route, unknown)
+      const routeStatus = prog
+        ? evaluateRiderRouteStatus({
+            riderProgressMeters: prog.distanceAlong,
+            refProgressMeters,
+            crossTrackMeters: prog.crossTrack,
+            isOffRouteAlert: isOffRoute,
+            isStaleOrUnknown: freshness.isStale || freshness.isUnknown,
+            progressPercent: prog.percent,
+          })
+        : undefined;
 
       return {
         userId: r.user_id,
@@ -1046,9 +1126,39 @@ export default function RidePage() {
         distanceKm: dist,
         color,
         freshness,
+        routeStatus,
       };
     });
-  }, [riders, user?.id, myFreshness, session?.started_by, myLat, myLng]);
+  }, [riders, user?.id, myFreshness, session?.started_by, myLat, myLng, activeRoute, totalRouteDist, deviationTrackers]);
+
+  // Feature E2: Data prepared for RouteProgressStrip
+  const ridersForProgressStrip: RouteProgressRider[] = useMemo(() => {
+    return ridersWithFreshness
+      .filter((r) => r.lat && r.lng && r.routeStatus)
+      .map((r) => ({
+        userId: r.userId,
+        userName: r.userName,
+        isMe: r.isMe,
+        isCaptain: r.isCaptain,
+        color: r.color,
+        progressPercent: r.routeStatus!.progressPercent,
+        distanceAlongMeters: r.routeStatus!.distanceAlongMeters,
+        routeStatus: r.routeStatus!,
+      }));
+  }, [ridersWithFreshness]);
+
+  const stopsForProgressStrip: RouteMilestoneStop[] = useMemo(() => {
+    if (!activeRoute || activeRoute.length < 2) return [];
+    return itineraryStops.map((stop) => {
+      const prog = calculateRouteProgress([stop.lat as number, stop.lng as number], activeRoute, totalRouteDist);
+      return {
+        id: stop.id,
+        place: stop.place,
+        progressPercent: prog.progressPercent,
+        itemType: stop.item_type,
+      };
+    });
+  }, [itineraryStops, activeRoute, totalRouteDist]);
 
   // Stale and unknown riders (for alert banner)
   const staleRiders = useMemo(() => {
@@ -1098,15 +1208,6 @@ export default function RidePage() {
       setFocusTarget(null);
     }, 2500);
   }, []);
-
-  const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
-  const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
-  const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
-
-  const activeRoute = useMemo(
-    () => (osrmRoute.length > 1 ? osrmRoute : routeCoords),
-    [osrmRoute, routeCoords]
-  );
 
   // Feature C: Evaluate route deviation for all riders against active route
   useEffect(() => {
@@ -1592,6 +1693,30 @@ export default function RidePage() {
         backgroundColor: '#111316',
         minHeight: 0,
       }}>
+        {/* Feature E2: Planned Route Progress Strip along planned line */}
+        {splitView && activeRoute.length > 1 && (
+          <RouteProgressStrip
+            routeTitle={session?.trips?.title ? `${session.trips.title}` : 'Planned Route Progress'}
+            totalDistanceMeters={totalRouteDist}
+            riders={ridersForProgressStrip}
+            stops={stopsForProgressStrip}
+            onSelectRider={(uid) => {
+              const found = ridersWithFreshness.find((r) => r.userId === uid);
+              if (found && found.lat && found.lng) {
+                setFollowing(false);
+                setFocusTarget([found.lat, found.lng]);
+              }
+            }}
+            onSelectStop={(stopId) => {
+              const found = itineraryStops.find((s) => s.id === stopId);
+              if (found && found.lat && found.lng) {
+                setFollowing(false);
+                setFocusTarget([found.lat as number, found.lng as number]);
+              }
+            }}
+          />
+        )}
+
         {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
         <div className="warm-map-container" style={{
           flex: splitView ? '0 0 38%' : '1 1 auto',
@@ -1811,9 +1936,13 @@ export default function RidePage() {
                 />
               );
             })}
-            {/* Itinerary stop markers */}
+            {/* Itinerary stop markers along planned line (Feature E2) */}
             {itineraryStops.map((stop) => (
-              <Marker key={stop.id} position={[stop.lat as number, stop.lng as number]} icon={makeStopIcon()} />
+              <Marker
+                key={stop.id}
+                position={[stop.lat as number, stop.lng as number]}
+                icon={makeStopIcon(stop.place, stop.item_type, stop.order_index)}
+              />
             ))}
             {/* Pinned target stop marker with pulsating alert */}
             {pinnedStop && (
@@ -1829,12 +1958,19 @@ export default function RidePage() {
                 icon={makeMyNavIcon(colorForUser(user?.id ?? ''), myHeading, myStatus, myFreshness.isStale)}
               />
             )}
-            {/* Other riders — dynamic Last-seen marker (solid if live, hollow if stale/unknown) */}
+            {/* Other riders — dynamic Last-seen & Route Progress marker (Feature A + E2) */}
             {ridersWithFreshness.filter((r) => !r.isMe).map((r) => (
               <Marker
                 key={r.userId}
                 position={[r.lat, r.lng]}
-                icon={createRiderMarkerIcon(r.userName, r.color, r.quickStatus ?? '', r.freshness, r.isCaptain)}
+                icon={createRiderMarkerIcon(
+                  r.userName,
+                  r.color,
+                  r.quickStatus ?? '',
+                  r.freshness,
+                  r.isCaptain,
+                  r.routeStatus
+                )}
               />
             ))}
           </MapContainer>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { FreshnessInfo } from '../utils/lastSeen';
+import { RiderRouteStatus } from '../utils/plannedRouteProgress';
 
 export interface RiderRosterData {
   userId: string;
@@ -14,6 +15,7 @@ export interface RiderRosterData {
   distanceKm?: number | null;
   color: string;
   freshness: FreshnessInfo;
+  routeStatus?: RiderRouteStatus;
 }
 
 interface RiderRosterRowProps {
@@ -40,44 +42,59 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
   // e.g. "Need fuel · 10:42"
   // e.g. "Last position 6 min ago"
   let subtitle = '';
-  if (isCaptain) {
-    subtitle = `Captain · ${freshness.ageLabel}`;
+  if (rider.routeStatus?.status === 'off_route') {
+    subtitle = `Off planned route · ${freshness.ageLabel}`;
+  } else if (isCaptain) {
+    subtitle = `Captain · ${rider.routeStatus?.deltaFormatted ? `${rider.routeStatus.deltaFormatted} · ` : ''}${freshness.ageLabel}`;
   } else if (quickStatus) {
     subtitle = `${quickStatus} · ${freshness.ageLabel}`;
   } else if (freshness.isUnknown) {
     subtitle = `Last position ${freshness.ageLabel}`;
+  } else if (rider.routeStatus?.deltaFormatted && rider.routeStatus.status !== 'on_plan') {
+    subtitle = `${rider.routeStatus.deltaFormatted} · ${freshness.ageLabel}`;
   } else if (speedKmh > 5) {
     subtitle = `${Math.round(speedKmh)} km/h · ${freshness.ageLabel}`;
   } else {
     subtitle = freshness.ageLabel;
   }
 
-  // Right status badge label (matching mockups: LIVE, BEHIND, UNKNOWN)
+  // Right status badge label (Feature E2 & Feature A integration)
+  // Shows: AHEAD, ON PLAN, BEHIND, OFF ROUTE, UNKNOWN
   let badgeLabel = freshness.badgeLabel;
   let badgeColor = freshness.badgeTextColor;
   let badgeBorder = freshness.badgeBorderColor;
   let badgeBg = 'transparent';
 
-  if (quickStatus && quickStatus.toLowerCase().includes('behind')) {
-    badgeLabel = 'BEHIND';
-    badgeColor = '#F0C23A';
-    badgeBorder = '#F0C23A';
-    badgeBg = 'rgba(240, 194, 58, 0.12)';
-  } else if (freshness.isStale && !quickStatus) {
-    badgeLabel = 'STALE';
-    badgeColor = '#F0C23A';
-    badgeBorder = '#F0C23A';
-    badgeBg = 'rgba(240, 194, 58, 0.12)';
-  } else if (freshness.isLive) {
-    badgeLabel = 'LIVE';
-    badgeColor = '#10B981';
-    badgeBorder = '#10B981';
-    badgeBg = 'rgba(16, 185, 129, 0.12)';
-  } else if (freshness.isUnknown) {
+  if (rider.routeStatus?.status === 'off_route') {
+    badgeLabel = 'OFF ROUTE';
+    badgeColor = '#EF4444';
+    badgeBorder = '#EF4444';
+    badgeBg = 'rgba(239, 68, 68, 0.15)';
+  } else if (freshness.isUnknown || rider.routeStatus?.status === 'unknown') {
     badgeLabel = 'UNKNOWN';
     badgeColor = '#9D9C9A';
     badgeBorder = '#9D9C9A';
     badgeBg = 'rgba(157, 156, 154, 0.12)';
+  } else if (rider.routeStatus?.status === 'ahead') {
+    badgeLabel = 'AHEAD';
+    badgeColor = '#38BDF8';
+    badgeBorder = '#38BDF8';
+    badgeBg = 'rgba(56, 189, 248, 0.14)';
+  } else if (rider.routeStatus?.status === 'behind' || (quickStatus && quickStatus.toLowerCase().includes('behind'))) {
+    badgeLabel = 'BEHIND';
+    badgeColor = '#F59E0B';
+    badgeBorder = '#F59E0B';
+    badgeBg = 'rgba(245, 158, 11, 0.14)';
+  } else if (freshness.isStale) {
+    badgeLabel = 'STALE';
+    badgeColor = '#F0C23A';
+    badgeBorder = '#F0C23A';
+    badgeBg = 'rgba(240, 194, 58, 0.12)';
+  } else {
+    badgeLabel = 'LIVE';
+    badgeColor = '#10B981';
+    badgeBorder = '#10B981';
+    badgeBg = 'rgba(16, 185, 129, 0.12)';
   }
 
   return (
