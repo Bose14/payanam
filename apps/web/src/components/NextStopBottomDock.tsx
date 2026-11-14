@@ -37,7 +37,8 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
               onClick={onPinNewStop}
               style={styles.btnWhite}
             >
-              📌 Choose stop
+              <span>📌</span>
+              <span>Choose stop</span>
             </button>
           )}
           <button
@@ -45,7 +46,8 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
             onClick={onOpenTellGroup}
             style={styles.btnYellow}
           >
-            Tell group
+            <span>💬</span>
+            <span>Tell group</span>
           </button>
         </div>
       </div>
@@ -88,17 +90,18 @@ const styles: Record<string, React.CSSProperties> = {
   dockCard: {
     backgroundColor: '#1B1E23',
     border: '1.5px solid #2A2E35',
-    borderRadius: 20,
-    margin: '8px 16px 12px',
-    padding: '12px 16px 14px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+    borderRadius: 18,
+    margin: '4px 12px 6px',
+    padding: '10px 14px 12px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
     flexShrink: 0,
     zIndex: 800,
+    boxSizing: 'border-box',
   },
   notchWrap: {
     display: 'flex',
     justifyContent: 'center',
-    paddingBottom: 8,
+    paddingBottom: 6,
     cursor: 'pointer',
   },
   notch: {
@@ -113,15 +116,15 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     gap: 12,
     cursor: 'pointer',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   unpinnedInfo: {
-    marginBottom: 10,
+    marginBottom: 8,
     cursor: 'pointer',
   },
   stopName: {
     margin: 0,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 900,
     color: '#F1EFEA',
     letterSpacing: -0.3,
@@ -145,7 +148,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tellGroupBtn: {
     width: '100%',
-    padding: '13px 16px',
+    minHeight: 46,
+    padding: '12px 16px',
     backgroundColor: '#F0C23A',
     color: '#111316',
     border: 'none',
@@ -156,14 +160,18 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: -0.2,
     boxShadow: '0 3px 12px rgba(240, 194, 58, 0.25)',
     transition: 'transform 0.1s ease',
+    touchAction: 'manipulation',
+    marginTop: 6,
   },
   btnRow: {
     display: 'flex',
-    gap: 10,
+    gap: 8,
+    marginTop: 6,
   },
   btnWhite: {
     flex: 1,
-    padding: '11px 14px',
+    minHeight: 44,
+    padding: '10px 12px',
     backgroundColor: '#1B1E23',
     border: '1.5px solid #2A2E35',
     borderRadius: 12,
@@ -171,10 +179,16 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     color: '#F1EFEA',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    touchAction: 'manipulation',
   },
   btnYellow: {
     flex: 1,
-    padding: '11px 14px',
+    minHeight: 44,
+    padding: '10px 12px',
     backgroundColor: '#F0C23A',
     border: 'none',
     borderRadius: 12,
@@ -182,7 +196,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     color: '#111316',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+    touchAction: 'manipulation',
   },
 };
 

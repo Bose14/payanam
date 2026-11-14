@@ -45,21 +45,24 @@ export const StaleRidersAlertBanner: React.FC<StaleRidersAlertBannerProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   banner: {
-    margin: '8px 16px 8px',
-    padding: '10px 14px',
-    borderRadius: 16,
+    margin: '4px 12px 6px',
+    padding: '8px 12px',
+    borderRadius: 14,
     background: '#1B1E23',
     border: '1.5px solid #F0C23A',
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
+    flexShrink: 0,
+    minHeight: 44,
+    touchAction: 'manipulation',
   },
   iconWrap: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: '50%',
     background: 'rgba(240, 194, 58, 0.15)',
     display: 'flex',
@@ -85,10 +88,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 2,
   },
   chevron: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#F0C23A',
-    fontWeight: 700,
-    paddingLeft: 4,
+    fontWeight: 800,
+    paddingLeft: 2,
+    flexShrink: 0,
   },
 };
 

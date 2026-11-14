@@ -284,7 +284,8 @@ html, body {
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.18);
   }
 
-  /* Shift deployment / Netlify badge above bottom nav bar */
+  /* Shift deployment / Netlify badge above bottom nav bar and prevent blocking buttons */
+  netlify-badge,
   [data-netlify-badge],
   .netlify-badge,
   #netlify-badge,
@@ -292,12 +293,27 @@ html, body {
   [class*="netlify"],
   div[class*="netlify"],
   iframe[src*="netlify"],
-  iframe[title*="Netlify"] {
+  iframe[title*="Netlify"],
+  [aria-label*="Netlify"] {
     bottom: calc(76px + env(safe-area-inset-bottom, 12px)) !important;
     right: 12px !important;
-    transform: scale(0.85);
-    transform-origin: bottom right;
-    z-index: 9998 !important;
+    transform: scale(0.8) !important;
+    transform-origin: bottom right !important;
+    z-index: 850 !important;
+    pointer-events: none !important;
+  }
+
+  /* Dedicated Ride Page bottom navigation (in-flow, never fixed over content) */
+  .ride-bottom-nav {
+    display: flex !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    background: #111316 !important;
+    border-top: 1.5px solid #2A2E35 !important;
+    z-index: 900 !important;
+    height: calc(54px + env(safe-area-inset-bottom, 0px)) !important;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4) !important;
   }
 
   .mobile-nav-item {
