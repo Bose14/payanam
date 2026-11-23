@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/api';
+import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
 
 function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token') || '';
+  const hashParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.replace(/^#/, '')) : null;
+  const token = searchParams.get('token') || searchParams.get('code') || hashParams?.get('access_token') || '';
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,6 +54,11 @@ function ResetPasswordPage() {
     setIsLoading(true);
     try {
       await authService.resetPassword(token, password);
+      try {
+        await supabase.auth.updateUser({ password });
+      } catch {
+        // Optional sync with Supabase Auth
+      }
       setSuccess(true);
     } catch (err: unknown) {
       const errorObj = err as { message?: string; code?: string; response?: { data?: { message?: string } } };

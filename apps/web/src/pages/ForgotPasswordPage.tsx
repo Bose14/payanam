@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/api';
+import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successInfo, setSuccessInfo] = useState<{ message: string; resetLink?: string } | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ message: string; resetLink?: string; resetToken?: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,8 +21,17 @@ function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
+      // Also attempt Supabase native recovery email in case Supabase SMTP is configured
+      try {
+        await supabase.auth.resetPasswordForEmail(cleanEmail, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+      } catch {
+        // Supabase Auth email is optional fallback
+      }
+
       const data = await authService.forgotPassword(cleanEmail);
-      setSuccessInfo(data || { message: 'Password reset link generated.' });
+      setSuccessInfo(data || { message: 'Password reset authorization ready.' });
     } catch (err: unknown) {
       const errorObj = err as { message?: string; code?: string; response?: { data?: { message?: string } } };
       if (errorObj?.message === 'Network Error' || errorObj?.code === 'ERR_NETWORK') {
@@ -35,39 +45,57 @@ function ForgotPasswordPage() {
     }
   };
 
+  const isUserNotFound = error && (error.toLowerCase().includes('no account') || error.toLowerCase().includes('not found'));
+  const resetToken = successInfo?.resetToken || (successInfo?.resetLink ? successInfo.resetLink.split('token=')[1] : '');
+
   return (
     <AuthLayout
       title="Reset Password"
-      subtitle="Enter your registered email and we'll send you instructions to reset your password."
+      subtitle="Enter your registered email and we'll help you securely reset your password."
     >
       {error && (
         <div style={styles.errorBox}>
-          <span style={{ fontSize: '16px' }}>⚠️</span>
-          <span>{error}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <span style={{ fontSize: '16px' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div>{error}</div>
+              {isUserNotFound && (
+                <div style={{ marginTop: '8px' }}>
+                  <Link to="/register" style={styles.createAccountBtn}>
+                    Create an account with this email →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {successInfo ? (
         <div style={styles.successBox}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>📬</div>
-          <h3 style={styles.successTitle}>Request Processed!</h3>
-          <p style={styles.successMessage}>{successInfo.message}</p>
+          <div style={{ fontSize: '38px', marginBottom: '8px' }}>🔐</div>
+          <h3 style={styles.successTitle}>Password Reset Ready!</h3>
+          <p style={styles.successMessage}>
+            Password reset authorization has been generated for <strong>{email}</strong>.
+          </p>
 
-          {successInfo.resetLink && (
-            <div style={styles.devLinkBox}>
-              <span style={styles.devBadge}>Development Mode</span>
-              <p style={{ margin: '6px 0 10px', fontSize: '13px', color: '#1e3a8a' }}>
-                Click below to proceed directly to the reset page:
-              </p>
-              <Link to={successInfo.resetLink.replace(/^https?:\/\/[^/]+/, '')} style={styles.devLinkBtn}>
-                Reset Password Now →
-              </Link>
-            </div>
-          )}
+          <div style={styles.actionCard}>
+            <p style={{ margin: '0 0 14px', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.5 }}>
+              Since email delivery (SMTP) is not configured in this deployment, click below to set your new password immediately:
+            </p>
+            <Link
+              to={resetToken ? `/reset-password?token=${resetToken}` : '/reset-password'}
+              style={styles.directResetBtn}
+            >
+              Set New Password Now →
+            </Link>
+          </div>
 
-          <Link to="/login" style={styles.backLink}>
-            ← Back to Sign In
-          </Link>
+          <div style={{ marginTop: '18px' }}>
+            <Link to="/login" style={styles.backLink}>
+              ← Back to Sign In
+            </Link>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -91,7 +119,7 @@ function ForgotPasswordPage() {
             disabled={isLoading}
             style={isLoading ? { ...styles.submitBtn, ...styles.submitBtnDisabled } : styles.submitBtn}
           >
-            {isLoading ? 'Generating Link...' : 'Send Reset Link →'}
+            {isLoading ? 'Generating Link...' : 'Continue to Reset Password →'}
           </button>
 
           <div style={{ textAlign: 'center', marginTop: '16px' }}>
@@ -157,6 +185,13 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#0f172a',
     background: '#ffffff',
   },
+  createAccountBtn: {
+    display: 'inline-block',
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#b91c1c',
+    textDecoration: 'underline',
+  },
   submitBtn: {
     marginTop: '6px',
     padding: '12.5px',
@@ -177,8 +212,8 @@ const styles: Record<string, React.CSSProperties> = {
   successBox: {
     background: '#f0fdf4',
     border: '1px solid #bbf7d0',
-    borderRadius: '12px',
-    padding: '24px',
+    borderRadius: '16px',
+    padding: '24px 20px',
     textAlign: 'center',
   },
   successTitle: {
@@ -193,32 +228,30 @@ const styles: Record<string, React.CSSProperties> = {
     lineHeight: 1.5,
     margin: '0 0 16px',
   },
-  devLinkBox: {
-    background: '#eff6ff',
-    border: '1px solid #bfdbfe',
-    borderRadius: '8px',
-    padding: '12px',
-    marginBottom: '16px',
+  actionCard: {
+    background: '#ffffff',
+    border: '1.5px solid #86efac',
+    borderRadius: '12px',
+    padding: '16px 14px',
+    margin: '12px 0 16px',
+    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.12)',
     textAlign: 'center',
   },
-  devBadge: {
-    background: '#3b82f6',
+  directResetBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    padding: '13px 18px',
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     color: '#ffffff',
-    fontSize: '11px',
-    fontWeight: 700,
-    padding: '2px 8px',
-    borderRadius: '4px',
-    textTransform: 'uppercase',
-  },
-  devLinkBtn: {
-    display: 'inline-block',
-    padding: '8px 16px',
-    background: '#1d4ed8',
-    color: '#ffffff',
-    borderRadius: '6px',
+    borderRadius: '10px',
     textDecoration: 'none',
-    fontSize: '13.5px',
-    fontWeight: 600,
+    fontSize: '15px',
+    fontWeight: 700,
+    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+    transition: 'all 0.15s ease',
+    boxSizing: 'border-box',
   },
   backLink: {
     color: '#4f46e5',

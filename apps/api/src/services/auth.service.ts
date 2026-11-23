@@ -135,6 +135,7 @@ export async function requestPasswordReset(email: string): Promise<{
   message: string;
   resetToken?: string;
   resetLink?: string;
+  email?: string;
 }> {
   const db = getDatabase();
   const normalizedEmail = email.trim().toLowerCase();
@@ -145,11 +146,15 @@ export async function requestPasswordReset(email: string): Promise<{
     .eq('email', normalizedEmail)
     .maybeSingle();
 
-  // For privacy, return generic response even if user not found
-  if (error || !user) {
-    return {
-      message: 'If an account exists with this email, a password reset link has been generated.',
-    };
+  if (error) {
+    console.error('❌ Database error finding user for reset:', error);
+    throw new Error(`Database error: ${error.message || 'Unable to query user account'}`);
+  }
+
+  if (!user) {
+    throw new NotFoundError(
+      `No account registered with ${normalizedEmail}. Please check for typos or create a new account.`
+    );
   }
 
   const resetToken = crypto.randomBytes(32).toString('hex');
@@ -164,6 +169,12 @@ export async function requestPasswordReset(email: string): Promise<{
     .eq('id', user.id);
 
   if (updateError) {
+    console.error('❌ Database error updating reset_password_token:', updateError);
+    if (updateError.message?.includes('reset_password_token') || updateError.message?.includes('schema cache')) {
+      throw new Error(
+        'Database is missing the reset_password_token column. Please run docs/PASSWORD_RESET_SETUP.sql in Supabase SQL editor.'
+      );
+    }
     throw new Error(`Failed to generate reset link: ${updateError.message}`);
   }
 
@@ -176,9 +187,10 @@ export async function requestPasswordReset(email: string): Promise<{
   console.log(`========================================\n`);
 
   return {
-    message: 'If an account exists with this email, a password reset link has been generated.',
+    message: 'Password reset link ready.',
     resetToken,
     resetLink,
+    email: user.email,
   };
 }
 
