@@ -72,7 +72,17 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     .eq('email', normalizedEmail)
     .maybeSingle();
 
-  if (error || !user) {
+  if (error) {
+    const msg = error.message || '';
+    if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+      throw new Error(
+        'Database connection failed: Your Supabase database is paused. Please visit https://supabase.com/dashboard to restore/unpause your project.'
+      );
+    }
+    throw new Error(`Database error: ${msg}`);
+  }
+
+  if (!user) {
     throw new UnauthorizedError('Invalid email or password');
   }
 
@@ -131,10 +141,23 @@ export async function getUserById(userId: string): Promise<User> {
   };
 }
 
+function parseUtcDate(val: string | Date | null | undefined): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  let str = String(val).trim().replace(' ', 'T');
+  // If no timezone offset (Z or +/-HH:MM) is present, explicitly treat as UTC
+  if (!str.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(str)) {
+    str += 'Z';
+  }
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? new Date(val) : parsed;
+}
+
 export async function requestPasswordReset(email: string): Promise<{
   message: string;
   resetToken?: string;
   resetLink?: string;
+  email?: string;
 }> {
   const db = getDatabase();
   const normalizedEmail = email.trim().toLowerCase();
@@ -145,15 +168,25 @@ export async function requestPasswordReset(email: string): Promise<{
     .eq('email', normalizedEmail)
     .maybeSingle();
 
-  // For privacy, return generic response even if user not found
-  if (error || !user) {
-    return {
-      message: 'If an account exists with this email, a password reset link has been generated.',
-    };
+  if (error) {
+    console.error('❌ Database error finding user for reset:', error);
+    const msg = error.message || '';
+    if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+      throw new Error(
+        'Database connection failed: Your Supabase database is currently paused. Please log into https://supabase.com/dashboard and click "Restore" to unpause your project.'
+      );
+    }
+    throw new Error(`Database error: ${msg || 'Unable to query user account'}`);
+  }
+
+  if (!user) {
+    throw new NotFoundError(
+      `No account registered with ${normalizedEmail}. Please check for typos or create a new account.`
+    );
   }
 
   const resetToken = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours validity
 
   const { error: updateError } = await db
     .from('users')
@@ -164,6 +197,12 @@ export async function requestPasswordReset(email: string): Promise<{
     .eq('id', user.id);
 
   if (updateError) {
+    console.error('❌ Database error updating reset_password_token:', updateError);
+    if (updateError.message?.includes('reset_password_token') || updateError.message?.includes('schema cache')) {
+      throw new Error(
+        'Database is missing the reset_password_token column. Please run docs/PASSWORD_RESET_SETUP.sql in Supabase SQL editor.'
+      );
+    }
     throw new Error(`Failed to generate reset link: ${updateError.message}`);
   }
 
@@ -176,9 +215,10 @@ export async function requestPasswordReset(email: string): Promise<{
   console.log(`========================================\n`);
 
   return {
-    message: 'If an account exists with this email, a password reset link has been generated.',
+    message: 'Password reset link ready.',
     resetToken,
     resetLink,
+    email: user.email,
   };
 }
 
@@ -195,8 +235,11 @@ export async function resetPassword(token: string, newPassword: string): Promise
     throw new ValidationError('Invalid or expired password reset link');
   }
 
-  if (user.reset_password_expires_at && new Date(user.reset_password_expires_at) < new Date()) {
-    throw new ValidationError('Password reset link has expired. Please request a new one.');
+  if (user.reset_password_expires_at) {
+    const expiryDate = parseUtcDate(user.reset_password_expires_at);
+    if (expiryDate && expiryDate.getTime() < Date.now()) {
+      throw new ValidationError('Password reset link has expired. Please request a new one.');
+    }
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);

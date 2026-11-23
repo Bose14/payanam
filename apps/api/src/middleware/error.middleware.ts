@@ -37,10 +37,15 @@ export function errorHandler(
     return res.status(error.statusCode).json(apiError);
   }
 
+  let message = error.message || 'An unexpected error occurred';
+  if (message.includes('fetch failed') || message.includes('ENOTFOUND')) {
+    message = 'Database is currently unreachable or paused. Please visit https://supabase.com/dashboard to restore/unpause your Supabase project.';
+  }
+
   const apiError: ApiError = {
     status: 'error',
     code: 'INTERNAL_ERROR',
-    message: error.message || 'An unexpected error occurred',
+    message,
     timestamp,
     requestId,
   };

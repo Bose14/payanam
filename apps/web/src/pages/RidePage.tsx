@@ -2445,7 +2445,9 @@ export default function RidePage() {
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
         flex: tab === 'map' ? 1 : 0,
-        overflow: 'hidden',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
         display: tab === 'map' ? 'flex' : 'none',
         flexDirection: 'column',
         position: 'relative',
@@ -2924,7 +2926,7 @@ export default function RidePage() {
             </button>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Feature 2: Trip Completed Celebration Banner */}
             {milestoneSummary && (
               <TripCompletedBanner
@@ -3136,7 +3138,7 @@ export default function RidePage() {
             />
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
                 <p style={{ color: '#F1EFEA', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
@@ -3413,7 +3415,7 @@ export default function RidePage() {
 
       {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', backgroundColor: '#111316' }}>
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 14px', backgroundColor: '#111316' }}>
           {/* Stale Riders Warning Banner */}
           <StaleRidersAlertBanner
             staleCount={staleRiders.length}
@@ -3450,7 +3452,7 @@ export default function RidePage() {
 
       {/* Nav / Directions panel */}
       {tab === 'nav' && (
-        <div style={{ flex: 1, overflowY: 'auto', background: '#111316', padding: '12px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: '#111316', padding: '12px 16px' }}>
           {/* Quick Launch External Navigation Apps */}
           <div style={{ padding: '12px 16px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
             <button

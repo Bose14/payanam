@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/api';
+import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
 
 function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = searchParams.get('token') || '';
+  const hashParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.replace(/^#/, '')) : null;
+  const token = searchParams.get('token') || searchParams.get('code') || hashParams?.get('access_token') || '';
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,6 +54,11 @@ function ResetPasswordPage() {
     setIsLoading(true);
     try {
       await authService.resetPassword(token, password);
+      try {
+        await supabase.auth.updateUser({ password });
+      } catch {
+        // Optional sync with Supabase Auth
+      }
       setSuccess(true);
     } catch (err: unknown) {
       const errorObj = err as { message?: string; code?: string; response?: { data?: { message?: string } } };
@@ -73,8 +80,19 @@ function ResetPasswordPage() {
     >
       {error && (
         <div style={styles.errorBox}>
-          <span style={{ fontSize: '16px' }}>⚠️</span>
-          <span>{error}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <span style={{ fontSize: '16px' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div>{error}</div>
+              {(error.toLowerCase().includes('expired') || error.toLowerCase().includes('invalid')) && (
+                <div style={{ marginTop: '10px' }}>
+                  <Link to="/forgot-password" style={styles.requestNewBtn}>
+                    Request a Fresh Reset Link →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -318,6 +336,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: '13.5px',
     textDecoration: 'none',
+  },
+  requestNewBtn: {
+    display: 'inline-block',
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#b91c1c',
+    textDecoration: 'underline',
   },
 };
 

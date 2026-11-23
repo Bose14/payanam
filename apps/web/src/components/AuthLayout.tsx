@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -8,10 +7,6 @@ interface AuthLayoutProps {
 }
 
 export default function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
-  const location = useLocation();
-  const isLogin = location.pathname === '/login';
-  const isRegister = location.pathname === '/register';
-
   return (
     <div className="auth-container" style={styles.container}>
       {/* LEFT: Adventure Showcase Panel (Fixed 50% on desktop) */}
@@ -123,30 +118,6 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       {/* RIGHT: Modern Form Panel (Fixed 50% on desktop) */}
       <div className="auth-form-panel" style={styles.formPanel}>
         <div className="auth-form-card" style={styles.formCard}>
-          {/* Auth Tab switcher (Login / Register) */}
-          {(isLogin || isRegister) && (
-            <div style={styles.tabContainer}>
-              <Link
-                to="/login"
-                style={{
-                  ...styles.tabBtn,
-                  ...(isLogin ? styles.tabActive : styles.tabInactive),
-                }}
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                style={{
-                  ...styles.tabBtn,
-                  ...(isRegister ? styles.tabActive : styles.tabInactive),
-                }}
-              >
-                Create Account
-              </Link>
-            </div>
-          )}
-
           {/* Page header */}
           <div style={styles.formHeader}>
             <h2 style={styles.formTitle}>{title}</h2>
@@ -169,22 +140,23 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
 const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
-    height: '100vh',
-    maxHeight: '100vh',
-    width: '100vw',
-    overflow: 'hidden',
+    minHeight: '100vh',
+    width: '100%',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     background: '#0f172a',
     color: '#0f172a',
     boxSizing: 'border-box',
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
   },
   showcase: {
     flex: '1 1 50%',
     width: '50%',
-    height: '100%',
+    minHeight: '100%',
     position: 'relative',
     overflowY: 'auto',
     overflowX: 'hidden',
+    WebkitOverflowScrolling: 'touch',
     background: 'linear-gradient(145deg, #0b0f19 0%, #111827 50%, #1e1b4b 100%)',
     padding: '40px 48px',
     display: 'flex',
@@ -387,14 +359,16 @@ const styles: Record<string, React.CSSProperties> = {
   formPanel: {
     flex: '1 1 50%',
     width: '50%',
-    height: '100%',
+    minHeight: '100%',
     background: '#f8fafc',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '32px 24px',
     overflowY: 'auto',
     overflowX: 'hidden',
+    WebkitOverflowScrolling: 'touch',
     boxSizing: 'border-box',
   },
   formCard: {
@@ -406,31 +380,6 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 10px 40px -10px rgba(15, 23, 42, 0.12), 0 0 1px 1px rgba(15, 23, 42, 0.05)',
     boxSizing: 'border-box',
     margin: 'auto 0',
-  },
-  tabContainer: {
-    display: 'flex',
-    background: '#f1f5f9',
-    borderRadius: '10px',
-    padding: '4px',
-    marginBottom: '22px',
-  },
-  tabBtn: {
-    flex: 1,
-    textAlign: 'center',
-    padding: '9px 12px',
-    borderRadius: '8px',
-    fontSize: '13.5px',
-    fontWeight: 600,
-    transition: 'all 0.15s ease',
-  },
-  tabActive: {
-    background: '#ffffff',
-    color: '#0f172a',
-    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
-  },
-  tabInactive: {
-    color: '#64748b',
-    background: 'transparent',
   },
   formHeader: {
     marginBottom: '20px',
