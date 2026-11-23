@@ -80,8 +80,19 @@ function ResetPasswordPage() {
     >
       {error && (
         <div style={styles.errorBox}>
-          <span style={{ fontSize: '16px' }}>⚠️</span>
-          <span>{error}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <span style={{ fontSize: '16px' }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div>{error}</div>
+              {(error.toLowerCase().includes('expired') || error.toLowerCase().includes('invalid')) && (
+                <div style={{ marginTop: '10px' }}>
+                  <Link to="/forgot-password" style={styles.requestNewBtn}>
+                    Request a Fresh Reset Link →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -325,6 +336,13 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     fontSize: '13.5px',
     textDecoration: 'none',
+  },
+  requestNewBtn: {
+    display: 'inline-block',
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#b91c1c',
+    textDecoration: 'underline',
   },
 };
 

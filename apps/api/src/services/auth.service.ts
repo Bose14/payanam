@@ -141,6 +141,18 @@ export async function getUserById(userId: string): Promise<User> {
   };
 }
 
+function parseUtcDate(val: string | Date | null | undefined): Date | null {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  let str = String(val).trim().replace(' ', 'T');
+  // If no timezone offset (Z or +/-HH:MM) is present, explicitly treat as UTC
+  if (!str.endsWith('Z') && !/[+-]\d{2}(?::?\d{2})?$/.test(str)) {
+    str += 'Z';
+  }
+  const parsed = new Date(str);
+  return isNaN(parsed.getTime()) ? new Date(val) : parsed;
+}
+
 export async function requestPasswordReset(email: string): Promise<{
   message: string;
   resetToken?: string;
@@ -174,7 +186,7 @@ export async function requestPasswordReset(email: string): Promise<{
   }
 
   const resetToken = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours validity
 
   const { error: updateError } = await db
     .from('users')
@@ -223,8 +235,11 @@ export async function resetPassword(token: string, newPassword: string): Promise
     throw new ValidationError('Invalid or expired password reset link');
   }
 
-  if (user.reset_password_expires_at && new Date(user.reset_password_expires_at) < new Date()) {
-    throw new ValidationError('Password reset link has expired. Please request a new one.');
+  if (user.reset_password_expires_at) {
+    const expiryDate = parseUtcDate(user.reset_password_expires_at);
+    if (expiryDate && expiryDate.getTime() < Date.now()) {
+      throw new ValidationError('Password reset link has expired. Please request a new one.');
+    }
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
