@@ -72,7 +72,17 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     .eq('email', normalizedEmail)
     .maybeSingle();
 
-  if (error || !user) {
+  if (error) {
+    const msg = error.message || '';
+    if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+      throw new Error(
+        'Database connection failed: Your Supabase database is paused. Please visit https://supabase.com/dashboard to restore/unpause your project.'
+      );
+    }
+    throw new Error(`Database error: ${msg}`);
+  }
+
+  if (!user) {
     throw new UnauthorizedError('Invalid email or password');
   }
 
@@ -148,7 +158,13 @@ export async function requestPasswordReset(email: string): Promise<{
 
   if (error) {
     console.error('❌ Database error finding user for reset:', error);
-    throw new Error(`Database error: ${error.message || 'Unable to query user account'}`);
+    const msg = error.message || '';
+    if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+      throw new Error(
+        'Database connection failed: Your Supabase database is currently paused. Please log into https://supabase.com/dashboard and click "Restore" to unpause your project.'
+      );
+    }
+    throw new Error(`Database error: ${msg || 'Unable to query user account'}`);
   }
 
   if (!user) {
