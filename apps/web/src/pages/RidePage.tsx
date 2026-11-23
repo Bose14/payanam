@@ -2171,14 +2171,14 @@ export default function RidePage() {
         </div>
       </div>
 
-      {/* Dedicated Expedition Route Strip for Mobile Users View */}
-      {session?.trips?.title && tab === 'map' && (
+      {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
+      {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (
         <div style={{
           backgroundColor: '#1B1E23',
           border: '1.5px solid #2A2E35',
           borderRadius: 14,
-          margin: '2px 16px 8px',
-          padding: '7px 12px',
+          margin: '2px 12px 6px',
+          padding: '6px 12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -2478,17 +2478,17 @@ export default function RidePage() {
 
         {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
         <div className="warm-map-container" style={{
-          flex: splitView ? '0 0 38%' : '1 1 auto',
-          height: splitView ? '38%' : '100%',
+          flex: splitView ? '0 0 clamp(160px, 28vh, 220px)' : '1 1 auto',
+          height: splitView ? 'clamp(160px, 28vh, 220px)' : '100%',
           minHeight: 0,
-          margin: splitView ? '2px 16px 8px' : '0',
-          borderRadius: splitView ? 20 : 0,
+          margin: splitView ? '0 12px 6px' : '0',
+          borderRadius: splitView ? 18 : 0,
           border: splitView ? '1.5px solid #2A2E35' : 'none',
           position: 'relative',
           overflow: 'hidden',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
           backgroundColor: '#111316',
-          boxShadow: splitView ? '0 4px 20px rgba(0, 0, 0, 0.35)' : 'none',
+          boxShadow: splitView ? '0 4px 16px rgba(0, 0, 0, 0.35)' : 'none',
         }}>
           {gpsError && (
             <div style={{
@@ -2813,9 +2813,16 @@ export default function RidePage() {
           </MapContainer>
         </div>
 
-        {/* In Split View: Alert Banner + Rider Roster (Mockup Screen 1) */}
+        {/* In Split View: Alert Banner + Rider Roster + Next Stop Bottom Dock */}
         {splitView && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
+          <div style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            backgroundColor: '#111316',
+          }}>
             {/* Stale Riders Warning Banner */}
             <StaleRidersAlertBanner
               staleCount={staleRiders.length}
@@ -2823,9 +2830,15 @@ export default function RidePage() {
               onClick={() => setTab('riders')}
             />
 
-            {/* Rider Roster List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 2px 8px' }}>
+            {/* Rider Roster List (Scrolls in available middle space) */}
+            <div style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              padding: '2px 12px 4px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '2px 2px 6px' }}>
                 <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
                   Convoy Roster ({ridersWithFreshness.length})
                 </span>
@@ -2835,7 +2848,7 @@ export default function RidePage() {
               </div>
 
               {ridersWithFreshness.length === 0 && (
-                <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 24, fontSize: 13 }}>
+                <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 14, fontSize: 13 }}>
                   Waiting for riders to join and share GPS...
                 </p>
               )}
@@ -2848,14 +2861,27 @@ export default function RidePage() {
                 />
               ))}
             </div>
+
+            {/* Next Stop Bottom Dock - FIXED AT BOTTOM OF SPLIT VIEW, ALWAYS VISIBLE & TAP-FRIENDLY */}
+            <div style={{ flexShrink: 0, zIndex: 10 }}>
+              <NextStopBottomDock
+                pinnedStop={pinnedStop}
+                distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+                arrivedCount={arrivedCount}
+                totalCount={ridersWithFreshness.length}
+                onOpenDetail={() => setShowStopDetailSheet(true)}
+                onOpenTellGroup={() => setShowTellGroupSheet(true)}
+                onPinNewStop={() => setShowPinModal(true)}
+              />
+            </div>
           </div>
         )}
 
-        {/* Next Stop Bottom Dock (Screen 1 mockup signature) */}
-        {(splitView || pinnedStop) && (
-          <div style={splitView ? {} : {
+        {/* In Full Map View: Float dock above bottom navigation bar */}
+        {!splitView && (
+          <div style={{
             position: 'absolute',
-            bottom: 6,
+            bottom: 8,
             left: 0,
             right: 0,
             zIndex: 1000,
@@ -3522,14 +3548,18 @@ export default function RidePage() {
       )}
 
       {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
-      <div className="mobile-bottom-nav" style={{
+      <div className="ride-bottom-nav" style={{
         backgroundColor: '#111316',
         borderTop: '1.5px solid #2A2E35',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        padding: '8px 10px max(12px, env(safe-area-inset-bottom, 12px))',
+        padding: '6px 8px max(10px, env(safe-area-inset-bottom, 10px))',
         flexShrink: 0,
+        height: 'calc(54px + env(safe-area-inset-bottom, 0px))',
+        boxSizing: 'border-box',
+        zIndex: 900,
+        position: 'relative',
         gap: 2,
       }}>
         {/* Tab 1: RIDE */}
@@ -3742,12 +3772,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     letterSpacing: 0.3,
     borderRadius: 999,
-    padding: '7px 13px',
+    padding: '7px 14px',
+    minHeight: 38,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     border: 'none',
     cursor: 'pointer',
     boxShadow: '0 2px 10px rgba(240, 194, 58, 0.25)',
     transition: 'all 0.15s ease',
     flexShrink: 0,
+    touchAction: 'manipulation',
   },
   inactiveNavBtn: {
     backgroundColor: 'transparent',
@@ -3757,9 +3792,14 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 0.3,
     border: 'none',
     cursor: 'pointer',
-    padding: '7px 8px',
+    padding: '7px 10px',
+    minHeight: 38,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     transition: 'all 0.15s ease',
     flexShrink: 0,
+    touchAction: 'manipulation',
   },
   chatUnreadDot: {
     position: 'absolute',
