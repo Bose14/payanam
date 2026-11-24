@@ -8,3 +8,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Temporary: show the sign-in code in the app until SMS (Twilio) is set up. Remove after.
+      - key: OTP_DEV_MODE
+        value: "true"

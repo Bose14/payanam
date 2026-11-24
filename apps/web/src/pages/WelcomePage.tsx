@@ -46,6 +46,7 @@ export default function WelcomePage() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [devCode, setDevCode] = useState<string | undefined>();
+  const [copied, setCopied] = useState(false);
   const [name, setName] = useState('');
   const [city, setCity] = useState('Bengaluru');
   const [bike, setBike] = useState('');
@@ -110,6 +111,17 @@ export default function WelcomePage() {
       setErr(apiMessage(e, 'Could not send the code. Check the number and try again.'));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const copyCode = async () => {
+    if (!devCode) return;
+    try {
+      await navigator.clipboard.writeText(devCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked: the code is still on screen */
     }
   };
 
@@ -302,6 +314,18 @@ export default function WelcomePage() {
             <StepDots current="otp" />
             <h2 className="pz-h2">Enter the code</h2>
             <p className="pz-note">Sent to {maskPhone(phone)}.</p>
+            {devCode && (
+              <div className="pz-banner warn" role="status" style={{ marginTop: 12 }}>
+                <div className="pz-note" style={{ marginBottom: 6 }}>Your code (shown here because SMS is not set up yet)</div>
+                <div className="pz-row" style={{ justifyContent: 'space-between' }}>
+                  <span className="pz-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '0.2em' }}>{devCode}</span>
+                  <span className="pz-row">
+                    <button className="pz-btn small" type="button" onClick={copyCode}>{copied ? 'Copied' : 'Copy'}</button>
+                    <button className="pz-btn small primary" type="button" onClick={() => setOtp(devCode)}>Fill it in</button>
+                  </span>
+                </div>
+              </div>
+            )}
             <input
               className="pz-input pz-otp"
               inputMode="numeric"
@@ -314,7 +338,6 @@ export default function WelcomePage() {
               onKeyDown={(e) => e.key === 'Enter' && otp.length === 4 && !busy && verify()}
               style={{ marginTop: 12 }}
             />
-            {devCode && <p className="pz-note" style={{ marginTop: 8 }}>Development code: {devCode}</p>}
             {errorLine}
             <button className="pz-btn primary block" type="button" onClick={verify} disabled={busy || otp.length !== 4} style={{ marginTop: 12 }}>
               {busy ? 'Checking…' : 'Verify'}
