@@ -48,3 +48,33 @@ export function validateForgotPasswordInput(data: unknown) {
 export function validateResetPasswordInput(data: unknown) {
   return resetPasswordSchema.parse(data);
 }
+
+export const phoneRequestSchema = z.object({
+  phone: z.string().min(10, 'Enter your mobile number').max(20),
+});
+
+export const phoneVerifySchema = z.object({
+  phone: z.string().min(10).max(20),
+  code: z.string().regex(/^\d{4}$/, 'Enter the 4-digit code'),
+});
+
+export const onboardingSchema = z.object({
+  fullName: z.string().trim().min(2, 'Enter your name').max(255),
+  city: z.string().trim().min(2, 'Choose your city').max(100),
+  bike: z.string().trim().max(150).optional(),
+  termsAccepted: z.boolean(),
+  locationConsent: z.boolean(),
+  recognitionOptIn: z.boolean().default(false),
+});
+
+export function validatePhoneRequestInput(data: unknown) {
+  return phoneRequestSchema.parse(data);
+}
+
+export function validatePhoneVerifyInput(data: unknown) {
+  return phoneVerifySchema.parse(data);
+}
+
+export function validateOnboardingInput(data: unknown) {
+  return onboardingSchema.parse(data);
+}

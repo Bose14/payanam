@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { User, AuthContext as AuthContextType } from '@payanam/types';
+import { User, AuthResponse, AuthContext as AuthContextType } from '@payanam/types';
 import { authService } from '../services/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +39,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const completeLogin = (response: AuthResponse) => {
+    localStorage.setItem('access_token', response.accessToken);
+    localStorage.setItem('refresh_token', response.refreshToken);
+    setUser(response.user);
+  };
+
+  const refreshUser = async () => {
+    const fresh = await authService.getMe();
+    setUser(fresh);
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -46,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout,
+    completeLogin,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

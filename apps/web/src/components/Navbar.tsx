@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import MobileBottomNav from './MobileBottomNav';
 import JoinConvoyModal from './JoinConvoyModal';
+import { useInShell } from './shell/ShellContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -11,10 +12,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const inShell = useInShell();
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/welcome');
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -36,6 +38,9 @@ export default function Navbar() {
       : mode === 'day'
       ? 'Sunlight High-Visibility Mode (high contrast for bright outdoor riding). Click to cycle.'
       : 'Moon Stealth Mode (glare-free dark palette for dusk and night rides). Click to cycle.';
+
+  // The app shell supplies its own header and tab bar.
+  if (inShell) return null;
 
   return (
     <>

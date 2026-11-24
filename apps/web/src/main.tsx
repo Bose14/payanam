@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import './styles/prototype.css';
 
 // Immediately set data-theme before first paint to eliminate any contrast mismatches
 try {

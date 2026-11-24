@@ -38,11 +38,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.setAttribute('data-theme', activeTheme);
     document.body.setAttribute('data-theme', activeTheme);
     if (activeTheme === 'day') {
-      document.body.style.backgroundColor = '#f8fafc';
-      document.body.style.color = '#020617';
+      document.body.style.backgroundColor = '#f3f1ec';
+      document.body.style.color = '#15171a';
     } else {
-      document.body.style.backgroundColor = '#050811';
-      document.body.style.color = '#ffffff';
+      document.body.style.backgroundColor = '#111316';
+      document.body.style.color = '#f1efea';
     }
   }, []);
 
