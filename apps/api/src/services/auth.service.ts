@@ -86,6 +86,9 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     throw new UnauthorizedError('Invalid email or password');
   }
 
+  if (!user.password_hash) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
   const isPasswordValid = await bcrypt.compare(password, user.password_hash);
   if (!isPasswordValid) {
     throw new UnauthorizedError('Invalid email or password');
@@ -132,9 +135,13 @@ export async function getUserById(userId: string): Promise<User> {
 
   return {
     id: user.id,
-    email: user.email,
-    fullName: user.full_name,
+    email: user.email ?? '',
+    phone: user.phone ?? undefined,
+    fullName: user.full_name ?? '',
     avatarUrl: user.avatar_url,
+    city: user.city ?? undefined,
+    bike: user.bike ?? undefined,
+    onboardingComplete: !!user.onboarding_completed_at || !user.phone,
     status: user.status,
     createdAt: new Date(user.created_at),
     updatedAt: new Date(user.updated_at),
@@ -261,4 +268,59 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return {
     message: 'Your password has been reset successfully. You can now log in with your new password.',
   };
+}
+
+/** Everything we hold about the signed-in user, for the "Download my data" action. */
+export async function exportUserData(userId: string) {
+  const db = getDatabase();
+  const [{ data: user }, { data: riderProfile }, { data: trips }, { data: memberships }] = await Promise.all([
+    db.from('users').select('*').eq('id', userId).maybeSingle(),
+    db.from('rider_profiles').select('*').eq('user_id', userId).maybeSingle(),
+    db.from('trips').select('*').eq('created_by', userId),
+    db.from('room_members').select('*').eq('user_id', userId),
+  ]);
+  if (!user) throw new NotFoundError('User');
+
+  // Never hand back credential material.
+  const { password_hash: _ph, reset_password_token: _rt, reset_password_expires_at: _re, ...safeUser } = user;
+  return {
+    exportedAt: new Date().toISOString(),
+    user: safeUser,
+    riderProfile: riderProfile ?? null,
+    tripsYouLead: trips ?? [],
+    tripMemberships: memberships ?? [],
+  };
+}
+
+/**
+ * Anonymises the account rather than deleting the row: trips and ride history
+ * that other riders rely on keep their foreign keys, but nothing identifies this person.
+ */
+export async function deleteUserAccount(userId: string): Promise<{ message: string }> {
+  const db = getDatabase();
+  const { data: user } = await db.from('users').select('phone').eq('id', userId).maybeSingle();
+  if (!user) throw new NotFoundError('User');
+
+  await db.from('rider_profiles').delete().eq('user_id', userId);
+  await db.from('sessions').delete().eq('user_id', userId);
+  if (user.phone) await db.from('phone_otps').delete().eq('phone', user.phone);
+
+  const { error } = await db
+    .from('users')
+    .update({
+      full_name: 'Deleted rider',
+      email: null,
+      phone: null,
+      password_hash: null,
+      avatar_url: null,
+      city: null,
+      bike: null,
+      reset_password_token: null,
+      reset_password_expires_at: null,
+      status: 'inactive',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+  if (error) throw new Error(`Failed to delete account: ${error.message}`);
+  return { message: 'Account deleted' };
 }

@@ -333,7 +333,11 @@ export default function RidePage() {
   const [messages, setMessages] = useState<RideMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [tab, setTab] = useState<TabType>('map');
+  // /ride/:id?tab=chat opens straight into a tab (used by the Chat tab in the app shell).
+  const [tab, setTab] = useState<TabType>(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    return t === 'chat' || t === 'plan' || t === 'riders' || t === 'nav' || t === 'discover' || t === 'me' ? t : 'map';
+  });
   const [showStatusDrawer, setShowStatusDrawer] = useState(false);
   const [myStatus, setMyStatus] = useState('');
   const [sosActive, setSosActive] = useState(false);

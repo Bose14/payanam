@@ -15,6 +15,8 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   user: User;
+  /** Only returned by phone verification. */
+  isNewUser?: boolean;
 }
 
 export interface TokenPayload {
@@ -35,4 +37,8 @@ export interface AuthContext {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
+  /** Store tokens + user after phone verification. */
+  completeLogin: (response: AuthResponse) => void;
+  /** Re-read the signed-in user from the API. */
+  refreshUser: () => Promise<void>;
 }

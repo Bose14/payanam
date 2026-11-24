@@ -37,15 +37,16 @@ api.interceptors.response.use(
   (error) => {
     const isAuthEndpoint = error.config?.url?.includes('/api/auth/login') ||
       error.config?.url?.includes('/api/auth/register') ||
+      error.config?.url?.includes('/api/auth/phone/') ||
       error.config?.url?.includes('/api/rooms/status');
     if (error.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       const currentPath = window.location.pathname + window.location.search;
-      const redirectParam = currentPath && currentPath !== '/login' && currentPath !== '/register'
+      const redirectParam = currentPath && !['/login', '/register', '/welcome'].includes(currentPath)
         ? `?redirect=${encodeURIComponent(currentPath)}`
         : '';
-      window.location.href = `/login${redirectParam}`;
+      window.location.href = `/welcome${redirectParam}`;
     }
     return Promise.reject(error);
   },
@@ -68,9 +69,40 @@ export const authService = {
     return response.data.data!;
   },
 
+  requestPhoneCode: async (phone: string): Promise<{ sent: true; devCode?: string }> => {
+    const response = await api.post('/api/auth/phone/request', { phone });
+    return response.data.data;
+  },
+
+  verifyPhoneCode: async (phone: string, code: string): Promise<AuthResponse> => {
+    const response = await api.post<ApiResponse<AuthResponse>>('/api/auth/phone/verify', { phone, code });
+    return response.data.data!;
+  },
+
+  completeOnboarding: async (data: {
+    fullName: string;
+    city: string;
+    bike?: string;
+    termsAccepted: boolean;
+    locationConsent: boolean;
+    recognitionOptIn: boolean;
+  }) => {
+    const response = await api.post('/api/auth/onboarding', data);
+    return response.data.data;
+  },
+
   getMe: async () => {
     const response = await api.get('/api/auth/me');
     return response.data.data;
+  },
+
+  exportMyData: async () => {
+    const response = await api.get('/api/auth/me/export');
+    return response.data.data;
+  },
+
+  deleteMyAccount: async (): Promise<void> => {
+    await api.delete('/api/auth/me');
   },
 
   logout: async (): Promise<void> => {
