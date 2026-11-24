@@ -33,8 +33,8 @@ function otpDevMode(): boolean {
 async function sendSms(phone: string, code: string): Promise<void> {
   const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: token, TWILIO_FROM_NUMBER: from } = env;
   if (!sid || !token || !from) {
-    // No SMS provider configured: only acceptable outside production.
-    if (env.NODE_ENV === 'production') {
+    // No SMS provider configured. Fine while OTP_DEV_MODE is on (the code is shown in the app).
+    if (!otpDevMode()) {
       throw new AppError(503, 'SMS_NOT_CONFIGURED', 'SMS sign-in is not available right now.');
     }
     console.log(`[phone-otp] SMS provider not configured. Code for ${phone}: ${code}`);

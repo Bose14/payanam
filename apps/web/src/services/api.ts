@@ -342,3 +342,58 @@ export const profileService = {
 };
 
 export default api;
+
+export interface ChatConversation {
+  key: string;
+  type: 'trip' | 'group' | 'dm';
+  title: string;
+  subtitle: string;
+  lastMessage: string | null;
+  lastAt: string | null;
+  unread: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  mine: boolean;
+  kind: 'text' | 'location';
+  body: string;
+  meta: { place: string; lat: number; lng: number; confirmed: boolean } | null;
+  createdAt: string;
+}
+
+export interface ChatGroup {
+  id: string;
+  name: string;
+  inviteCode: string;
+  isAdmin: boolean;
+  members: Array<{ userId: string; name: string; role: string; you: boolean }>;
+  requests: Array<{ userId: string; name: string }>;
+}
+
+export const chatService = {
+  conversations: async (): Promise<ChatConversation[]> =>
+    (await api.get('/api/chat/conversations')).data.data.conversations,
+  unread: async (stopsOnly: boolean): Promise<number> =>
+    (await api.get('/api/chat/unread', { params: { stopsOnly } })).data.data.unread,
+  contacts: async (): Promise<Array<{ userId: string; name: string; city: string | null; key: string }>> =>
+    (await api.get('/api/chat/contacts')).data.data.contacts,
+  messages: async (key: string): Promise<{
+    messages: ChatMessage[];
+    isLead: boolean;
+    dm?: { sentUnreplied: number; blocked: boolean; limit: number };
+  }> => (await api.get('/api/chat/messages', { params: { key } })).data.data,
+  send: async (key: string, data: { body?: string; kind?: 'text' | 'location'; place?: string; lat?: number; lng?: number }): Promise<ChatMessage> =>
+    (await api.post('/api/chat/messages', data, { params: { key } })).data.data.message,
+  confirmStop: async (key: string, messageId: string) =>
+    (await api.post(`/api/chat/messages/${messageId}/confirm-stop`, {}, { params: { key } })).data.data,
+  createGroup: async (name: string): Promise<{ id: string; name: string; inviteCode: string }> =>
+    (await api.post('/api/chat/groups', { name })).data.data,
+  joinGroup: async (code: string): Promise<{ status: 'member' | 'pending'; groupId: string; name: string }> =>
+    (await api.post('/api/chat/groups/join', { code })).data.data,
+  group: async (id: string): Promise<ChatGroup> => (await api.get(`/api/chat/groups/${id}`)).data.data,
+  respondToGroupRequest: async (groupId: string, userId: string, action: 'accept' | 'decline') =>
+    (await api.put(`/api/chat/groups/${groupId}/requests/${userId}`, { action })).data.data,
+};
