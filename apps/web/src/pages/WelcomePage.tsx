@@ -1,3 +1,4 @@
+import { enablePush } from '../utils/push';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { authService } from '../services/api';
@@ -216,6 +217,7 @@ export default function WelcomePage() {
       return;
     }
     const result = await Notification.requestPermission();
+    if (result === 'granted') void enablePush();
     setPerms((p) => ({ ...p, notif: result === 'granted' ? 'allowed' : 'denied' }));
   };
 

@@ -4,6 +4,7 @@ import { tripService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Icon from '../components/Icon';
+import { apiMessage } from '../utils/apiMessage';
 
 interface TripPreview {
   id: string;
@@ -47,6 +48,7 @@ export default function JoinRoomPage() {
   const [preview, setPreview] = useState<TripPreview | null>(null);
   const [leader, setLeader] = useState<ConvoyLeader | null>(null);
   const [memberCount, setMemberCount] = useState<number>(1);
+  const [maxMembers, setMaxMembers] = useState<number | null>(null);
   const [stopsPreview, setStopsPreview] = useState<StopPreview[]>([]);
   const [tripId, setTripId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
@@ -75,6 +77,7 @@ export default function JoinRoomPage() {
         setTripId(trip?.id ?? null);
         if (p?.leader) setLeader(p.leader as ConvoyLeader);
         if (typeof p?.memberCount === 'number') setMemberCount(p.memberCount);
+        if (typeof p?.maxMembers === 'number') setMaxMembers(p.maxMembers);
         if (Array.isArray(p?.stopsPreview)) setStopsPreview(p.stopsPreview);
 
         // If user is already logged in, check their member status directly
@@ -162,7 +165,7 @@ export default function JoinRoomPage() {
         setPageState('pending');
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const msg = apiMessage(err, 'Something went wrong');
       setErrorMsg(msg);
       setPageState('error');
     }
@@ -417,7 +420,7 @@ export default function JoinRoomPage() {
               </div>
               <div style={styles.statBox}>
                 <span style={styles.statBoxLabel}>Convoy Strength</span>
-                <span style={styles.statBoxVal}>{memberCount} {memberCount === 1 ? 'Rider' : 'Riders'}</span>
+                <span style={styles.statBoxVal}>{maxMembers ? `${memberCount} of ${maxMembers}` : memberCount} {(maxMembers ?? memberCount) === 1 ? 'Rider' : 'Riders'}</span>
               </div>
               <div style={styles.statBox}>
                 <span style={styles.statBoxLabel}>Vehicle Type</span>
@@ -451,14 +454,14 @@ export default function JoinRoomPage() {
               <div style={{ marginTop: 20 }}>
                 <button
                   onClick={handleRequestJoin}
-                  disabled={pageState === 'requesting'}
+                  disabled={pageState === 'requesting' || (maxMembers != null && memberCount >= maxMembers)}
                   style={{
                     ...styles.btnPrimary,
                     opacity: pageState === 'requesting' ? 0.7 : 1,
                     cursor: pageState === 'requesting' ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {pageState === 'requesting' ? 'Requesting Entry...' : 'Request to Join Convoy'}
+                  {pageState === 'requesting' ? 'Requesting Entry...' : (maxMembers != null && memberCount >= maxMembers) ? 'Trip is full' : 'Request to Join Convoy'}
                 </button>
               </div>
             ) : (

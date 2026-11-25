@@ -5,6 +5,8 @@ import { initializeDatabase } from './config/database';
 import { requestIdMiddleware } from './middleware/request-id.middleware';
 import { errorHandler } from './middleware/error.middleware';
 import { registerRoutes } from './routes/index';
+import { checkMissingRiders } from './services/ride.service';
+import { pushEnabled } from './services/push.service';
 
 const app = express();
 
@@ -46,6 +48,10 @@ registerRoutes(app);
 app.use(errorHandler);
 
 const PORT = env.PORT;
+if (pushEnabled) {
+  setInterval(() => { checkMissingRiders().catch(() => undefined); }, 60 * 1000);
+}
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);

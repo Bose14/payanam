@@ -1,5 +1,5 @@
 import { getDatabase } from '../config/database';
-import { ForbiddenError } from '../utils/errors';
+import { ForbiddenError, ConflictError } from '../utils/errors';
 import { generateItinerary } from './ai.service';
 import { readLocalProfiles } from './profile.service';
 import {
@@ -43,6 +43,7 @@ interface CreateTripData {
   trip_type?: string;
   preferences?: string;
   status?: string;
+  max_members?: number | null;
 }
 
 function randomCode(length = 8): string {
@@ -65,6 +66,7 @@ export async function createTrip(userId: string, data: CreateTripData) {
     status: data.status || 'planning',
   };
   if (data.preferences) row.preferences = data.preferences;
+  if (data.max_members != null) row.max_members = data.max_members;
   if (data.from_lat != null) row.from_lat = data.from_lat;
   if (data.from_lng != null) row.from_lng = data.from_lng;
   if (data.to_lat != null) row.to_lat = data.to_lat;
@@ -301,11 +303,13 @@ export async function getTripById(tripId: string, userId: string) {
     .order('day_number')
     .order('order_index');
 
+  const capacity = await getTripCapacity(tripId);
   return {
     ...trip,
     rooms: rooms ?? [],
     itinerary: items ?? [],
     isOwner: authCheck.isOwner,
+    memberCount: capacity.taken,
   };
 }
 
@@ -409,6 +413,42 @@ export async function createRoom(tripId: string, userId: string) {
   return room;
 }
 
+/** Riders counted against the group size limit: the captain plus every approved member. */
+/** Everyone on the trip: the captain plus approved riders. */
+export async function getTripMemberIds(tripId: string): Promise<string[]> {
+  const db = getDatabase();
+  const { data: trip } = await db.from('trips').select('id, user_id').eq('id', tripId).maybeSingle();
+  if (!trip) return [];
+  const memberIds = new Set<string>([trip.user_id as string]);
+  const { data: rooms } = await db.from('rooms').select('id').eq('trip_id', tripId);
+  const roomIds = (rooms ?? []).map((r) => r.id);
+  if (roomIds.length > 0) {
+    const { data: members } = await db.from('room_members').select('user_id, status').in('room_id', roomIds);
+    for (const m of members ?? []) {
+      if (m.status !== 'pending' && m.status !== 'rejected') memberIds.add(m.user_id as string);
+    }
+  }
+  for (const r of getLocalRequestsForTrip(tripId)) {
+    if (r.status === 'approved') memberIds.add(r.user_id);
+  }
+  return [...memberIds];
+}
+
+export async function getTripCapacity(tripId: string): Promise<{ max: number | null; taken: number }> {
+  const db = getDatabase();
+  const { data: trip } = await db.from('trips').select('id, max_members').eq('id', tripId).maybeSingle();
+  if (!trip) return { max: null, taken: 0 };
+  const ids = await getTripMemberIds(tripId);
+  return { max: (trip.max_members as number | null) ?? null, taken: ids.length };
+}
+
+async function assertTripHasRoom(tripId: string) {
+  const { max, taken } = await getTripCapacity(tripId);
+  if (max != null && taken >= max) {
+    throw new ConflictError(`This trip is full (${max} riders). Ask the captain to raise the limit.`);
+  }
+}
+
 export async function joinRoom(inviteCode: string, userId: string) {
   const db = getDatabase();
   const { data: room, error } = await db
@@ -444,6 +484,7 @@ export async function joinRoom(inviteCode: string, userId: string) {
 
     if (existing) {
       if (existing.status === 'rejected') {
+        await assertTripHasRoom(tripId);
         // Re-requesting after previous rejection: reset to pending
         try { await db.from('room_members').update({ status: 'pending' }).eq('id', existing.id); } catch { /* silent */ }
         writeLocalRequest({
@@ -473,7 +514,8 @@ export async function joinRoom(inviteCode: string, userId: string) {
     return { room, memberStatus: localReq.status, isNew: false };
   }
 
-  // 4. Create new pending membership
+  // 4. Create new pending membership (refused once the group size limit is reached)
+  await assertTripHasRoom(tripId);
   const newMemberId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   let inserted = false;
   try {
@@ -572,7 +614,7 @@ export async function getRoomPreview(inviteCode: string) {
   const db = getDatabase();
   const { data: room, error } = await db
     .from('rooms')
-    .select('id, invite_code, created_by, created_at, trips(id, title, from_place, to_place, days, bike_type, preferences)')
+    .select('id, invite_code, created_by, created_at, trips(id, title, from_place, to_place, days, bike_type, preferences, max_members)')
     .eq('invite_code', inviteCode.toUpperCase())
     .single();
 
@@ -641,6 +683,9 @@ export async function getRoomPreview(inviteCode: string) {
     } catch { /* silent */ }
   }
 
+  const previewTripId = (room.trips as unknown as { id: string } | null)?.id ?? (room as { trip_id?: string }).trip_id;
+  const capacityInfo = previewTripId ? await getTripCapacity(previewTripId) : { max: null, taken: 0 };
+
   return {
     ...room,
     leader: leader ? {
@@ -651,6 +696,8 @@ export async function getRoomPreview(inviteCode: string) {
       city: (leaderProfile?.city as string) || null,
     } : null,
     memberCount,
+    maxMembers: capacityInfo.max,
+    isFull: capacityInfo.max != null && capacityInfo.taken >= capacityInfo.max,
     stopsPreview,
   };
 }
@@ -904,6 +951,7 @@ export async function respondToRequest(roomMemberId: string, action: 'approved' 
     if (tripId) {
       const { data: trip } = await db.from('trips').select('id').eq('id', tripId).eq('user_id', ownerId).maybeSingle();
       if (!trip) throw new Error('Not authorized');
+      if (action === 'approved') await assertTripHasRoom(tripId);
     }
     try {
       await db.from('room_members').update({ status: action }).eq('id', roomMemberId);
@@ -929,6 +977,7 @@ export async function respondToRequest(roomMemberId: string, action: 'approved' 
   const { data: trip } = await db.from('trips').select('id').eq('id', localTarget.trip_id).eq('user_id', ownerId).maybeSingle();
   if (!trip) throw new Error('Not authorized');
 
+  if (action === 'approved') await assertTripHasRoom(localTarget.trip_id);
   updateLocalRequestStatus(localTarget.id, action);
 
   // Sync to room_members in DB

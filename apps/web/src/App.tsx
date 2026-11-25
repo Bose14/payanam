@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -16,6 +17,7 @@ import RideTab from './pages/tabs/RideTab';
 import DiscoverPage from './pages/tabs/DiscoverPage';
 import ChatTab from './pages/tabs/ChatTab';
 import MeTab from './pages/tabs/MeTab';
+import { enablePush } from './utils/push';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/shell/AppShell';
 
@@ -25,11 +27,19 @@ function Home() {
   return <Navigate to={isAuthenticated ? '/ride' : '/welcome'} replace />;
 }
 
+/** Once signed in with permission granted, keep this device subscribed to push. */
+function PushSync() {
+  const { isAuthenticated } = useAuth();
+  useEffect(() => { if (isAuthenticated) void enablePush(); }, [isAuthenticated]);
+  return null;
+}
+
 function App() {
   return (
     <Router>
       <ThemeProvider>
         <AuthProvider>
+          <PushSync />
           <Routes>
             <Route path="/" element={<Home />} />
 

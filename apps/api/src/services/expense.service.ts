@@ -16,6 +16,25 @@ async function verifyMember(_db: ReturnType<typeof getDatabase>, tripId: string,
   if (auth.status !== 'approved') throw new Error('Not authorized');
 }
 
+function buildSplits(expenseId: string, data: AddExpenseData) {
+  let splits: Array<{ expense_id: string; user_id: string; amount: number }> = [];
+  if (data.split_type === 'equal' && data.split_among && data.split_among.length > 0) {
+    const n = data.split_among.length;
+    const base = Math.floor((data.amount / n) * 100) / 100;
+    const remainder = Math.round((data.amount - base * n) * 100) / 100;
+    splits = data.split_among.map((uid, i) => ({
+      expense_id: expenseId,
+      user_id: uid,
+      amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
+    }));
+  } else if (data.split_type === 'custom' && data.custom_splits) {
+    splits = data.custom_splits
+      .filter(s => s.amount > 0)
+      .map(s => ({ expense_id: expenseId, user_id: s.user_id, amount: s.amount }));
+  }
+  return splits;
+}
+
 export async function addExpense(tripId: string, userId: string, data: AddExpenseData) {
   const db = getDatabase();
   await verifyMember(db, tripId, userId);
@@ -36,22 +55,7 @@ export async function addExpense(tripId: string, userId: string, data: AddExpens
 
   if (error) throw new Error(error.message);
 
-  let splits: Array<{ expense_id: string; user_id: string; amount: number }> = [];
-
-  if (data.split_type === 'equal' && data.split_among && data.split_among.length > 0) {
-    const n = data.split_among.length;
-    const base = Math.floor((data.amount / n) * 100) / 100;
-    const remainder = Math.round((data.amount - base * n) * 100) / 100;
-    splits = data.split_among.map((uid, i) => ({
-      expense_id: expense.id,
-      user_id: uid,
-      amount: i === 0 ? Math.round((base + remainder) * 100) / 100 : base,
-    }));
-  } else if (data.split_type === 'custom' && data.custom_splits) {
-    splits = data.custom_splits
-      .filter(s => s.amount > 0)
-      .map(s => ({ expense_id: expense.id, user_id: s.user_id, amount: s.amount }));
-  }
+  const splits = buildSplits(expense.id, data);
 
   if (splits.length > 0) {
     const { error: splitError } = await db.from('expense_splits').insert(splits);
@@ -167,4 +171,48 @@ export async function recordSettlement(
   if (splitError) throw new Error(splitError.message);
 
   return expense;
+}
+
+/** Edit an expense. Only the rider who added it or the trip captain may change it. */
+export async function updateExpense(tripId: string, expenseId: string, userId: string, data: AddExpenseData) {
+  const db = getDatabase();
+  const auth = await assertUserTripMembership(tripId, userId);
+  if (auth.status !== 'approved') throw new Error('Not authorized');
+
+  const { data: existing } = await db
+    .from('trip_expenses')
+    .select('id, trip_id, added_by')
+    .eq('id', expenseId)
+    .maybeSingle();
+  if (!existing || existing.trip_id !== tripId) throw new Error('Expense not found');
+  if (existing.added_by !== userId && !auth.isOwner) throw new Error('Not authorized');
+
+  const { data: updated, error } = await db
+    .from('trip_expenses')
+    .update({
+      title: data.title,
+      amount: data.amount,
+      category: data.category,
+      paid_by: data.paid_by,
+      split_type: data.split_type,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', expenseId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+
+  // Rebuild the splits, keeping "settled" for riders whose share did not change.
+  const { data: oldSplits } = await db.from('expense_splits').select('user_id, amount, is_settled').eq('expense_id', expenseId);
+  const settledBefore = new Map((oldSplits ?? []).map((sp) => [sp.user_id as string, { amount: Number(sp.amount), settled: !!sp.is_settled }]));
+  await db.from('expense_splits').delete().eq('expense_id', expenseId);
+  const splits = buildSplits(expenseId, data).map((sp) => {
+    const prev = settledBefore.get(sp.user_id);
+    return { ...sp, is_settled: !!prev && prev.settled && prev.amount === sp.amount };
+  });
+  if (splits.length > 0) {
+    const { error: splitError } = await db.from('expense_splits').insert(splits);
+    if (splitError) throw new Error(splitError.message);
+  }
+  return updated;
 }

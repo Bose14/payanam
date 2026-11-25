@@ -22,6 +22,7 @@ import {
   addExpenseHandler,
   getExpensesHandler,
   deleteExpenseHandler,
+  updateExpenseHandler,
   toggleSplitSettledHandler,
   recordSettlementHandler,
 } from '../controllers/expense.controller';
@@ -45,6 +46,7 @@ router.delete('/:id/members/:memberId', removeMemberHandler);
 router.get('/:id/participants', getAllTripParticipantsHandler);
 router.get('/:id/expenses', getExpensesHandler);
 router.post('/:id/expenses', addExpenseHandler);
+router.put('/:id/expenses/:expenseId', updateExpenseHandler);
 router.delete('/:id/expenses/:expenseId', deleteExpenseHandler);
 router.patch('/:id/expenses/splits/:splitId/settle', toggleSplitSettledHandler);
 router.post('/:id/expenses/settle', recordSettlementHandler);

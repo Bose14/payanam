@@ -1742,6 +1742,20 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
+  // Missing riders: no position for over 5 minutes. Shown to the captain as a dedicated alert.
+  const [dismissedMissing, setDismissedMissing] = useState<string[]>([]);
+  const missingRiders = useMemo(
+    () => ridersWithFreshness.filter((r) => !r.isMe && !r.isCaptain && r.freshness.isUnknown && r.freshness.ageMs !== Infinity),
+    [ridersWithFreshness],
+  );
+  useEffect(() => {
+    // A rider who reports in again can raise the alert again later.
+    setDismissedMissing((prev) => {
+      const still = prev.filter((id) => missingRiders.some((r) => r.userId === id));
+      return still.length === prev.length ? prev : still;
+    });
+  }, [missingRiders]);
+
   // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop distance tracking)
   const distToPinnedStop = useMemo(() => {
     if (!pinnedStop || !myLat || !myLng) return null;
@@ -2261,6 +2275,23 @@ export default function RidePage() {
           )}
         </div>
       </div>
+
+      {/* Missing rider alert (captain only, ride map tab only) */}
+      {isLead && tab === 'map' && missingRiders.filter((r) => !dismissedMissing.includes(r.userId)).map((r) => (
+        <div key={r.userId} role="alert" style={{
+          margin: '4px 12px 2px', padding: '10px 12px', borderRadius: 14, flexShrink: 0,
+          background: 'var(--pz-bad-bg, var(--pz-surface))', border: '1.5px solid var(--pz-bad)',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ color: 'var(--pz-bad)', display: 'inline-flex' }}><Icon name="warning" /></span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--pz-ink)' }}>{r.userName} may be missing</div>
+            <div style={{ fontSize: 12, color: 'var(--pz-muted)' }}>Last position {r.freshness.ageLabel}. Check on them before moving on.</div>
+          </div>
+          <button type="button" className="pz-btn small" onClick={() => handleFocusRider(r)}>Locate</button>
+          <button type="button" className="pz-btn small" onClick={() => setDismissedMissing((p) => [...p, r.userId])}>Dismiss</button>
+        </div>
+      ))}
 
       {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
       {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (

@@ -54,6 +54,7 @@ export default function CreateTripPage() {
     to_lat: null as number | null,
     to_lng: null as number | null,
     days: 3,
+    max_members: 6,
     bike_type: 'motorcycle',
     trip_type: 'one_way',
     preferences: '',
@@ -310,6 +311,36 @@ export default function CreateTripPage() {
                 >
                   +
                 </button>
+              </div>
+            </div>
+
+            {/* Group size */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>How many riders in this trip? (including you)</label>
+              <div style={styles.stepperBox}>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, max_members: Math.max(2, f.max_members - 1) }))}
+                  style={styles.stepperBtn}
+                  aria-label="Decrease riders"
+                >
+                  –
+                </button>
+                <div style={styles.stepperValue}>
+                  <strong style={{ fontSize: 17, fontWeight: 800 }}>{form.max_members}</strong>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Riders</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, max_members: Math.min(100, f.max_members + 1) }))}
+                  style={styles.stepperBtn}
+                  aria-label="Increase riders"
+                >
+                  +
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
+                Once this many riders have joined, nobody else can join with the code or link. You can see who joined on the trip page.
               </div>
             </div>
 

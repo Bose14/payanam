@@ -26,6 +26,10 @@ const envSchema = z.object({
   TWILIO_FROM_NUMBER: z.string().optional(),
   // true = also return the code in the API response (never use in production).
   OTP_DEV_MODE: z.enum(['true', 'false']).optional(),
+  // Web push. Generate with: npx web-push generate-vapid-keys. Push is off when these are empty.
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:support@payanam.app'),
 });
 
 const env = envSchema.parse(process.env);

@@ -1,7 +1,8 @@
 import crypto from 'crypto';
 import { getDatabase } from '../config/database';
 import { AppError, ForbiddenError, NotFoundError, ValidationError } from '../utils/errors';
-import { assertUserTripMembership, getUserTrips, addStopToTrip } from './trip.service';
+import { assertUserTripMembership, getUserTrips, addStopToTrip, getTripMemberIds } from './trip.service';
+import { sendPush } from './push.service';
 
 const MAX_BODY = 2000;
 const DM_UNREPLIED_LIMIT = 5;
@@ -159,7 +160,37 @@ export async function sendMessage(key: string, userId: string, input: SendInput)
     .single();
   if (error || !data) throw new Error(`Failed to send message: ${error?.message}`);
   const names = await nameMap([userId]);
+  void notifyChat(auth, key, userId, kind, body, names[userId] ?? 'Rider');
   return shape(data as MessageRow, names, userId);
+}
+
+/** Push to everyone else in the conversation. Best effort, never blocks the send. */
+async function notifyChat(
+  auth: ParsedKey, key: string, senderId: string, kind: string, body: string, senderName: string,
+) {
+  try {
+    let recipients: string[] = [];
+    let title = senderName;
+    if (auth.type === 'dm') {
+      recipients = [auth.id];
+    } else if (auth.type === 'trip') {
+      recipients = await getTripMemberIds(auth.id);
+      const { data: trip } = await getDatabase().from('trips').select('title').eq('id', auth.id).maybeSingle();
+      title = `${senderName} in ${trip?.title ?? 'your trip'}`;
+    } else {
+      const { data: g } = await getDatabase().from('chat_group_members').select('user_id').eq('group_id', auth.id).eq('status', 'member');
+      recipients = (g ?? []).map((m) => m.user_id as string);
+      const { data: grp } = await getDatabase().from('chat_groups').select('name').eq('id', auth.id).maybeSingle();
+      title = `${senderName} in ${grp?.name ?? 'group'}`;
+    }
+    recipients = recipients.filter((id) => id !== senderId);
+    await sendPush(recipients, {
+      title,
+      body: kind === 'location' ? `Shared a place: ${body}` : body.slice(0, 140),
+      url: `/chat?c=${encodeURIComponent(key)}`,
+      tag: `chat:${key}`,
+    });
+  } catch { /* ignore */ }
 }
 
 /** Trip leader turns a shared location into a stop everyone sees on the itinerary. */

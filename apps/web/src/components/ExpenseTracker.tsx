@@ -141,6 +141,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
   });
 
   // Add Expense Form State
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: '',
     amount: '',
@@ -177,6 +178,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
   }, [loadData]);
 
   const openModal = () => {
+    setEditingId(null);
     setForm({
       title: '',
       amount: '',
@@ -185,6 +187,25 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
       split_type: 'equal',
       split_among: participants.map(p => p.id),
       custom_splits: Object.fromEntries(participants.map(p => [p.id, ''])),
+    });
+    setShowModal(true);
+  };
+
+  const openEdit = (expense: Expense) => {
+    setEditingId(expense.id);
+    setForm({
+      title: expense.title,
+      amount: String(expense.amount),
+      category: expense.category,
+      paid_by: expense.paid_by,
+      split_type: expense.split_type,
+      split_among: expense.expense_splits.map(sp => sp.user_id),
+      custom_splits: Object.fromEntries(
+        participants.map(p => {
+          const sp = expense.expense_splits.find(x => x.user_id === p.id);
+          return [p.id, sp ? String(sp.amount) : ''];
+        })
+      ),
     });
     setShowModal(true);
   };
@@ -221,7 +242,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
     }
     setSaving(true);
     try {
-      await tripService.addExpense(tripId, {
+      const payload = {
         title: form.title.trim(),
         amount,
         category: form.category,
@@ -233,12 +254,15 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
               .filter(([, v]) => parseFloat(v) > 0)
               .map(([user_id, v]) => ({ user_id, amount: parseFloat(v) }))
           : undefined,
-      });
+      };
+      if (editingId) await tripService.updateExpense(tripId, editingId, payload);
+      else await tripService.addExpense(tripId, payload);
       setShowModal(false);
-      showToast('Expense recorded');
+      setEditingId(null);
+      showToast(editingId ? 'Expense updated' : 'Expense recorded');
       await loadData();
     } catch {
-      showToast('Failed to add expense');
+      showToast(editingId ? 'Failed to update expense' : 'Failed to add expense');
     } finally {
       setSaving(false);
     }
@@ -703,6 +727,14 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                       </div>
                       {isCreator && (
                         <button
+                          onClick={() => openEdit(expense)}
+                          style={{ ...styles.btnDelete, color: 'var(--text-primary)', marginRight: 6 }}
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {isCreator && (
+                        <button
                           onClick={() => handleDelete(expense.id)}
                           disabled={deletingId === expense.id}
                           style={styles.btnDelete}
@@ -964,7 +996,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             <div style={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 22 }}><Icon name="plus" /></span>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Add Road Trip Expense</h3>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{editingId ? 'Edit Expense' : 'Add Road Trip Expense'}</h3>
               </div>
               <button onClick={() => setShowModal(false)} style={styles.modalClose}><Icon name="close" /></button>
             </div>
@@ -1215,7 +1247,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                   justifyContent: 'center',
                 }}
               >
-                {saving ? 'Recording Expense...' : '+ Add Expense'}
+                {saving ? 'Saving...' : editingId ? 'Save Changes' : '+ Add Expense'}
               </button>
             </div>
           </div>
