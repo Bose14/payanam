@@ -89,6 +89,7 @@ export default function LocationBubble({
           <b className="pz-grow">{meta.place}</b>
           {meta.live && <span className={`pz-pill ${isLive ? 'ok' : 'stale'}`}>{isLive ? 'Live' : 'Ended'}</span>}
         </div>
+        {meta.note && <div style={{ fontSize: 14 }}>{meta.note}</div>}
         {meta.live && (
           <div className="pz-note">
             {isLive ? `Sharing until ${until}, ${ago(meta.updatedAt, now)}` : 'Live location ended. Last known position shown.'}

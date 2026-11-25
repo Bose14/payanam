@@ -121,6 +121,7 @@ export interface SendInput {
   kind?: 'text' | 'location';
   body?: string;
   place?: string;
+  note?: string;
   lat?: number;
   lng?: number;
   liveMinutes?: 15 | 60 | 480;
@@ -141,7 +142,7 @@ export async function sendMessage(key: string, userId: string, input: SendInput)
       throw new ValidationError('Location is missing');
     }
     body = place;
-    meta = { place, lat: input.lat, lng: input.lng, confirmed: false, ...(live ? { live: { until: live }, updatedAt: new Date().toISOString() } : {}) };
+    meta = { place, lat: input.lat, lng: input.lng, confirmed: false, ...((input.note ?? '').trim() ? { note: (input.note ?? '').trim().slice(0, 200) } : {}), ...(live ? { live: { until: live }, updatedAt: new Date().toISOString() } : {}) };
   } else {
     if (!body) throw new ValidationError('Write a message first');
     if (body.length > MAX_BODY) throw new ValidationError(`Messages can be up to ${MAX_BODY} characters`);

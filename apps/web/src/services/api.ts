@@ -381,7 +381,7 @@ export interface ChatMessage {
   mine: boolean;
   kind: 'text' | 'location';
   body: string;
-  meta: { place: string; lat: number; lng: number; confirmed: boolean; live?: { until: string }; updatedAt?: string } | null;
+  meta: { place: string; lat: number; lng: number; confirmed: boolean; live?: { until: string }; updatedAt?: string; note?: string } | null;
   createdAt: string;
 }
 
@@ -406,7 +406,7 @@ export const chatService = {
     isLead: boolean;
     dm?: { sentUnreplied: number; blocked: boolean; limit: number };
   }> => (await api.get('/api/chat/messages', { params: { key } })).data.data,
-  send: async (key: string, data: { body?: string; kind?: 'text' | 'location'; place?: string; lat?: number; lng?: number; liveMinutes?: 15 | 60 | 480 }): Promise<ChatMessage> =>
+  send: async (key: string, data: { body?: string; kind?: 'text' | 'location'; place?: string; note?: string; lat?: number; lng?: number; liveMinutes?: 15 | 60 | 480 }): Promise<ChatMessage> =>
     (await api.post('/api/chat/messages', data, { params: { key } })).data.data.message,
   updateLive: async (key: string, messageId: string, lat: number, lng: number): Promise<{ active: boolean }> =>
     (await api.put(`/api/chat/messages/${messageId}/live`, { lat, lng }, { params: { key } })).data.data,
