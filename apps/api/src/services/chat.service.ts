@@ -100,7 +100,7 @@ export async function getMessages(key: string, userId: string, since?: string) {
 
   await db
     .from('chat_reads')
-    .upsert({ user_id: userId, conversation_key: key, last_read_at: new Date().toISOString() });
+    .upsert({ user_id: userId, conversation_key: key, last_read_at: new Date().toISOString(), marked_unread: false });
 
   let dmState: { sentUnreplied: number; blocked: boolean; limit: number } | undefined;
   if (auth.type === 'dm') dmState = await dmStatus(key, userId);
@@ -260,6 +260,7 @@ export async function listConversations(userId: string) {
   const out: Array<{
     key: string; type: ConvType; title: string; subtitle: string;
     lastMessage: string | null; lastAt: string | null; unread: number;
+    lastSender?: string | null; lastMine?: boolean; markedUnread?: boolean;
   }> = [];
 
   const tripData = await getUserTrips(userId);
@@ -306,19 +307,25 @@ export async function listConversations(userId: string) {
   if (!out.length) return out;
   const keys = out.map((c) => c.key);
   const [{ data: reads }, { data: recent }] = await Promise.all([
-    db.from('chat_reads').select('conversation_key, last_read_at').eq('user_id', userId).in('conversation_key', keys),
+    db.from('chat_reads').select('conversation_key, last_read_at, marked_unread').eq('user_id', userId).in('conversation_key', keys),
     db.from('chat_messages').select('conversation_key, sender_id, kind, body, created_at')
       .in('conversation_key', keys).order('created_at', { ascending: false }).limit(1000),
   ]);
   const readAt: Record<string, string> = {};
-  (reads ?? []).forEach((r) => { readAt[r.conversation_key] = r.last_read_at; });
+  const flagged = new Set<string>();
+  (reads ?? []).forEach((r) => { readAt[r.conversation_key] = r.last_read_at; if (r.marked_unread) flagged.add(r.conversation_key); });
+  const senderNames = await nameMap((recent ?? []).map((m) => m.sender_id as string));
   out.forEach((c) => {
     const msgs = (recent ?? []).filter((m) => m.conversation_key === c.key);
     if (msgs[0]) {
       c.lastMessage = msgs[0].kind === 'location' ? `Shared location: ${msgs[0].body}` : msgs[0].body;
       c.lastAt = msgs[0].created_at;
+      c.lastMine = msgs[0].sender_id === userId;
+      c.lastSender = c.lastMine ? 'You' : (senderNames[msgs[0].sender_id as string] ?? null);
     }
-    c.unread = msgs.filter((m) => m.sender_id !== userId && (!readAt[c.key] || m.created_at > readAt[c.key])).length;
+    const count = msgs.filter((m) => m.sender_id !== userId && (!readAt[c.key] || m.created_at > readAt[c.key])).length;
+    c.markedUnread = flagged.has(c.key);
+    c.unread = count > 0 ? count : (c.markedUnread ? 1 : 0);
   });
   out.sort((a, b) => (b.lastAt ?? '').localeCompare(a.lastAt ?? ''));
   return out;
@@ -561,4 +568,26 @@ export async function resetInviteCode(adminId: string, groupId: string) {
     return { inviteCode: code };
   }
   throw new Error('Could not create a unique invite code');
+}
+
+// ----------------------------- read and unread -----------------------------
+
+export async function markConversation(userId: string, key: string, unread: boolean) {
+  await authorize(key, userId);
+  const { error } = await getDatabase().from('chat_reads').upsert(
+    { user_id: userId, conversation_key: key, last_read_at: new Date().toISOString(), marked_unread: unread },
+  );
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+export async function markAllRead(userId: string) {
+  const convs = await listConversations(userId);
+  const now = new Date().toISOString();
+  const rows = convs.filter((c) => c.unread > 0).map((c) => ({ user_id: userId, conversation_key: c.key, last_read_at: now, marked_unread: false }));
+  if (rows.length) {
+    const { error } = await getDatabase().from('chat_reads').upsert(rows);
+    if (error) throw new Error(error.message);
+  }
+  return { cleared: rows.length };
 }

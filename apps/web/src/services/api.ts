@@ -372,6 +372,9 @@ export interface ChatConversation {
   lastMessage: string | null;
   lastAt: string | null;
   unread: number;
+  lastSender?: string | null;
+  lastMine?: boolean;
+  markedUnread?: boolean;
 }
 
 export interface ChatMessage {
@@ -434,6 +437,9 @@ export const chatService = {
   joinGroup: async (code: string): Promise<{ status: 'member' | 'pending'; groupId: string; name: string }> =>
     (await api.post('/api/chat/groups/join', { code })).data.data,
   group: async (id: string): Promise<ChatGroup> => (await api.get(`/api/chat/groups/${id}`)).data.data,
+  mark: async (key: string, unread: boolean) =>
+    (await api.put('/api/chat/mark', { unread }, { params: { key } })).data.data,
+  readAll: async () => (await api.post('/api/chat/read-all', {})).data.data,
   renameTrip: async (key: string, name: string): Promise<{ name: string }> =>
     (await api.put('/api/chat/rename', { name }, { params: { key } })).data.data,
   updateGroup: async (id: string, patch: GroupSettingsPatch) =>
