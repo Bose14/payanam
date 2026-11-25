@@ -562,6 +562,7 @@ export default function ChatTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('All');
+  const [query, setQuery] = useState('');
   const [groupName, setGroupName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [notice, setNotice] = useState('');
@@ -647,14 +648,39 @@ export default function ChatTab() {
     );
   }
 
+  const q = query.trim().toLowerCase();
   const rows = convs.filter((c) =>
-    filter === 'All' || (filter === 'Trips' && c.type === 'trip') || (filter === 'Groups' && c.type === 'group') || (filter === 'Direct' && c.type === 'dm'));
-  const startable = contacts.filter((p) => !convs.some((c) => c.key === p.key));
+    (filter === 'All' || (filter === 'Trips' && c.type === 'trip') || (filter === 'Groups' && c.type === 'group') || (filter === 'Direct' && c.type === 'dm')) &&
+    (!q || `${c.title} ${c.subtitle} ${c.lastMessage ?? ''}`.toLowerCase().includes(q)));
+  const startable = contacts.filter((p) => !convs.some((c) => c.key === p.key) &&
+    (!q || `${p.name} ${p.city ?? ''}`.toLowerCase().includes(q)));
   const tag = (t: ChatConversation['type']) => (t === 'trip' ? 'Trips' : t === 'group' ? 'Groups' : 'Direct');
 
   return (
     <>
       <h1 className="pz-h1">Chat</h1>
+
+      <div style={{ position: 'relative', marginBottom: 12 }}>
+        <span aria-hidden="true" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--pz-muted)', display: 'inline-flex', pointerEvents: 'none' }}>
+          <Icon name="search" />
+        </span>
+        <input
+          type="search"
+          className="pz-input"
+          placeholder="Search chats, groups and riders"
+          aria-label="Search chats"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 42, paddingRight: query ? 44 : 14, borderRadius: 14 }}
+        />
+        {query && (
+          <button type="button" aria-label="Clear search" onClick={() => setQuery('')}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', width: 30, height: 30, borderRadius: 15,
+              border: 'none', background: 'var(--pz-line)', color: 'var(--pz-ink)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="close" />
+          </button>
+        )}
+      </div>
 
       <div className="pz-chips">
         {(['All', 'Trips', 'Groups', 'Direct'] as Filter[]).map((f) => (
@@ -687,7 +713,7 @@ export default function ChatTab() {
             </div>
           </button>
         ))}
-        {!loading && !rows.length && <p className="pz-note">Nothing here yet.</p>}
+        {!loading && !rows.length && <p className="pz-note">{q ? `No chats match "${query.trim()}".` : 'Nothing here yet.'}</p>}
       </div>
 
       {(filter === 'All' || filter === 'Direct') && startable.length > 0 && (
