@@ -24,6 +24,30 @@ function useLivePolling(fn: () => void, ms: number) {
   }, [ms]);
 }
 
+const QUICK_REPLIES = ['OK', 'Coming', 'Reached', 'Waiting', 'Wait', 'Fuel', 'Break', 'Slow', 'Help', 'Thanks'];
+
+function QuickReplies({ onSend, disabled }: { onSend: (text: string) => Promise<void>; disabled?: boolean }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const tap = async (t: string) => {
+    if (busy || disabled) return;
+    setBusy(t);
+    try { await onSend(t); } catch { /* the error is shown by the chat */ } finally { setBusy(null); }
+  };
+  return (
+    <div role="group" aria-label="Quick replies" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '10px 0 2px', WebkitOverflowScrolling: 'touch' }}>
+      {QUICK_REPLIES.map((t) => (
+        <button key={t} type="button" onClick={() => tap(t)} disabled={!!busy || disabled}
+          style={{
+            flexShrink: 0, padding: '8px 14px', borderRadius: 999, cursor: 'pointer', font: 'inherit', fontSize: 14, fontWeight: 700,
+            color: 'var(--pz-ink)', background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', opacity: busy && busy !== t ? 0.6 : 1,
+          }}>
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Composer({ onSend, disabled, onAttach }: { onSend: (text: string) => Promise<void>; disabled?: boolean; onAttach?: () => void }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -346,6 +370,7 @@ function Thread({
         <div className="pz-note">{dm.limit - dm.sentUnreplied} messages left before {conv.title} needs to reply.</div>
       )}
 
+      {conv.type === 'trip' && <QuickReplies onSend={send} />}
       <Composer onSend={send} disabled={conv.type === 'dm' && !!dm?.blocked} onAttach={conv.type === 'trip' ? () => setMode('menu') : undefined} />
 
       {conv.type === 'trip' && (
