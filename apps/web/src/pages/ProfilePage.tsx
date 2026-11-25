@@ -464,7 +464,7 @@ export default function ProfilePage() {
         <div style={{ ...styles.sectionCard, marginTop: 24, borderColor: 'rgba(239, 68, 68, 0.3)' }}>
           <div style={styles.sectionHeader}>
             <div style={{ ...styles.sectionIconAmber, background: 'rgba(239, 68, 68, 0.15)' }}>
-
+              <Icon name="door" />
             </div>
             <div style={{ flex: 1 }}>
               <h2 style={styles.sectionTitle}>Account & Session</h2>
@@ -511,7 +511,7 @@ export default function ProfilePage() {
                 style={styles.modalCloseBtn}
                 title="Close"
               >
-
+                <Icon name="close" />
               </button>
             </div>
 

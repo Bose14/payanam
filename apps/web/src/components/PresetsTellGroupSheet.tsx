@@ -80,9 +80,9 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                 onClick={() => handleRiderPresetClick(p.label)}
                 style={{
                   ...styles.presetBtn,
-                  backgroundColor: isSelected ? '#F0C23A' : '#1B1E23',
-                  color: isSelected ? '#111316' : 'var(--text-primary)',
-                  borderColor: isSelected ? '#F0C23A' : '#2A2E35',
+                  backgroundColor: isSelected ? 'var(--pz-accent)' : 'var(--pz-surface)',
+                  color: isSelected ? 'var(--pz-bg)' : 'var(--text-primary)',
+                  borderColor: isSelected ? 'var(--pz-accent)' : 'var(--pz-line)',
                 }}
               >
                 <span style={{ fontSize: 18, marginRight: 8, lineHeight: 1 }}><Icon name={p.icon} /></span>
@@ -109,9 +109,9 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                     onClick={() => handleCaptainAnnouncementClick(cp.label)}
                     style={{
                       ...styles.presetBtn,
-                      backgroundColor: isSelected ? '#F0C23A' : '#1B1E23',
-                      color: isSelected ? '#111316' : 'var(--text-primary)',
-                      borderColor: isSelected ? '#F0C23A' : '#2A2E35',
+                      backgroundColor: isSelected ? 'var(--pz-accent)' : 'var(--pz-surface)',
+                      color: isSelected ? 'var(--pz-bg)' : 'var(--text-primary)',
+                      borderColor: isSelected ? 'var(--pz-accent)' : 'var(--pz-line)',
                     }}
                   >
                     <span style={styles.btnLabel}>{cp.label}</span>
@@ -150,10 +150,10 @@ const styles: Record<string, React.CSSProperties> = {
   sheet: {
     width: '100%',
     maxWidth: 540,
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1.5px solid #2A2E35',
+    borderTop: '1.5px solid var(--pz-line)',
     padding: '12px 20px 24px',
     boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.5)',
     animation: 'slideUp 0.25s ease-out',
@@ -170,7 +170,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#3A3F47',
+    backgroundColor: 'var(--pz-line)',
   },
   header: {
     marginBottom: 16,
@@ -188,7 +188,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   subtitle: {
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 500,
   },
   grid: {
@@ -200,7 +200,7 @@ const styles: Record<string, React.CSSProperties> = {
   presetBtn: {
     padding: '16px 14px',
     borderRadius: 14,
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -218,9 +218,9 @@ const styles: Record<string, React.CSSProperties> = {
   captainSection: {
     marginTop: 4,
     padding: '14px 14px 4px',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     borderRadius: 18,
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     marginBottom: 16,
   },
   captainHeader: {
@@ -229,15 +229,15 @@ const styles: Record<string, React.CSSProperties> = {
   captainTitle: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     letterSpacing: 1,
   },
   closeBtn: {
     width: '100%',
     padding: '14px',
     borderRadius: 14,
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
     color: 'var(--text-primary)',
     fontWeight: 800,
     fontSize: 15,

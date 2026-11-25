@@ -1239,7 +1239,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                 onClick={() => setSettleModal(prev => ({ ...prev, show: false }))}
                 style={styles.modalClose}
               >
-
+                <Icon name="close" />
               </button>
             </div>
 

@@ -35,7 +35,7 @@ export default function TripMilestoneCard({
       <div style={styles.topRow}>
         <div style={styles.badgePill}>
           <span style={{ fontSize: 13 }}><Icon name="trophy" /></span>
-          <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: '#F0C23A' }}>
+          <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: 'var(--pz-warn)' }}>
             EXPEDITION COMPLETED
           </span>
         </div>
@@ -89,7 +89,7 @@ export default function TripMilestoneCard({
         {summary.mealStopsCount > 0 && <span>{summary.mealStopsCount} Meals</span>}
         {summary.scenicPointsCount > 0 && <span>{summary.scenicPointsCount} Scenic Passes</span>}
         {customization.showBikeModel && summary.bikeModel && (
-          <span style={{ marginLeft: 'auto', color: '#F0C23A', fontWeight: 800 }}>
+          <span style={{ marginLeft: 'auto', color: 'var(--pz-warn)', fontWeight: 800 }}>
             {summary.bikeModel}
           </span>
         )}
@@ -136,7 +136,7 @@ export default function TripMilestoneCard({
 const styles: Record<string, React.CSSProperties> = {
   cardWrapper: {
     borderRadius: 20,
-    border: '2px solid #F0C23A',
+    border: '2px solid var(--pz-accent)',
     padding: '20px 22px',
     boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65)',
     display: 'flex',
@@ -155,14 +155,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    border: '1px solid rgba(240, 194, 58, 0.4)',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1px solid var(--pz-warn-bg)',
     borderRadius: 999,
     padding: '4px 12px',
   },
   dateStamp: {
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 700,
     letterSpacing: 0.5,
   },
@@ -176,7 +176,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   subtitleText: {
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 2,
   },
   statsGrid: {
@@ -202,7 +202,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 9,
     fontWeight: 900,
     letterSpacing: 1,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 4,
     textTransform: 'uppercase',
   },
@@ -223,7 +223,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'flex-start',
     gap: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    borderLeft: '3px solid #F0C23A',
+    borderLeft: '3px solid var(--pz-accent)',
     borderRadius: 8,
     padding: '8px 12px',
     marginBottom: 12,
@@ -242,9 +242,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 6,
     fontSize: 11,
-    color: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    border: '1px solid #10B981',
+    color: 'var(--pz-ok)',
+    backgroundColor: 'var(--pz-ok-bg)',
+    border: '1px solid var(--pz-ok)',
     borderRadius: 8,
     padding: '4px 10px',
     cursor: 'pointer',
@@ -255,7 +255,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 6,
     fontSize: 10,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 6,
     padding: '3px 8px',
@@ -267,7 +267,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     fontWeight: 900,
     letterSpacing: 1.5,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginLeft: 'auto',
   },
 };

@@ -132,20 +132,20 @@ export default function CaptainAnnouncementModal({
                 onClick={() => setSelectedId(p.id)}
                 style={{
                   ...styles.presetBtn,
-                  border: isSelected ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
-                  backgroundColor: isSelected ? 'rgba(240, 194, 58, 0.12)' : '#111316',
+                  border: isSelected ? '1.5px solid var(--pz-accent)' : '1.5px solid var(--pz-line)',
+                  backgroundColor: isSelected ? 'var(--pz-warn-bg)' : 'var(--pz-bg)',
                 }}
               >
                 <span style={styles.presetIcon}><Icon name={p.icon} /></span>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={{
-                    color: isSelected ? '#F0C23A' : 'var(--text-primary)',
+                    color: isSelected ? 'var(--pz-accent)' : 'var(--text-primary)',
                     fontWeight: 800,
                     fontSize: 14,
                   }}>
                     {p.title}
                   </div>
-                  <div style={{ color: '#9D9C9A', fontSize: 11.5, marginTop: 2, lineHeight: 1.3 }}>
+                  <div style={{ color: 'var(--pz-muted)', fontSize: 11.5, marginTop: 2, lineHeight: 1.3 }}>
                     {p.description}
                   </div>
                 </div>
@@ -168,9 +168,9 @@ export default function CaptainAnnouncementModal({
               onClick={handleStartDictation}
               style={{
                 ...styles.micBtn,
-                backgroundColor: isListening ? '#EF4444' : '#111316',
-                borderColor: isListening ? '#EF4444' : '#2A2E35',
-                color: isListening ? '#FFFFFF' : '#F0C23A',
+                backgroundColor: isListening ? 'var(--pz-bad)' : 'var(--pz-bg)',
+                borderColor: isListening ? 'var(--pz-bad)' : 'var(--pz-line)',
+                color: isListening ? '#FFFFFF' : 'var(--pz-accent)',
               }}
               title="Dictate short text line via speech"
             >
@@ -234,10 +234,10 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'fadeIn 0.2s ease-out',
   },
   sheet: {
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1.5px solid #2A2E35',
+    borderTop: '1.5px solid var(--pz-line)',
     width: '100%',
     maxWidth: 520,
     padding: '12px 20px 28px',
@@ -250,7 +250,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#3A3F47',
+    backgroundColor: 'var(--pz-line)',
     margin: '4px auto 12px',
     cursor: 'pointer',
   },
@@ -264,8 +264,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    border: '1.5px solid #F0C23A',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1.5px solid var(--pz-accent)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -275,7 +275,7 @@ const styles: Record<string, React.CSSProperties> = {
   pretitle: {
     fontSize: 9.5,
     fontWeight: 900,
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -287,14 +287,14 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: -0.2,
   },
   subtitle: {
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 11.5,
     margin: '2px 0 0',
   },
   closeBtn: {
-    background: '#111316',
-    border: '1.5px solid #2A2E35',
-    color: '#9D9C9A',
+    background: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
+    color: 'var(--pz-muted)',
     borderRadius: '50%',
     width: 32,
     height: 32,
@@ -331,16 +331,16 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   checkMark: {
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     fontSize: 18,
     fontWeight: 900,
   },
   optionalSection: {
     marginTop: 14,
     padding: '12px 14px',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     borderRadius: 16,
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
   },
   optionalHeader: {
     display: 'flex',
@@ -349,7 +349,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 6,
   },
   optionalLabel: {
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 11,
     fontWeight: 800,
     textTransform: 'uppercase',
@@ -365,8 +365,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   customInput: {
     width: '100%',
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     padding: '9px 12px',
     color: 'var(--text-primary)',
@@ -384,8 +384,8 @@ const styles: Record<string, React.CSSProperties> = {
   suggestionChip: {
     padding: '4px 9px',
     borderRadius: 999,
-    backgroundColor: '#1B1E23',
-    border: '1px solid #3A3F47',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
     color: 'var(--text-primary)',
     fontSize: 10.5,
     fontWeight: 700,
@@ -399,10 +399,10 @@ const styles: Record<string, React.CSSProperties> = {
   btnCancel: {
     flex: 1,
     padding: '14px',
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 14,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 800,
     fontSize: 14,
     cursor: 'pointer',
@@ -410,13 +410,13 @@ const styles: Record<string, React.CSSProperties> = {
   btnBroadcast: {
     flex: 2,
     padding: '14px',
-    backgroundColor: '#F0C23A',
+    backgroundColor: 'var(--pz-accent)',
     border: 'none',
     borderRadius: 14,
-    color: '#111316',
+    color: 'var(--pz-on-accent)',
     fontWeight: 900,
     fontSize: 14,
     cursor: 'pointer',
-    boxShadow: '0 4px 16px rgba(240, 194, 58, 0.3)',
+    boxShadow: '0 4px 16px var(--pz-warn-bg)',
   },
 };

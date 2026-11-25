@@ -113,7 +113,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               onClick={() => onToggleBatterySaver(!batterySaver)}
               style={{
                 ...styles.switchTrack,
-                backgroundColor: batterySaver ? '#F0C23A' : '#2A2E35',
+                backgroundColor: batterySaver ? 'var(--pz-accent)' : 'var(--pz-line)',
               }}
             >
               <div
@@ -128,10 +128,10 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           {/* Dynamic note explaining status */}
           <div style={{
             ...styles.settingFooterNote,
-            borderColor: batterySaver ? 'rgba(240, 194, 58, 0.3)' : '#2A2E35',
-            backgroundColor: batterySaver ? 'rgba(240, 194, 58, 0.08)' : '#16191D',
+            borderColor: batterySaver ? 'var(--pz-warn-bg)' : 'var(--pz-line)',
+            backgroundColor: batterySaver ? 'var(--pz-warn-bg)' : '#16191D',
           }}>
-            <span style={{ color: batterySaver ? '#F0C23A' : '#9D9C9A', fontWeight: 700 }}>
+            <span style={{ color: batterySaver ? 'var(--pz-accent)' : 'var(--pz-muted)', fontWeight: 700 }}>
               {batterySaver
                 ? 'Active rate: 30s · The Ride tab shows a note that positions may be older.'
                 : 'Standard rate: 10s · Real-time high accuracy telemetry.'}
@@ -160,7 +160,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 onClick={onToggleWakeLock}
                 style={{
                   ...styles.switchTrack,
-                  backgroundColor: wakeLockActive ? '#10B981' : '#2A2E35',
+                  backgroundColor: wakeLockActive ? 'var(--pz-ok)' : 'var(--pz-line)',
                 }}
               >
                 <div
@@ -188,11 +188,11 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           <span style={{
             ...styles.sectionBadge,
             backgroundColor: trackingStatus.isHeartbeatHealthy
-              ? 'rgba(16, 185, 129, 0.15)'
-              : (trackingStatus.isPaused ? 'rgba(239, 68, 68, 0.15)' : 'rgba(240, 194, 58, 0.12)'),
+              ? 'var(--pz-ok-bg)'
+              : (trackingStatus.isPaused ? 'var(--pz-bad-bg)' : 'var(--pz-warn-bg)'),
             color: trackingStatus.isHeartbeatHealthy
-              ? '#10B981'
-              : (trackingStatus.isPaused ? '#EF4444' : '#F0C23A'),
+              ? 'var(--pz-ok)'
+              : (trackingStatus.isPaused ? 'var(--pz-bad)' : 'var(--pz-accent)'),
           }}>
             {trackingStatus.isPaused ? 'PAUSED' : (trackingStatus.isTracking ? '● HEALTHY' : 'STANDBY')}
           </span>
@@ -207,7 +207,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
                   Reliability & Heartbeat
                 </div>
-                <div style={{ fontSize: 11, color: '#9D9C9A' }}>
+                <div style={{ fontSize: 11, color: 'var(--pz-muted)' }}>
                   {trackingStatus.platformMode}
                 </div>
               </div>
@@ -219,34 +219,34 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               gap: 5,
               padding: '4px 8px',
               borderRadius: 8,
-              backgroundColor: trackingStatus.isHeartbeatHealthy ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
-              border: `1px solid ${trackingStatus.isHeartbeatHealthy ? '#10B981' : '#EF4444'}`,
+              backgroundColor: trackingStatus.isHeartbeatHealthy ? 'var(--pz-ok-bg)' : 'var(--pz-bad-bg)',
+              border: `1px solid ${trackingStatus.isHeartbeatHealthy ? 'var(--pz-ok)' : 'var(--pz-bad)'}`,
             }}>
               <span style={{
                 width: 7,
                 height: 7,
                 borderRadius: '50%',
-                backgroundColor: trackingStatus.isHeartbeatHealthy ? '#10B981' : '#EF4444',
+                backgroundColor: trackingStatus.isHeartbeatHealthy ? 'var(--pz-ok)' : 'var(--pz-bad)',
               }} />
               <span style={{
                 fontSize: 10.5,
                 fontWeight: 800,
-                color: trackingStatus.isHeartbeatHealthy ? '#10B981' : '#EF4444',
+                color: trackingStatus.isHeartbeatHealthy ? 'var(--pz-ok)' : 'var(--pz-bad)',
               }}>
                 {trackingStatus.isHeartbeatHealthy ? 'Heartbeat OK' : 'Watchdog Alert'}
               </span>
             </div>
           </div>
 
-          <p style={{ margin: '0 0 12px', fontSize: 11.5, color: '#9D9C9A', lineHeight: 1.4 }}>
+          <p style={{ margin: '0 0 12px', fontSize: 11.5, color: 'var(--pz-muted)', lineHeight: 1.4 }}>
             Invisible in normal use. Heartbeat continuously monitors GPS fixes in background. The Ride tab alerts you immediately if tracking stops.
           </p>
 
           {/* Warning state if paused */}
           {trackingStatus.isPaused && (
             <div style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid #EF4444',
+              backgroundColor: 'var(--pz-bad-bg)',
+              border: '1px solid var(--pz-bad)',
               borderRadius: 12,
               padding: '10px 12px',
               marginBottom: 12,
@@ -268,7 +268,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 onClick={() => backgroundTrackingEngine.resumeTracking()}
                 style={{
                   padding: '6px 12px',
-                  backgroundColor: '#EF4444',
+                  backgroundColor: 'var(--pz-bad)',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: 8,
@@ -292,11 +292,11 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           }}>
             <div style={{
               backgroundColor: '#16191D',
-              border: '1px solid #2A2E35',
+              border: '1px solid var(--pz-line)',
               borderRadius: 10,
               padding: '8px 10px',
             }}>
-              <div style={{ fontSize: 10, color: '#9D9C9A', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 10, color: 'var(--pz-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                 Last Position Fix
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 800, marginTop: 2 }}>
@@ -304,7 +304,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                   ? new Date(trackingStatus.lastFixTime).toLocaleTimeString()
                   : 'Awaiting fix'}
               </div>
-              <div style={{ fontSize: 10, color: '#F0C23A', marginTop: 1 }}>
+              <div style={{ fontSize: 10, color: 'var(--pz-warn)', marginTop: 1 }}>
                 {trackingStatus.lastFixCoords
                   ? `${trackingStatus.lastFixCoords.lat.toFixed(4)}, ${trackingStatus.lastFixCoords.lng.toFixed(4)}`
                   : 'No coordinates'}
@@ -313,17 +313,17 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
 
             <div style={{
               backgroundColor: '#16191D',
-              border: '1px solid #2A2E35',
+              border: '1px solid var(--pz-line)',
               borderRadius: 10,
               padding: '8px 10px',
             }}>
-              <div style={{ fontSize: 10, color: '#9D9C9A', fontWeight: 700, textTransform: 'uppercase' }}>
+              <div style={{ fontSize: 10, color: 'var(--pz-muted)', fontWeight: 700, textTransform: 'uppercase' }}>
                 Positions Recorded
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 800, marginTop: 2 }}>
                 {trackingStatus.totalFixesRecorded} fixes
               </div>
-              <div style={{ fontSize: 10, color: '#9D9C9A', marginTop: 1 }}>
+              <div style={{ fontSize: 10, color: 'var(--pz-muted)', marginTop: 1 }}>
                 Watchdog: {trackingStatus.maxFixStallSec}s threshold
               </div>
             </div>
@@ -338,7 +338,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 flex: 1,
                 minWidth: '140px',
                 padding: '9px 12px',
-                backgroundColor: copiedDiag ? '#10B981' : '#2A2E35',
+                backgroundColor: copiedDiag ? 'var(--pz-ok)' : 'var(--pz-line)',
                 color: 'var(--text-primary)',
                 border: 'none',
                 borderRadius: 10,
@@ -362,8 +362,8 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               style={{
                 padding: '9px 12px',
                 backgroundColor: '#16191D',
-                color: '#9D9C9A',
-                border: '1px solid #2A2E35',
+                color: 'var(--pz-muted)',
+                border: '1px solid var(--pz-line)',
                 borderRadius: 10,
                 fontSize: 11.5,
                 fontWeight: 700,
@@ -379,8 +379,8 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             <div style={{
               marginTop: 12,
               padding: '10px',
-              backgroundColor: '#111316',
-              border: '1px solid #2A2E35',
+              backgroundColor: 'var(--pz-bg)',
+              border: '1px solid var(--pz-line)',
               borderRadius: 10,
               maxHeight: 180,
               overflowY: 'auto',
@@ -388,15 +388,15 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               fontSize: 10.5,
             }}>
               {trackingStatus.logs.length === 0 ? (
-                <div style={{ color: '#9D9C9A', textAlign: 'center', padding: '10px 0' }}>
+                <div style={{ color: 'var(--pz-muted)', textAlign: 'center', padding: '10px 0' }}>
                   No log entries recorded yet.
                 </div>
               ) : (
                 trackingStatus.logs.map((item, idx) => (
                   <div key={idx} style={{ marginBottom: 4, lineHeight: 1.35, wordBreak: 'break-word' }}>
-                    <span style={{ color: '#9D9C9A' }}>[{item.timestamp}] </span>
+                    <span style={{ color: 'var(--pz-muted)' }}>[{item.timestamp}] </span>
                     <span style={{
-                      color: item.level === 'ERROR' ? '#EF4444' : (item.level === 'WARN' ? '#F0C23A' : '#10B981'),
+                      color: item.level === 'ERROR' ? 'var(--pz-bad)' : (item.level === 'WARN' ? 'var(--pz-accent)' : 'var(--pz-ok)'),
                       fontWeight: 700,
                     }}>
                       [{item.level}]
@@ -443,7 +443,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     overflow: 'hidden',
   },
   header: {
@@ -463,9 +463,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #F0C23A',
-    color: '#F0C23A',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-accent)',
+    color: 'var(--pz-warn)',
     fontWeight: 900,
     fontSize: 14,
     display: 'flex',
@@ -482,12 +482,12 @@ const styles: Record<string, React.CSSProperties> = {
   userSub: {
     margin: '2px 0 0',
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 600,
   },
   backBtn: {
     padding: '7px 16px',
-    backgroundColor: '#2A2E35',
+    backgroundColor: 'var(--pz-line)',
     color: 'var(--text-primary)',
     border: 'none',
     borderRadius: 12,
@@ -509,20 +509,20 @@ const styles: Record<string, React.CSSProperties> = {
   sectionTitle: {
     fontSize: 11,
     fontWeight: 900,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     letterSpacing: '0.08em',
   },
   sectionBadge: {
     fontSize: 9.5,
     fontWeight: 800,
-    color: '#F0C23A',
-    backgroundColor: 'rgba(240, 194, 58, 0.12)',
+    color: 'var(--pz-warn)',
+    backgroundColor: 'var(--pz-warn-bg)',
     padding: '2px 6px',
     borderRadius: 6,
   },
   settingCard: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 18,
     padding: '16px',
     marginBottom: 12,
@@ -556,7 +556,7 @@ const styles: Record<string, React.CSSProperties> = {
   settingSub: {
     margin: 0,
     fontSize: 11.5,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     lineHeight: 1.4,
   },
   switchTrack: {
@@ -584,7 +584,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 12,
     padding: '8px 12px',
     borderRadius: 10,
-    border: '1px solid #2A2E35',
+    border: '1px solid var(--pz-line)',
     fontSize: 10.5,
     lineHeight: 1.35,
   },
@@ -597,8 +597,8 @@ const styles: Record<string, React.CSSProperties> = {
   primaryActionBtn: {
     width: '100%',
     padding: '14px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 14,
     fontSize: 13.5,
@@ -608,14 +608,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    boxShadow: '0 4px 14px rgba(240, 194, 58, 0.25)',
+    boxShadow: '0 4px 14px var(--pz-warn-bg)',
   },
   dangerActionBtn: {
     width: '100%',
     padding: '13px',
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-    color: '#EF4444',
-    border: '1px solid rgba(239, 68, 68, 0.4)',
+    backgroundColor: 'var(--pz-bad-bg)',
+    color: 'var(--pz-bad)',
+    border: '1px solid var(--pz-bad-bg)',
     borderRadius: 14,
     fontSize: 12.5,
     fontWeight: 800,

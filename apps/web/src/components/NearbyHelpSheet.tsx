@@ -189,9 +189,9 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                   }}
                   style={{
                     ...styles.filterPill,
-                    backgroundColor: isActive ? '#F0C23A' : '#111316',
-                    color: isActive ? '#111316' : '#9D9C9A',
-                    borderColor: isActive ? '#F0C23A' : '#2A2E35',
+                    backgroundColor: isActive ? 'var(--pz-accent)' : 'var(--pz-bg)',
+                    color: isActive ? 'var(--pz-bg)' : 'var(--pz-muted)',
+                    borderColor: isActive ? 'var(--pz-accent)' : 'var(--pz-line)',
                   }}
                 >
                   <span><Icon name={icon} /></span>
@@ -228,8 +228,8 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                     onClick={() => setSelectedId(item.id)}
                     style={{
                       ...styles.itemCard,
-                      borderColor: isSelected ? '#F0C23A' : '#2A2E35',
-                      backgroundColor: isSelected ? 'rgba(240, 194, 58, 0.08)' : '#1B1E23',
+                      borderColor: isSelected ? 'var(--pz-accent)' : 'var(--pz-line)',
+                      backgroundColor: isSelected ? 'var(--pz-warn-bg)' : 'var(--pz-surface)',
                       opacity: item.isOpen ? 1 : 0.75,
                     }}
                   >
@@ -263,9 +263,9 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                         <span
                           style={{
                             ...styles.verifiedBadge,
-                            color: isOld ? '#9D9C9A' : '#10B981',
-                            backgroundColor: isOld ? 'rgba(157, 156, 154, 0.12)' : 'rgba(16, 185, 129, 0.15)',
-                            borderColor: isOld ? '#2A2E35' : '#10B981',
+                            color: isOld ? 'var(--pz-muted)' : 'var(--pz-ok)',
+                            backgroundColor: isOld ? 'rgba(157, 156, 154, 0.12)' : 'var(--pz-ok-bg)',
+                            borderColor: isOld ? 'var(--pz-line)' : 'var(--pz-ok)',
                           }}
                         >
                           Verified: {verifiedLabel}
@@ -312,7 +312,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                             e.stopPropagation();
                             handleConfirmOpen(item.id, item.name);
                           }}
-                          style={{ ...styles.actionBtnSmall, color: '#10B981' }}
+                          style={{ ...styles.actionBtnSmall, color: 'var(--pz-ok)' }}
                           title="Confirm open for convoy"
                         >
                           <span><Icon name="check" /></span> Confirm open
@@ -324,7 +324,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                             e.stopPropagation();
                             handleReportClosed(item.id, item.name);
                           }}
-                          style={{ ...styles.actionBtnSmall, color: '#EF4444' }}
+                          style={{ ...styles.actionBtnSmall, color: 'var(--pz-bad)' }}
                           title="Report closed"
                         >
                           <span><Icon name="warning" /></span> Report closed
@@ -396,10 +396,10 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'fadeIn 0.2s ease-out',
   },
   sheet: {
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1.5px solid #2A2E35',
+    borderTop: '1.5px solid var(--pz-line)',
     maxHeight: '85vh',
     display: 'flex',
     flexDirection: 'column',
@@ -423,7 +423,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '6px 14px 10px',
-    borderBottom: '1px solid #2A2E35',
+    borderBottom: '1px solid var(--pz-line)',
   },
   title: {
     margin: 0,
@@ -434,24 +434,24 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     margin: '2px 0 0',
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   alongRouteBadge: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#F0C23A',
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    border: '1px solid #F0C23A',
+    color: 'var(--pz-warn)',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1px solid var(--pz-accent)',
     padding: '2px 8px',
     borderRadius: 6,
     letterSpacing: 0.5,
   },
   btnAddPlace: {
     padding: '7px 12px',
-    backgroundColor: '#111316',
-    border: '1.5px solid #F0C23A',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-accent)',
     borderRadius: 10,
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     fontSize: 12,
     fontWeight: 800,
     cursor: 'pointer',
@@ -460,8 +460,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 4,
   },
   toastBar: {
-    backgroundColor: '#10B981',
-    color: '#111316',
+    backgroundColor: 'var(--pz-ok)',
+    color: 'var(--pz-on-accent)',
     padding: '6px 16px',
     fontSize: 11,
     fontWeight: 900,
@@ -471,8 +471,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 8,
     padding: '8px 14px',
-    borderBottom: '1px solid #2A2E35',
-    backgroundColor: '#111316',
+    borderBottom: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-bg)',
     overflowX: 'auto',
   },
   filterPill: {
@@ -499,15 +499,15 @@ const styles: Record<string, React.CSSProperties> = {
   emptyCard: {
     textAlign: 'center',
     padding: '30px 16px',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     borderRadius: 14,
-    border: '1px dashed #2A2E35',
+    border: '1px dashed var(--pz-line)',
   },
   btnEmptyAdd: {
     marginTop: 10,
     padding: '6px 14px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 8,
     fontSize: 12,
@@ -542,23 +542,23 @@ const styles: Record<string, React.CSSProperties> = {
   },
   itemSubtitle: {
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 2,
     lineHeight: 1.35,
   },
   openBadge: {
     fontSize: 9,
     fontWeight: 900,
-    color: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    color: 'var(--pz-ok)',
+    backgroundColor: 'var(--pz-ok-bg)',
     padding: '1px 6px',
     borderRadius: 4,
   },
   closedBadge: {
     fontSize: 9,
     fontWeight: 900,
-    color: '#EF4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    color: 'var(--pz-bad)',
+    backgroundColor: 'var(--pz-bad-bg)',
     padding: '1px 6px',
     borderRadius: 4,
   },
@@ -572,9 +572,9 @@ const styles: Record<string, React.CSSProperties> = {
   distanceBadge: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#F0C23A',
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    color: 'var(--pz-warn)',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     padding: '2px 6px',
     borderRadius: 4,
   },
@@ -588,11 +588,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sourceBadge: {
     fontSize: 9,
-    color: '#9D9C9A',
-    backgroundColor: '#111316',
+    color: 'var(--pz-muted)',
+    backgroundColor: 'var(--pz-bg)',
     padding: '2px 6px',
     borderRadius: 4,
-    border: '1px solid #2A2E35',
+    border: '1px solid var(--pz-line)',
   },
   itemActionsBar: {
     display: 'flex',
@@ -603,8 +603,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   actionBtnSmall: {
     padding: '3px 8px',
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 6,
     color: 'var(--text-primary)',
     fontSize: 10,
@@ -619,25 +619,25 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 8,
     padding: '8px 14px',
-    backgroundColor: '#111316',
-    borderTop: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    borderTop: '1px solid var(--pz-line)',
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   actionRow: {
     display: 'flex',
     gap: 10,
     padding: '10px 14px max(14px, env(safe-area-inset-bottom, 14px))',
-    borderTop: '1px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    borderTop: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
     flexWrap: 'wrap',
   },
   btnPrimary: {
     flex: 1.5,
     minWidth: 160,
     padding: '10px 14px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 10,
     fontWeight: 900,
@@ -649,9 +649,9 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     minWidth: 140,
     padding: '10px 14px',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     color: 'var(--text-primary)',
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     fontWeight: 800,
     fontSize: 13,

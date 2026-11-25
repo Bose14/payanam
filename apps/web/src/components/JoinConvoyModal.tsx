@@ -65,7 +65,7 @@ export const JoinConvoyModal: React.FC<JoinConvoyModalProps> = ({
             </h3>
           </div>
           <button onClick={onClose} style={styles.closeBtn} aria-label="Close modal">
-
+            <Icon name="close" />
           </button>
         </div>
 

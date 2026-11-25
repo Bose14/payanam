@@ -41,7 +41,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       document.body.style.backgroundColor = '#f3f1ec';
       document.body.style.color = '#15171a';
     } else {
-      document.body.style.backgroundColor = '#111316';
+      document.body.style.backgroundColor = 'var(--pz-bg)';
       document.body.style.color = '#f1efea';
     }
   }, []);

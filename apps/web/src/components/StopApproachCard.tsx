@@ -40,8 +40,8 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
   return (
     <div style={{
       ...styles.container,
-      borderColor: isArrivedStage ? '#10B981' : '#F0C23A',
-      background: isArrivedStage ? 'rgba(16, 185, 129, 0.08)' : 'rgba(27, 30, 35, 0.98)',
+      borderColor: isArrivedStage ? 'var(--pz-ok)' : 'var(--pz-accent)',
+      background: isArrivedStage ? 'var(--pz-ok-bg)' : 'rgba(27, 30, 35, 0.98)',
     }}>
       {/* Top Header Row */}
       <div style={styles.headerRow}>
@@ -58,9 +58,9 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
         <div style={styles.headerRight}>
           <span style={{
             ...styles.stageBadge,
-            color: isArrivedStage ? '#10B981' : '#F0C23A',
-            borderColor: isArrivedStage ? '#10B981' : '#F0C23A',
-            backgroundColor: isArrivedStage ? 'rgba(16, 185, 129, 0.15)' : 'rgba(240, 194, 58, 0.15)',
+            color: isArrivedStage ? 'var(--pz-ok)' : 'var(--pz-accent)',
+            borderColor: isArrivedStage ? 'var(--pz-ok)' : 'var(--pz-accent)',
+            backgroundColor: isArrivedStage ? 'var(--pz-ok-bg)' : 'var(--pz-warn-bg)',
           }}>
             {isArrivedStage ? 'HERE' : 'APPROACHING'}
           </span>
@@ -71,7 +71,7 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
               style={styles.closeBtn}
               title="Dismiss banner"
             >
-
+              <Icon name="close" />
             </button>
           )}
         </div>
@@ -98,8 +98,8 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
           onClick={() => onToggleMyArrival(!isMeArrived)}
           style={{
             ...styles.primaryBtn,
-            backgroundColor: isMeArrived ? '#10B981' : '#F0C23A',
-            color: '#111316',
+            backgroundColor: isMeArrived ? 'var(--pz-ok)' : 'var(--pz-accent)',
+            color: 'var(--pz-on-accent)',
           }}
         >
           {isMeArrived ? 'You are here' : "I'm here"}
@@ -120,7 +120,7 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
             style={styles.iconNavBtn}
             title="Open in Maps"
           >
-
+            <Icon name="compass" />
           </button>
         )}
       </div>
@@ -133,8 +133,8 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0 12px 8px 12px',
     padding: '12px 14px',
     borderRadius: 18,
-    border: '1.5px solid #F0C23A',
-    backgroundColor: '#1B1E23',
+    border: '1.5px solid var(--pz-accent)',
+    backgroundColor: 'var(--pz-surface)',
     boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
     flexShrink: 0,
     zIndex: 30,
@@ -156,8 +156,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -167,7 +167,7 @@ const styles: Record<string, React.CSSProperties> = {
   pretitle: {
     fontSize: 9,
     fontWeight: 900,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
@@ -199,7 +199,7 @@ const styles: Record<string, React.CSSProperties> = {
   closeBtn: {
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 12,
     fontWeight: 800,
     cursor: 'pointer',
@@ -220,7 +220,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   distSub: {
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 600,
   },
   btnRow: {
@@ -240,8 +240,8 @@ const styles: Record<string, React.CSSProperties> = {
   secondaryBtn: {
     padding: '8px 14px',
     borderRadius: 10,
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     color: 'var(--text-primary)',
     fontWeight: 800,
     fontSize: 12,
@@ -251,8 +251,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     color: 'var(--text-primary)',
     fontSize: 14,
     display: 'flex',
