@@ -102,7 +102,8 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
       onClick={() => onClick && onClick(rider)}
       style={{
         ...styles.rowCard,
-        borderColor: isMe ? '#F0C23A' : '#2A2E35',
+        borderColor: isMe ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-line, #2A2E35)',
+        backgroundColor: 'var(--pz-surface, #1B1E23)',
         opacity: freshness.isUnknown ? 0.8 : 1,
       }}
     >
@@ -110,9 +111,21 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
       <div
         style={{
           ...styles.avatar,
-          background: freshness.isLive ? '#22262D' : '#111316',
-          color: freshness.isLive ? 'var(--text-primary)' : color,
-          border: freshness.isLive ? '2px solid #3A3F47' : `2.5px ${freshness.isStale ? 'dashed' : 'solid'} ${color}`,
+          background: isCaptain
+            ? 'var(--pz-accent, #F0C23A)'
+            : freshness.isLive
+            ? 'var(--pz-sys-bg, #22262D)'
+            : 'var(--pz-bg, #111316)',
+          color: isCaptain
+            ? 'var(--pz-on-accent, #111316)'
+            : freshness.isLive
+            ? 'var(--pz-sys, #38BDF8)'
+            : color,
+          border: isCaptain
+            ? 'none'
+            : freshness.isLive
+            ? '1.5px solid var(--pz-line, #3A3F47)'
+            : `2px ${freshness.isStale ? 'dashed' : 'solid'} ${color}`,
         }}
       >
         {initial}
@@ -149,13 +162,13 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
         {!isMe && (
           <div style={styles.distanceText}>
             {freshness.isUnknown ? (
-              <span style={{ color: '#9D9C9A', fontSize: 11, fontWeight: 500 }}>Position stale</span>
+              <span style={{ color: 'var(--pz-muted, #9D9C9A)', fontSize: 11, fontWeight: 500 }}>Position stale</span>
             ) : distanceKm != null ? (
-              <span style={{ color: freshness.isLive ? '#10B981' : '#F0C23A', fontWeight: 700 }}>
+              <span style={{ color: freshness.isLive ? 'var(--pz-ok, #10B981)' : 'var(--pz-warn, #F0C23A)', fontWeight: 700 }}>
                 {distanceKm.toFixed(1)} km
               </span>
             ) : (
-              <span style={{ color: '#9D9C9A' }}>--</span>
+              <span style={{ color: 'var(--pz-muted, #9D9C9A)' }}>--</span>
             )}
           </div>
         )}
@@ -169,25 +182,25 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    padding: '10px 12px',
-    backgroundColor: '#1B1E23',
-    borderRadius: 16,
+    padding: '10px 14px',
+    backgroundColor: 'var(--pz-surface, #1B1E23)',
+    borderRadius: 14,
     marginBottom: 6,
-    border: '1.5px solid #2A2E35',
+    border: '1px solid var(--pz-line, #2A2E35)',
     cursor: 'pointer',
-    transition: 'transform 0.15s ease, background-color 0.15s ease',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
+    boxShadow: 'var(--card-shadow, 0 1px 3px rgba(0, 0, 0, 0.2))',
     touchAction: 'manipulation',
   },
   avatar: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 900,
-    fontSize: 16,
+    fontSize: 15,
     flexShrink: 0,
   },
   nameRow: {

@@ -35,7 +35,7 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
             <button
               type="button"
               onClick={onPinNewStop}
-              style={styles.btnWhite}
+              style={styles.btnPrimary}
             >
               <span>📌</span>
               <span>Choose stop</span>
@@ -44,7 +44,7 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
           <button
             type="button"
             onClick={onOpenTellGroup}
-            style={styles.btnYellow}
+            style={styles.btnSecondary}
           >
             <span>💬</span>
             <span>Tell group</span>
@@ -88,12 +88,12 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   dockCard: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
-    borderRadius: 18,
+    backgroundColor: 'var(--pz-surface, #1B1E23)',
+    border: '1px solid var(--pz-line, #2A2E35)',
+    borderRadius: 16,
     margin: '4px 12px 6px',
-    padding: '10px 14px 12px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+    padding: '12px 14px',
+    boxShadow: 'var(--card-shadow, 0 4px 20px rgba(0, 0, 0, 0.4))',
     flexShrink: 0,
     zIndex: 800,
     boxSizing: 'border-box',
@@ -108,7 +108,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3A3F47',
+    backgroundColor: 'var(--pz-line, #3A3F47)',
   },
   infoRow: {
     display: 'flex',
@@ -136,7 +136,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '2px 0 0',
     fontSize: 12,
     fontWeight: 600,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted, #9D9C9A)',
   },
   arrivalRatio: {
     fontSize: 13,
@@ -148,17 +148,17 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tellGroupBtn: {
     width: '100%',
-    minHeight: 46,
-    padding: '12px 16px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    minHeight: 44,
+    padding: '10px 16px',
+    backgroundColor: 'var(--pz-accent, #F0C23A)',
+    color: 'var(--pz-on-accent, #111316)',
     border: 'none',
-    borderRadius: 14,
-    fontSize: 15,
-    fontWeight: 900,
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: 800,
     cursor: 'pointer',
     letterSpacing: -0.2,
-    boxShadow: '0 3px 12px rgba(240, 194, 58, 0.25)',
+    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
     transition: 'transform 0.1s ease',
     touchAction: 'manipulation',
     marginTop: 6,
@@ -168,12 +168,30 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     marginTop: 6,
   },
-  btnWhite: {
+  btnPrimary: {
     flex: 1,
-    minHeight: 44,
-    padding: '10px 12px',
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    minHeight: 42,
+    padding: '10px 14px',
+    backgroundColor: 'var(--pz-accent, #F0C23A)',
+    border: '1px solid var(--pz-accent, #F0C23A)',
+    borderRadius: 12,
+    fontSize: 13,
+    fontWeight: 800,
+    color: 'var(--pz-on-accent, #111316)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+    touchAction: 'manipulation',
+  },
+  btnSecondary: {
+    flex: 1,
+    minHeight: 42,
+    padding: '10px 14px',
+    backgroundColor: 'var(--pz-surface, #1B1E23)',
+    border: '1px solid var(--pz-line, #2A2E35)',
     borderRadius: 12,
     fontSize: 13,
     fontWeight: 800,
@@ -183,24 +201,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    touchAction: 'manipulation',
-  },
-  btnYellow: {
-    flex: 1,
-    minHeight: 44,
-    padding: '10px 12px',
-    backgroundColor: '#F0C23A',
-    border: 'none',
-    borderRadius: 12,
-    fontSize: 13,
-    fontWeight: 900,
-    color: '#111316',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
     touchAction: 'manipulation',
   },
 };

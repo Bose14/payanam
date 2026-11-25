@@ -2596,60 +2596,93 @@ export default function RidePage() {
             </div>
           )}
 
-          {/* View Mode Toggle: Map + Roster vs Full Map */}
-          <button
-            type="button"
-            onClick={() => setSplitView(!splitView)}
-            style={{
-              position: 'absolute',
-              top: 10,
-              left: 10,
-              zIndex: 1000,
-              backgroundColor: '#1B1E23',
-              border: '1.5px solid #2A2E35',
-              color: 'var(--text-primary)',
-              borderRadius: 20,
-              padding: '6px 14px',
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}
-            title="Toggle split roster and map view"
-          >
-            <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
-          </button>
+          {/* Map Top Control Bar */}
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            right: 10,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pointerEvents: 'none',
+          }}>
+            {/* Left Control Group */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'auto' }}>
+              <button
+                type="button"
+                onClick={() => setSplitView(!splitView)}
+                style={{
+                  backgroundColor: 'rgba(27, 30, 35, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid var(--pz-line, #2A2E35)',
+                  color: 'var(--text-primary)',
+                  borderRadius: 20,
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+                title="Toggle split roster and map view"
+              >
+                <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
+              </button>
 
-          {/* Feature 3: Toggle nearby service pins on Ride map */}
-          <button
-            type="button"
-            onClick={() => setShowServicePins(!showServicePins)}
-            style={{
-              position: 'absolute',
-              top: 10,
-              left: splitView ? 116 : 106,
-              zIndex: 1000,
-              backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.15)' : '#1B1E23',
-              border: showServicePins ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
-              color: showServicePins ? '#F0C23A' : '#9D9C9A',
-              borderRadius: 20,
-              padding: '6px 12px',
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}
-            title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
-          >
-            <span>🛠️</span>
-            <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setShowServicePins(!showServicePins)}
+                style={{
+                  backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.2)' : 'rgba(27, 30, 35, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: showServicePins ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid var(--pz-line, #2A2E35)',
+                  color: showServicePins ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-muted, #9D9C9A)',
+                  borderRadius: 20,
+                  padding: '5px 10px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+                title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
+              >
+                <span>🛠️</span>
+                <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
+            {/* Right Status Indicator */}
+            {wakeLockActive && (
+              <div
+                style={{
+                  pointerEvents: 'auto',
+                  backgroundColor: 'rgba(27, 30, 35, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid var(--pz-ok, #10B981)',
+                  color: 'var(--pz-ok, #10B981)',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: '4px 8px',
+                  borderRadius: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+                title="Screen stay-awake is active"
+              >
+                <span>🔆</span>
+                <span className="hide-on-mobile">Screen on</span>
+              </div>
+            )}
+          </div>
 
           {/* Re-center button */}
           {!following && myLat && myLng && (
@@ -2709,25 +2742,7 @@ export default function RidePage() {
             </button>
           )}
 
-          {/* Wake lock indicator */}
-          {wakeLockActive && (
-            <div style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              zIndex: 999,
-              backgroundColor: '#1B1E23',
-              border: '1.5px solid #10B981',
-              color: '#10B981',
-              fontSize: 11,
-              fontWeight: 800,
-              padding: '5px 10px',
-              borderRadius: 20,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}>
-              🔆 Screen on
-            </div>
-          )}
+          {/* Map Follow & Drag Container */}
 
           <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             {/* Auto-invalidates size whenever splitView toggles so tiles cover 100% of screen */}
