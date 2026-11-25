@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { chatService } from '../../services/api';
-import { NOTIFY_KEY } from '../../pages/tabs/ChatTab';
 import { useTheme } from '../../context/ThemeContext';
 import { ShellContext } from './ShellContext';
 
@@ -60,12 +59,11 @@ export default function AppShell() {
   const current = activeTabKey(pathname);
   const [unread, setUnread] = useState(0);
 
-  // Unread count for the Chat tab badge; counts only shared stops if the rider chose "Stops and alerts only".
+  // Unread count for the Chat tab badge.
   useEffect(() => {
     let alive = true;
     const tick = () => {
-      const stopsOnly = localStorage.getItem(NOTIFY_KEY) === 'Stops and alerts only';
-      chatService.unread(stopsOnly).then((n) => alive && setUnread(n)).catch(() => {});
+      chatService.unread(false).then((n) => alive && setUnread(n)).catch(() => {});
     };
     tick();
     const id = setInterval(tick, 20000);
