@@ -192,7 +192,7 @@ const styles: Record<string, React.CSSProperties> = {
   noSignalTitle: {
     fontSize: 12.5,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.01em',
     lineHeight: 1.25,
   },
@@ -251,7 +251,7 @@ const styles: Record<string, React.CSSProperties> = {
   retryBtn: {
     fontSize: 10,
     fontWeight: 700,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     backgroundColor: '#2A2E35',
     border: 'none',
     padding: '4px 8px',

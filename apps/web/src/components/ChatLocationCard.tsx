@@ -73,7 +73,7 @@ export default function ChatLocationCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA' }}>
+            <span style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)' }}>
               {placeName}
             </span>
             {isConfirmed && (
@@ -156,7 +156,7 @@ export default function ChatLocationCard({
             backgroundColor: '#1B1E23',
             border: '1.5px solid #2A2E35',
             borderRadius: 10,
-            color: '#F1EFEA',
+            color: 'var(--text-primary)',
             fontSize: 12,
             fontWeight: 800,
             cursor: 'pointer',

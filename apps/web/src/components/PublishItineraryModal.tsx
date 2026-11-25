@@ -188,7 +188,7 @@ export default function PublishItineraryModal({
                     PRIVACY PROTECTIONS ACTIVE
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: '#F1EFEA', marginTop: 4, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-primary)', marginTop: 4, lineHeight: 1.4 }}>
                   <strong>Home start points are never shown</strong> to protect rider residential addresses.
                   Hotels and specific sensitive stops can also be masked.
                 </div>
@@ -335,7 +335,7 @@ export default function PublishItineraryModal({
                               {stop.item_type === 'fuel_stop' ? '⛽' : stop.item_type === 'meal' ? '🍽️' : stop.item_type === 'stay' ? '🏨' : '📍'}
                             </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#F1EFEA', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 Day {stop.day_number || 1} · {stop.place}
                               </div>
                               {stop.description && (
@@ -389,7 +389,7 @@ export default function PublishItineraryModal({
               <div style={styles.previewCard}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: '#F1EFEA' }}>
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>
                       {trip.title}
                     </h3>
                     <div style={{ fontSize: 12, color: '#F0C23A', fontWeight: 700, marginTop: 4 }}>
@@ -424,7 +424,7 @@ export default function PublishItineraryModal({
                       <div key={idx} style={styles.previewStopRow}>
                         <div style={styles.previewStopNumber}>{idx + 1}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#F1EFEA' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                             {s.place}
                           </div>
                           {s.description && (
@@ -528,7 +528,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 18,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
   subtitle: {
@@ -625,7 +625,7 @@ const styles: Record<string, React.CSSProperties> = {
   toggleTitle: {
     fontSize: 13,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   toggleDesc: {
     fontSize: 11,
@@ -677,7 +677,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     outline: 'none',
   },
@@ -690,7 +690,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     padding: '10px 14px',
     fontSize: 12,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   previewCard: {
     backgroundColor: '#111316',
@@ -790,7 +790,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#111316',
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer',

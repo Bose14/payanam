@@ -73,13 +73,13 @@ export async function loginUser(email: string, password: string): Promise<AuthRe
     .maybeSingle();
 
   if (error) {
-    const msg = error.message || '';
-    if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('fetch failed') || msg.includes('failed to fetch') || msg.includes('enotfound') || msg.includes('econnrefused')) {
       throw new Error(
         'Database connection failed: Your Supabase database is paused. Please visit https://supabase.com/dashboard to restore/unpause your project.'
       );
     }
-    throw new Error(`Database error: ${msg}`);
+    throw new Error(`Database error: ${error.message || 'Unable to query user account'}`);
   }
 
   if (!user) {
@@ -177,13 +177,13 @@ export async function requestPasswordReset(email: string): Promise<{
 
   if (error) {
     console.error('❌ Database error finding user for reset:', error);
-    const msg = error.message || '';
-    if (msg.includes('fetch failed') || msg.includes('ENOTFOUND')) {
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('fetch failed') || msg.includes('failed to fetch') || msg.includes('enotfound') || msg.includes('econnrefused')) {
       throw new Error(
         'Database connection failed: Your Supabase database is currently paused. Please log into https://supabase.com/dashboard and click "Restore" to unpause your project.'
       );
     }
-    throw new Error(`Database error: ${msg || 'Unable to query user account'}`);
+    throw new Error(`Database error: ${error.message || 'Unable to query user account'}`);
   }
 
   if (!user) {
@@ -238,7 +238,18 @@ export async function resetPassword(token: string, newPassword: string): Promise
     .eq('reset_password_token', token)
     .maybeSingle();
 
-  if (error || !user) {
+  if (error) {
+    console.error('❌ Database error reading reset token:', error);
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('fetch failed') || msg.includes('failed to fetch') || msg.includes('enotfound') || msg.includes('econnrefused')) {
+      throw new Error(
+        'Database connection failed: Your Supabase database is currently paused. Please log into https://supabase.com/dashboard and click "Restore" to unpause your project.'
+      );
+    }
+    throw new Error(`Database error: ${error.message}`);
+  }
+
+  if (!user) {
     throw new ValidationError('Invalid or expired password reset link');
   }
 
@@ -282,7 +293,10 @@ export async function exportUserData(userId: string) {
   if (!user) throw new NotFoundError('User');
 
   // Never hand back credential material.
-  const { password_hash: _ph, reset_password_token: _rt, reset_password_expires_at: _re, ...safeUser } = user;
+  const safeUser = { ...user };
+  delete (safeUser as Record<string, unknown>).password_hash;
+  delete (safeUser as Record<string, unknown>).reset_password_token;
+  delete (safeUser as Record<string, unknown>).reset_password_expires_at;
   return {
     exportedAt: new Date().toISOString(),
     user: safeUser,

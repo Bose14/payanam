@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 
 interface TripCompletedBannerProps {
   fromPlace: string;
@@ -6,6 +6,7 @@ interface TripCompletedBannerProps {
   days: number;
   distanceKm?: number;
   onShareMilestones: () => void;
+  onDismiss?: () => void;
 }
 
 export default function TripCompletedBanner({
@@ -14,15 +15,25 @@ export default function TripCompletedBanner({
   days,
   distanceKm,
   onShareMilestones,
+  onDismiss,
 }: TripCompletedBannerProps) {
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    onDismiss?.();
+  };
+
   return (
-    <div style={styles.banner}>
+    <div className="trip-completed-banner" style={styles.banner}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
         <div style={styles.trophyIcon}>🏆</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={styles.completedTag}>EXPEDITION COMPLETED</span>
-            <span style={{ fontSize: 12, color: '#9D9C9A' }}>
+            <span style={{ fontSize: 12, color: 'var(--pz-muted, var(--text-secondary))', fontWeight: 600 }}>
               {days} Day{days !== 1 ? 's' : ''} Touring
               {distanceKm ? ` · ${distanceKm} km` : ''}
             </span>
@@ -33,60 +44,82 @@ export default function TripCompletedBanner({
         </div>
       </div>
 
-      <button
-        onClick={onShareMilestones}
-        style={styles.btnShare}
-        title="Share trip completion milestones"
-      >
-        <span>🏆</span>
-        <span>Share Milestones</span>
-      </button>
+      <div style={styles.actionWrap} className="trip-completed-actions">
+        <button
+          onClick={onShareMilestones}
+          style={styles.btnShare}
+          title="Share trip completion milestones"
+        >
+          <span>🏆</span>
+          <span>Share Milestones</span>
+        </button>
+        <button
+          onClick={handleDismiss}
+          style={styles.btnDismiss}
+          title="Dismiss completed banner"
+          aria-label="Dismiss banner"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
   banner: {
-    backgroundColor: 'rgba(240, 194, 58, 0.1)',
-    border: '1.5px solid rgba(240, 194, 58, 0.45)',
+    backgroundColor: 'var(--accent-gold-bg, rgba(240, 194, 58, 0.12))',
+    border: '1.5px solid var(--accent-gold, rgba(240, 194, 58, 0.5))',
     borderRadius: 16,
-    padding: '14px 18px',
+    padding: '14px 16px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 14,
+    gap: 12,
     marginBottom: 16,
-    flexWrap: 'wrap',
+    boxShadow: '0 2px 10px rgba(240, 194, 58, 0.12)',
   },
   trophyIcon: {
-    fontSize: 28,
+    fontSize: 26,
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(240, 194, 58, 0.2)',
+    borderRadius: 12,
+    backgroundColor: 'var(--accent-gold-bg, rgba(240, 194, 58, 0.25))',
+    border: '1px solid var(--accent-gold, rgba(240, 194, 58, 0.4))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   completedTag: {
     fontSize: 10,
     fontWeight: 900,
-    letterSpacing: 1,
-    padding: '2px 8px',
+    letterSpacing: 0.8,
+    padding: '3px 8px',
     borderRadius: 6,
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--accent-gold, #F0C23A)',
+    color: 'var(--pz-on-accent, #111316)',
+    display: 'inline-block',
   },
   routeText: {
-    margin: '3px 0 0',
+    margin: '4px 0 0',
     fontSize: 15,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--pz-ink, var(--text-primary))',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  actionWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
   },
   btnShare: {
-    padding: '10px 18px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    padding: '10px 16px',
+    backgroundColor: 'var(--accent-gold, #F0C23A)',
+    color: 'var(--pz-on-accent, #111316)',
     border: 'none',
     borderRadius: 10,
     fontWeight: 900,
@@ -96,9 +129,25 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    boxShadow: '0 4px 14px rgba(240, 194, 58, 0.3)',
+    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.3)',
     whiteSpace: 'nowrap',
-    minWidth: 140,
+    minHeight: 40,
+    touchAction: 'manipulation',
+  },
+  btnDismiss: {
+    width: 36,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    border: '1px solid var(--pz-line, rgba(240, 194, 58, 0.3))',
+    color: 'var(--pz-muted, var(--text-secondary))',
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    touchAction: 'manipulation',
   },
 };
 

@@ -2030,14 +2030,14 @@ export default function RidePage() {
         marginTop: sosActive ? 48 : 0,
       }}>
         {/* Left: Clean Minimal Back Arrow + Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
           <button
             onClick={() => navigate(-1)}
             style={{
               background: 'none',
               border: 'none',
-              color: '#F1EFEA',
-              fontSize: 22,
+              color: 'var(--pz-ink, var(--text-primary))',
+              fontSize: 20,
               cursor: 'pointer',
               padding: '0 4px 0 0',
               fontWeight: 800,
@@ -2050,43 +2050,32 @@ export default function RidePage() {
           </button>
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 className="mobile-header-title" style={{
-              color: '#F1EFEA',
-              fontWeight: 900,
-              fontSize: 20,
+              color: 'var(--pz-ink, var(--text-primary))',
+              font: "700 20px/1.1 'Barlow Condensed', sans-serif",
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
               margin: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              letterSpacing: -0.5,
             }}>
-              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Itinerary & Plan' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Me · Settings' : 'Group ride'}
+              {tab === 'chat' ? 'Trip Chat' : tab === 'plan' ? 'Itinerary' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Settings' : 'Group Ride'}
             </h1>
           </div>
         </div>
 
         {/* Right: Subtitle & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {tab !== 'map' && (
-            <span className="hide-on-mobile" style={{
-              color: '#9D9C9A',
-              fontSize: 12,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}>
-              {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : tab === 'me' ? 'Ride settings' : ''}
-            </span>
-          )}
-
           {/* Quick Nearby Help */}
           <button
             type="button"
             onClick={() => setShowNearbyHelp(true)}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              backgroundColor: '#1B1E23',
-              border: '1.5px solid #2A2E35',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              backgroundColor: 'var(--pz-surface, #1B1E23)',
+              border: '1px solid var(--pz-line, #2A2E35)',
               fontSize: 13,
               cursor: 'pointer',
               display: 'flex',
@@ -2094,35 +2083,34 @@ export default function RidePage() {
               justifyContent: 'center',
               flexShrink: 0,
             }}
-            title="Verified Nearby Help (Fuel, Repair, Food, Rest)"
+            title="Nearby Amenities (Fuel, Repair, Food, Rest)"
           >
             🛠️
           </button>
 
-          {/* Feature K: Captain-only announcement control on Ride tab */}
+          {/* Captain-only announcement control on Ride tab */}
           {isLead && (
             <button
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                padding: '4px 8px',
-                borderRadius: 18,
-                backgroundColor: 'rgba(240, 194, 58, 0.15)',
-                border: '1.5px solid #F0C23A',
-                color: '#F0C23A',
-                fontSize: 11.5,
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                backgroundColor: 'var(--pz-warn-bg, rgba(240, 194, 58, 0.15))',
+                border: '1px solid var(--pz-accent, #F0C23A)',
+                color: 'var(--pz-accent, #F0C23A)',
+                fontSize: 13,
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
-                boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+                justifyContent: 'center',
                 flexShrink: 0,
               }}
-              title="Captain announcement sheet (Feature K)"
+              title="Captain Announcement"
             >
-              <span>👑</span>
-              <span className="hide-on-mobile">Announce</span>
+              👑
             </button>
           )}
 
@@ -2131,15 +2119,20 @@ export default function RidePage() {
             type="button"
             onClick={sendSOS}
             style={{
-              padding: '4px 8px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1.5px solid #EF4444',
-              color: '#EF4444',
-              borderRadius: 14,
-              fontSize: 11,
+              height: 34,
+              padding: '0 10px',
+              backgroundColor: 'var(--pz-bad-bg, rgba(239, 68, 68, 0.15))',
+              border: '1px solid var(--pz-bad, #EF4444)',
+              color: 'var(--pz-bad, #EF4444)',
+              borderRadius: 10,
+              fontSize: 11.5,
               fontWeight: 900,
               cursor: 'pointer',
               flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              letterSpacing: 0.5,
             }}
             title="Emergency SOS"
           >
@@ -2153,13 +2146,13 @@ export default function RidePage() {
               onClick={handleEndRide}
               disabled={endingRide}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
-                color: '#EF4444',
-                fontSize: 12,
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                backgroundColor: 'var(--pz-surface, #1B1E23)',
+                border: '1px solid var(--pz-line, #2A2E35)',
+                color: 'var(--pz-bad, #EF4444)',
+                fontSize: 13,
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
@@ -2208,7 +2201,7 @@ export default function RidePage() {
             <span style={{
               fontSize: 13,
               fontWeight: 800,
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -2304,7 +2297,7 @@ export default function RidePage() {
                 {activeAnnouncement.timestamp}
               </span>
             </div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA', lineHeight: 1.2 }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
               {activeAnnouncement.title}
             </div>
             {activeAnnouncement.message && (
@@ -2321,7 +2314,7 @@ export default function RidePage() {
               backgroundColor: '#111316',
               border: '1.5px solid #2A2E35',
               borderRadius: 10,
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               fontSize: 11,
               fontWeight: 800,
               cursor: 'pointer',
@@ -2513,7 +2506,7 @@ export default function RidePage() {
                 {/* Brand Header: ■ PAYANAM */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, marginTop: 4 }}>
                   <div style={{ width: 12, height: 12, backgroundColor: '#F0C23A', borderRadius: 2 }} />
-                  <span style={{ color: '#F1EFEA', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
                 </div>
 
                 {/* Step Card */}
@@ -2527,7 +2520,7 @@ export default function RidePage() {
                   <div style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
                     CONVOY GPS READY
                   </div>
-                  <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: '#F1EFEA', letterSpacing: -0.3 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: 'var(--text-primary)', letterSpacing: -0.3 }}>
                     Live convoy tracking
                   </h3>
                   <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.5, margin: '0 0 14px' }}>
@@ -2539,7 +2532,7 @@ export default function RidePage() {
                     borderRadius: 12,
                     padding: '10px 14px',
                     fontSize: 12,
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     lineHeight: 1.45,
                   }}>
                     💡 <strong>iPhone Safari Tip:</strong> If location is blocked, tap the <strong>aA</strong> icon in your address bar → <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>, then tap Allow below.
@@ -2581,7 +2574,7 @@ export default function RidePage() {
                     width: '100%',
                     padding: '16px',
                     backgroundColor: '#1B1E23',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     border: '1.5px solid #2A2E35',
                     borderRadius: 14,
                     fontWeight: 800,
@@ -2596,60 +2589,93 @@ export default function RidePage() {
             </div>
           )}
 
-          {/* View Mode Toggle: Map + Roster vs Full Map */}
-          <button
-            type="button"
-            onClick={() => setSplitView(!splitView)}
-            style={{
-              position: 'absolute',
-              top: 10,
-              left: 10,
-              zIndex: 1000,
-              backgroundColor: '#1B1E23',
-              border: '1.5px solid #2A2E35',
-              color: '#F1EFEA',
-              borderRadius: 20,
-              padding: '6px 14px',
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}
-            title="Toggle split roster and map view"
-          >
-            <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
-          </button>
+          {/* Map Top Control Bar */}
+          <div style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            right: 10,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pointerEvents: 'none',
+          }}>
+            {/* Left Control Group */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'auto' }}>
+              <button
+                type="button"
+                onClick={() => setSplitView(!splitView)}
+                style={{
+                  backgroundColor: 'rgba(27, 30, 35, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid var(--pz-line, #2A2E35)',
+                  color: 'var(--text-primary)',
+                  borderRadius: 20,
+                  padding: '5px 12px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+                title="Toggle split roster and map view"
+              >
+                <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
+              </button>
 
-          {/* Feature 3: Toggle nearby service pins on Ride map */}
-          <button
-            type="button"
-            onClick={() => setShowServicePins(!showServicePins)}
-            style={{
-              position: 'absolute',
-              top: 10,
-              left: splitView ? 116 : 106,
-              zIndex: 1000,
-              backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.15)' : '#1B1E23',
-              border: showServicePins ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
-              color: showServicePins ? '#F0C23A' : '#9D9C9A',
-              borderRadius: 20,
-              padding: '6px 12px',
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}
-            title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
-          >
-            <span>🛠️</span>
-            <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setShowServicePins(!showServicePins)}
+                style={{
+                  backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.2)' : 'rgba(27, 30, 35, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: showServicePins ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid var(--pz-line, #2A2E35)',
+                  color: showServicePins ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-muted, #9D9C9A)',
+                  borderRadius: 20,
+                  padding: '5px 10px',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+                title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
+              >
+                <span>🛠️</span>
+                <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+
+            {/* Right Status Indicator */}
+            {wakeLockActive && (
+              <div
+                style={{
+                  pointerEvents: 'auto',
+                  backgroundColor: 'rgba(27, 30, 35, 0.88)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid var(--pz-ok, #10B981)',
+                  color: 'var(--pz-ok, #10B981)',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: '4px 8px',
+                  borderRadius: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+                }}
+                title="Screen stay-awake is active"
+              >
+                <span>🔆</span>
+                <span className="hide-on-mobile">Screen on</span>
+              </div>
+            )}
+          </div>
 
           {/* Re-center button */}
           {!following && myLat && myLng && (
@@ -2709,25 +2735,7 @@ export default function RidePage() {
             </button>
           )}
 
-          {/* Wake lock indicator */}
-          {wakeLockActive && (
-            <div style={{
-              position: 'absolute',
-              top: 10,
-              right: 10,
-              zIndex: 999,
-              backgroundColor: '#1B1E23',
-              border: '1.5px solid #10B981',
-              color: '#10B981',
-              fontSize: 11,
-              fontWeight: 800,
-              padding: '5px 10px',
-              borderRadius: 20,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-            }}>
-              🔆 Screen on
-            </div>
-          )}
+          {/* Map Follow & Drag Container */}
 
           <MapContainer center={defaultCenter} zoom={18} style={{ height: '100%', width: '100%' }} zoomControl={false}>
             {/* Auto-invalidates size whenever splitView toggles so tiles cover 100% of screen */}
@@ -2931,8 +2939,8 @@ export default function RidePage() {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Feature 2: Trip Completed Celebration Banner */}
-            {milestoneSummary && (
+            {/* Feature 2: Trip Completed Celebration Banner (Only when ride is ended) */}
+            {ended && milestoneSummary && (
               <TripCompletedBanner
                 fromPlace={session?.trips?.from_place || 'Bengaluru'}
                 toPlace={session?.trips?.to_place || 'Kasaragod'}
@@ -2945,7 +2953,7 @@ export default function RidePage() {
             {/* Itinerary Section Card */}
             <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA', letterSpacing: -0.2 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
                   {session?.trips?.title ?? 'Bengaluru to Kasaragod'}
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#9D9C9A' }}>
@@ -3112,7 +3120,7 @@ export default function RidePage() {
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
             >
               🛠️ View route-cached amenities (fuel, repair, food)
             </button>
@@ -3145,7 +3153,7 @@ export default function RidePage() {
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
-                <p style={{ color: '#F1EFEA', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
+                <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
                 <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
               </div>
             )}
@@ -3205,7 +3213,7 @@ export default function RidePage() {
                       <span>📢</span>
                       <span>Captain Announcement · {m.user_name}</span>
                     </div>
-                    <div style={{ color: '#F1EFEA', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
                       {m.message}
                     </div>
                   </div>
@@ -3228,7 +3236,7 @@ export default function RidePage() {
                     padding: '12px 16px',
                     borderRadius: 20,
                     background: isMe ? '#22262D' : '#1B1E23',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     border: isMe ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                   }}>
@@ -3324,7 +3332,7 @@ export default function RidePage() {
                   background: '#1B1E23',
                   border: '1.5px solid #2A2E35',
                   borderRadius: 14,
-                  color: '#F1EFEA',
+                  color: 'var(--text-primary)',
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -3341,21 +3349,21 @@ export default function RidePage() {
             <button
               type="button"
               onClick={handleShareCurrentLocation}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               📍 Quick GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               📌 Propose Stop
             </button>
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               🛠️ Nearby Amenities
             </button>
@@ -3389,7 +3397,7 @@ export default function RidePage() {
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
               placeholder="Trip updates only (WhatsApp for casual chat)..."
-              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: '#F1EFEA', fontSize: 14, outline: 'none' }}
+              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
             />
             <button
               onClick={sendChat}
@@ -3504,15 +3512,15 @@ export default function RidePage() {
             return (
               <div style={{ background: '#1B1E23', padding: '14px 18px', border: '1.5px solid #2A2E35', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
                 <div>
-                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
                   <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>total distance</p>
                 </div>
                 <div>
-                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
                   <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>est. riding time</p>
                 </div>
                 <div>
-                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
                   <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>turns</p>
                 </div>
               </div>
@@ -3530,7 +3538,7 @@ export default function RidePage() {
                 {stepIcon(step.instruction)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: '#F1EFEA', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
+                <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
                 <p style={{ color: '#9D9C9A', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
               </div>
             </div>
@@ -3553,70 +3561,68 @@ export default function RidePage() {
         />
       )}
 
-      {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
-      <div className="ride-bottom-nav" style={{
-        backgroundColor: '#111316',
-        borderTop: '1.5px solid #2A2E35',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        padding: '6px 8px max(10px, env(safe-area-inset-bottom, 10px))',
-        flexShrink: 0,
-        height: 'calc(54px + env(safe-area-inset-bottom, 0px))',
-        boxSizing: 'border-box',
+      {/* Bottom tab bar — Prototype Design System Tab Navigation */}
+      <div className="pz-tabs" role="tablist" style={{
         zIndex: 900,
         position: 'relative',
-        gap: 2,
+        flexShrink: 0,
       }}>
         {/* Tab 1: RIDE */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'map' ? 'page' : undefined}
           onClick={() => setTab('map')}
-          style={tab === 'map' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          RIDE
+          <span style={{ fontSize: 16 }}>🏍️</span>
+          <span>RIDE</span>
         </button>
 
         {/* Tab 2: PLAN */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'plan' ? 'page' : undefined}
           onClick={() => setTab('plan')}
-          style={tab === 'plan' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          PLAN
+          <span style={{ fontSize: 16 }}>📋</span>
+          <span>PLAN</span>
         </button>
 
         {/* Tab 3: DISCOVER */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'discover' ? 'page' : undefined}
           onClick={() => setTab('discover')}
-          style={tab === 'discover' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          DISCOVER
+          <span style={{ fontSize: 16 }}>🧭</span>
+          <span>DISCOVER</span>
         </button>
 
         {/* Tab 4: CHAT */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'chat' ? 'page' : undefined}
           onClick={() => setTab('chat')}
-          style={{
-            ...(tab === 'chat' ? styles.activeNavPill : styles.inactiveNavBtn),
-            position: 'relative',
-          }}
         >
-          CHAT
+          <span style={{ fontSize: 16 }}>💬</span>
+          <span>CHAT</span>
           {newMsgCount > 0 && tab !== 'chat' && (
-            <span style={styles.chatUnreadDot} />
+            <span className="pz-tab-badge">{newMsgCount > 9 ? '9+' : newMsgCount}</span>
           )}
         </button>
 
         {/* Tab 5: ME */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'me' ? 'page' : undefined}
           onClick={() => setTab('me')}
-          style={tab === 'me' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          ME
+          <span style={{ fontSize: 16 }}>👤</span>
+          <span>ME</span>
         </button>
       </div>
 
@@ -3770,75 +3776,4 @@ const s: Record<string, React.CSSProperties> = {
   btnWhite: { marginTop: 16, padding: '10px 24px', background: '#fff', color: '#111827', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  activeNavPill: {
-    backgroundColor: '#F0C23A',
-    color: '#111316',
-    fontWeight: 900,
-    fontSize: 12,
-    letterSpacing: 0.3,
-    borderRadius: 999,
-    padding: '7px 14px',
-    minHeight: 38,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: 'none',
-    cursor: 'pointer',
-    boxShadow: '0 2px 10px rgba(240, 194, 58, 0.25)',
-    transition: 'all 0.15s ease',
-    flexShrink: 0,
-    touchAction: 'manipulation',
-  },
-  inactiveNavBtn: {
-    backgroundColor: 'transparent',
-    color: '#9D9C9A',
-    fontWeight: 800,
-    fontSize: 12,
-    letterSpacing: 0.3,
-    border: 'none',
-    cursor: 'pointer',
-    padding: '7px 10px',
-    minHeight: 38,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.15s ease',
-    flexShrink: 0,
-    touchAction: 'manipulation',
-  },
-  chatUnreadDot: {
-    position: 'absolute',
-    top: 4,
-    right: 2,
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    backgroundColor: '#F0C23A',
-  },
-  chatActionBtn: {
-    padding: '4px 8px',
-    background: '#1B1E23',
-    border: '1px solid #2A2E35',
-    borderRadius: 6,
-    color: '#F0C23A',
-    fontSize: 11,
-    fontWeight: 700,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 4,
-  },
-  chatQuickPill: {
-    padding: '6px 12px',
-    background: '#1B1E23',
-    border: '1px solid #2A2E35',
-    borderRadius: 14,
-    color: '#9D9C9A',
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    flexShrink: 0,
-  },
-};
+

@@ -40,6 +40,12 @@ export function errorHandler(
   let message = error.message || 'An unexpected error occurred';
   if (message.includes('fetch failed') || message.includes('ENOTFOUND')) {
     message = 'Database is currently unreachable or paused. Please visit https://supabase.com/dashboard to restore/unpause your Supabase project.';
+  } else if (
+    message.includes('phone_otps') ||
+    message.includes('users.phone') ||
+    message.includes('column users.phone does not exist')
+  ) {
+    message = "Phone authentication database tables are not set up yet. Please execute 'docs/PHONE_AUTH_SETUP.sql' in your Supabase SQL Editor.";
   }
 
   const apiError: ApiError = {

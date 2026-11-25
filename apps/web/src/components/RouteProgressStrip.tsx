@@ -37,6 +37,7 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
   onSelectStop,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const totalKm = (totalDistanceMeters / 1000).toFixed(0);
 
   // Group status counts
@@ -85,20 +86,42 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
             {/* Intermediate Stops (Milestones) along the line */}
             {stops.map((stop) => {
               const leftPercent = Math.max(3, Math.min(97, stop.progressPercent));
+              const isSelected = activeStopId === stop.id;
               return (
                 <div
                   key={`stop-${stop.id}`}
-                  onClick={() => onSelectStop?.(stop.id)}
+                  onClick={() => {
+                    setActiveStopId(isSelected ? null : stop.id);
+                    onSelectStop?.(stop.id);
+                  }}
                   style={{
                     ...styles.stopMilestone,
                     left: `${leftPercent}%`,
+                    zIndex: isSelected ? 20 : 5,
                   }}
                   title={`Stop: ${stop.place}`}
                 >
-                  <div style={styles.stopIconDisc}>
+                  <div
+                    style={{
+                      ...styles.stopIconDisc,
+                      borderColor: isSelected ? 'var(--pz-accent, #F0C23A)' : '#3A3F47',
+                      transform: isSelected ? 'scale(1.2)' : 'none',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(240, 194, 58, 0.35)' : undefined,
+                    }}
+                  >
                     {stop.itemType === 'fuel' ? '⛽' : stop.itemType === 'food' ? '🍲' : '⭐'}
                   </div>
-                  <span style={styles.stopLabel}>{stop.place.slice(0, 10)}</span>
+                  {isSelected && (
+                    <div
+                      style={{
+                        ...styles.activeStopCallout,
+                        left: leftPercent < 20 ? 0 : leftPercent > 80 ? '100%' : '50%',
+                        transform: leftPercent < 20 ? 'translateX(0)' : leftPercent > 80 ? 'translateX(-100%)' : 'translateX(-50%)',
+                      }}
+                    >
+                      {stop.place}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -188,12 +211,12 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface, #1B1E23)',
+    border: '1px solid var(--pz-line, #2A2E35)',
     borderRadius: 14,
     margin: '0 12px 6px 12px',
     padding: '8px 12px',
-    boxShadow: '0 3px 12px rgba(0, 0, 0, 0.35)',
+    boxShadow: 'var(--card-shadow, 0 3px 12px rgba(0, 0, 0, 0.35))',
     flexShrink: 0,
     zIndex: 20,
     userSelect: 'none',
@@ -216,7 +239,7 @@ const styles: Record<string, React.CSSProperties> = {
   routeTitle: {
     fontSize: 12,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -291,23 +314,33 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 5,
   },
   stopIconDisc: {
-    width: 16,
-    height: 16,
+    width: 18,
+    height: 18,
     borderRadius: '50%',
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #F0C23A',
+    backgroundColor: 'var(--pz-surface, #1B1E23)',
+    border: '1.5px solid var(--pz-accent, #F0C23A)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: 8,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+    fontSize: 9,
+    boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+    transition: 'transform 0.15s ease, border-color 0.15s ease',
   },
-  stopLabel: {
-    fontSize: 8.5,
-    fontWeight: 700,
-    color: '#9D9C9A',
-    marginTop: 2,
+  activeStopCallout: {
+    position: 'absolute',
+    bottom: 22,
+    transform: 'translateX(-50%)',
+    backgroundColor: 'var(--pz-ink, #111316)',
+    color: 'var(--pz-surface, #f1efea)',
+    padding: '3px 8px',
+    borderRadius: 8,
+    fontSize: 10,
+    fontWeight: 800,
     whiteSpace: 'nowrap',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+    pointerEvents: 'none',
+    border: '1px solid var(--pz-line, #3A3F47)',
+    zIndex: 30,
   },
   riderMarkerWrap: {
     position: 'absolute',

@@ -619,7 +619,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
   },
   heroCard: {
-    background: 'var(--bg-hero)',
+    background: 'var(--bg-card)',
     border: '1px solid var(--border-card)',
     borderRadius: 20,
     padding: '28px 24px',
@@ -629,7 +629,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     gap: 20,
     boxShadow: 'var(--card-shadow)',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
   },
   avatar: {
     width: 68,
@@ -649,13 +649,13 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 24,
     fontWeight: 900,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     letterSpacing: -0.5,
   },
   heroSubtitle: {
     margin: 0,
     fontSize: 14,
-    color: '#cbd5e1',
+    color: 'var(--text-muted)',
   },
   bloodBadge: {
     padding: '4px 10px',
@@ -668,8 +668,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   styleBadge: {
     padding: '4px 10px',
-    background: 'rgba(255, 255, 255, 0.15)',
-    color: '#ffffff',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
+    color: 'var(--text-primary)',
     borderRadius: 999,
     fontSize: 12,
     fontWeight: 700,

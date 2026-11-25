@@ -41,6 +41,7 @@ interface CreateTripData {
   bike_type: string;
   trip_type?: string;
   preferences?: string;
+  status?: string;
 }
 
 function randomCode(length = 8): string {
@@ -60,6 +61,7 @@ export async function createTrip(userId: string, data: CreateTripData) {
     to_place: data.to_place,
     days: Number(data.days) || 1,
     bike_type: data.bike_type || 'motorcycle',
+    status: data.status || 'planning',
   };
   if (data.preferences) row.preferences = data.preferences;
   if (data.from_lat != null) row.from_lat = data.from_lat;
@@ -77,6 +79,7 @@ export async function createTrip(userId: string, data: CreateTripData) {
       to_place: data.to_place,
       days: Number(data.days) || 1,
       bike_type: data.bike_type || 'motorcycle',
+      status: data.status || 'planning',
     };
     const retry = await db.from('trips').insert(baseRow).select().single();
     if (retry.error) throw new Error(retry.error.message);
@@ -1172,6 +1175,15 @@ export async function deleteTrip(tripId: string, userId: string) {
   const db = getDatabase();
   const { error } = await db.from('trips').delete().eq('id', tripId).eq('user_id', userId);
   if (error) throw new Error(error.message);
+}
+
+export async function updateTripStatus(tripId: string, userId: string, status: 'planning' | 'active' | 'completed') {
+  const db = getDatabase();
+  const { data: trip } = await db.from('trips').select('user_id').eq('id', tripId).single();
+  if (!trip || trip.user_id !== userId) throw new Error('Not authorized');
+  const { data, error } = await db.from('trips').update({ status, updated_at: new Date().toISOString() }).eq('id', tripId).select().single();
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function getRoomByTripId(tripId: string) {

@@ -131,7 +131,7 @@ export default function DiscoverTab({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
             <span style={{ fontSize: 20 }}>🌐</span>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#F1EFEA' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                 Have a great route? Publish your itinerary!
               </div>
               <div style={{ fontSize: 11, color: '#9D9C9A' }}>
@@ -163,7 +163,7 @@ export default function DiscoverTab({
         {filteredTrips.length === 0 ? (
           <div style={styles.emptyState}>
             <div style={{ fontSize: 36, marginBottom: 8 }}>🗺️</div>
-            <p style={{ fontWeight: 800, color: '#F1EFEA', margin: '0 0 4px', fontSize: 15 }}>
+            <p style={{ fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px', fontSize: 15 }}>
               No itineraries found for "{searchQuery}"
             </p>
             <p style={{ color: '#9D9C9A', fontSize: 13, margin: 0 }}>
@@ -245,7 +245,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 16,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#1B1E23',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 14,
     fontWeight: 600,
     outline: 'none',

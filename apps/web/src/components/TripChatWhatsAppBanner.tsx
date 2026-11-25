@@ -67,7 +67,7 @@ export default function TripChatWhatsAppBanner({
           <p
             style={{
               fontSize: 12,
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               margin: '2px 0 0',
               lineHeight: 1.3,
               overflow: 'hidden',

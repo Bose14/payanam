@@ -16,6 +16,7 @@ import {
   removeMemberHandler,
   getRoomMemberStatusHandler,
   getPendingRequestsCountHandler,
+  updateTripStatusHandler,
 } from '../controllers/trip.controller';
 import {
   addExpenseHandler,
@@ -36,6 +37,7 @@ router.get('/:id', getTripByIdHandler);
 router.put('/:id/itinerary', updateItineraryHandler);
 router.post('/:id/stops', addStopHandler);
 router.delete('/:id', deleteTripHandler);
+router.patch('/:id/status', updateTripStatusHandler);
 router.get('/:id/requests', getPendingRequestsHandler);
 router.put('/:id/requests/:memberId', respondToRequestHandler);
 router.get('/:id/members', getApprovedMembersHandler);

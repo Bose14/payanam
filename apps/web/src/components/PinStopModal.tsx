@@ -356,7 +356,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 14,
   },
   title: {
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 18,
     fontWeight: 900,
     margin: 0,
@@ -442,7 +442,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
     padding: '10px 14px',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13.5,
     outline: 'none',
     boxSizing: 'border-box',

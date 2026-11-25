@@ -159,7 +159,7 @@ const styles: Record<string, React.CSSProperties> = {
   metricDistance: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   metricDuration: {
     fontSize: 11,
@@ -205,7 +205,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 13.5,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.01em',
     lineHeight: 1.25,
   },
@@ -256,7 +256,7 @@ const styles: Record<string, React.CSSProperties> = {
   secondaryBtn: {
     padding: '8px 12px',
     backgroundColor: '#2A2E35',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     border: '1px solid #3A3F47',
     borderRadius: 12,
     fontSize: 11.5,

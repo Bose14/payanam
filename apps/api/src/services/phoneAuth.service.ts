@@ -69,7 +69,16 @@ export async function requestPhoneCode(rawPhone: string): Promise<{ sent: true; 
     .eq('phone', phone)
     .gte('created_at', hourAgo)
     .order('created_at', { ascending: false });
-  if (recentErr) throw new Error(`Failed to check recent codes: ${recentErr.message}`);
+  if (recentErr) {
+    if (recentErr.message.includes('phone_otps') || recentErr.message.includes('schema cache')) {
+      throw new AppError(
+        500,
+        'PHONE_AUTH_NOT_CONFIGURED',
+        "Phone authentication database is not set up. Please run 'docs/PHONE_AUTH_SETUP.sql' in your Supabase SQL editor.",
+      );
+    }
+    throw new Error(`Failed to check recent codes: ${recentErr.message}`);
+  }
 
   if (recent && recent.length >= MAX_CODES_PER_HOUR) {
     throw new AppError(429, 'TOO_MANY_REQUESTS', 'Too many codes requested. Try again in an hour.');
@@ -87,7 +96,16 @@ export async function requestPhoneCode(rawPhone: string): Promise<{ sent: true; 
     code_hash: hashCode(phone, code),
     expires_at: new Date(Date.now() + OTP_TTL_MS).toISOString(),
   });
-  if (error) throw new Error(`Failed to store code: ${error.message}`);
+  if (error) {
+    if (error.message.includes('phone_otps') || error.message.includes('schema cache')) {
+      throw new AppError(
+        500,
+        'PHONE_AUTH_NOT_CONFIGURED',
+        "Phone authentication database is not set up. Please run 'docs/PHONE_AUTH_SETUP.sql' in your Supabase SQL editor.",
+      );
+    }
+    throw new Error(`Failed to store code: ${error.message}`);
+  }
 
   if (!otpDevMode()) await sendSms(phone, code);
   return otpDevMode() ? { sent: true, devCode: code } : { sent: true };
@@ -140,7 +158,16 @@ export async function verifyPhoneCode(
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(`Failed to read code: ${error.message}`);
+  if (error) {
+    if (error.message.includes('phone_otps') || error.message.includes('schema cache')) {
+      throw new AppError(
+        500,
+        'PHONE_AUTH_NOT_CONFIGURED',
+        "Phone authentication database is not set up. Please run 'docs/PHONE_AUTH_SETUP.sql' in your Supabase SQL editor.",
+      );
+    }
+    throw new Error(`Failed to read code: ${error.message}`);
+  }
 
   if (!otp || new Date(otp.expires_at).getTime() < Date.now()) {
     throw new UnauthorizedError('That code has expired. Ask for a new one.');
@@ -158,7 +185,20 @@ export async function verifyPhoneCode(
   }
   await db.from('phone_otps').update({ consumed_at: new Date().toISOString() }).eq('id', otp.id);
 
-  let { data: userRow } = await db.from('users').select('*').eq('phone', phone).maybeSingle();
+  let userRow: UserRow | null = null;
+  const { data: existingUser, error: userQueryErr } = await db.from('users').select('*').eq('phone', phone).maybeSingle();
+  if (userQueryErr) {
+    if (userQueryErr.message.includes('users.phone') || userQueryErr.message.includes('column')) {
+      throw new AppError(
+        500,
+        'PHONE_AUTH_NOT_CONFIGURED',
+        "Users table is missing 'phone' column. Please run 'docs/PHONE_AUTH_SETUP.sql' in your Supabase SQL editor.",
+      );
+    }
+    throw new Error(`Failed to query user: ${userQueryErr.message}`);
+  }
+  userRow = existingUser;
+
   let isNewUser = false;
   if (!userRow) {
     const { data: created, error: createErr } = await db
@@ -166,7 +206,16 @@ export async function verifyPhoneCode(
       .insert({ phone, status: 'active' })
       .select()
       .single();
-    if (createErr || !created) throw new Error(`Failed to create user: ${createErr?.message}`);
+    if (createErr || !created) {
+      if (createErr?.message.includes('phone') || createErr?.message.includes('column') || createErr?.message.includes('null value in column')) {
+        throw new AppError(
+          500,
+          'PHONE_AUTH_NOT_CONFIGURED',
+          "Users table requires database migration. Please run 'docs/PHONE_AUTH_SETUP.sql' in your Supabase SQL editor.",
+        );
+      }
+      throw new Error(`Failed to create user: ${createErr?.message}`);
+    }
     userRow = created;
     isNewUser = true;
   }

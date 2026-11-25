@@ -64,7 +64,7 @@ export default function ConvoyInviteCard({
           <span style={{ fontSize: 11, fontWeight: 900, color: '#F0C23A', textTransform: 'uppercase', letterSpacing: 0.8 }}>
             CONVOY INVITATION (FEATURE 1A)
           </span>
-          <h4 style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 900, color: '#F1EFEA' }}>
+          <h4 style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 900, color: 'var(--text-primary)' }}>
             Invite members to itinerary
           </h4>
         </div>
@@ -106,7 +106,7 @@ export default function ConvoyInviteCard({
             backgroundColor: '#1B1E23',
             border: '1px solid #2A2E35',
             borderRadius: 8,
-            color: copiedCode ? '#10B981' : '#F1EFEA',
+            color: copiedCode ? '#10B981' : 'var(--text-primary)',
             fontSize: 11,
             fontWeight: 800,
             cursor: 'pointer',
@@ -131,7 +131,7 @@ export default function ConvoyInviteCard({
             backgroundColor: '#111316',
             border: '1px solid #2A2E35',
             borderRadius: 10,
-            color: copiedLink ? '#10B981' : '#F1EFEA',
+            color: copiedLink ? '#10B981' : 'var(--text-primary)',
             fontSize: 12,
             fontWeight: 800,
             cursor: 'pointer',

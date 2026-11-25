@@ -188,6 +188,7 @@ export default function TripDetailPage() {
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [dismissCompletedBanner, setDismissCompletedBanner] = useState(false);
   const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -242,6 +243,22 @@ export default function TripDetailPage() {
     );
     setToast('Proposal declined');
     setTimeout(() => setToast(''), 2500);
+  };
+
+  const handleToggleTripStatus = async () => {
+    if (!trip || !id) return;
+    const newStatus = trip.status === 'completed' ? 'planning' : 'completed';
+    const confirmMsg = newStatus === 'completed'
+      ? 'Mark this trip as completed? This will celebrate your expedition milestones.'
+      : 'Reopen this trip for planning and live convoys?';
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await tripService.updateTripStatus(id, newStatus);
+      setTrip((prev) => (prev ? { ...prev, status: newStatus } : null));
+      showToast(newStatus === 'completed' ? '🏆 Expedition marked as completed!' : 'Trip reopened for planning');
+    } catch {
+      showToast('Failed to update trip status');
+    }
   };
 
   const tripIdRef = useRef<string | null>(null);
@@ -555,9 +572,9 @@ export default function TripDetailPage() {
 
             <h1 style={styles.heroTitle}>{trip.title}</h1>
             <p style={styles.heroRoute}>
-              <span style={{ color: '#34d399' }}>● {trip.from_place}</span>
-              <span style={{ margin: '0 8px', color: '#f59e0b' }}>➔</span>
-              <span style={{ color: '#f87171' }}>● {trip.to_place}</span>
+              <span style={{ color: 'var(--accent-green, #10b981)' }}>● {trip.from_place}</span>
+              <span style={{ margin: '0 8px', color: 'var(--accent-gold, #f59e0b)' }}>➔</span>
+              <span style={{ color: 'var(--pz-bad, #ef4444)' }}>● {trip.to_place}</span>
             </p>
           </div>
 
@@ -608,8 +625,8 @@ export default function TripDetailPage() {
                 onClick={() => setShowPublishModal(true)}
                 style={{
                   ...styles.btnShare,
-                  borderColor: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
-                  color: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
+                  borderColor: isTripPublished(trip.id) ? '#10B981' : 'var(--accent-gold)',
+                  color: isTripPublished(trip.id) ? '#10B981' : 'var(--accent-gold)',
                 }}
                 title="Feature 1B: Publish itinerary publicly to Discover"
               >
@@ -676,26 +693,41 @@ export default function TripDetailPage() {
                 onClick={() => setShowMilestoneModal(true)}
                 style={{
                   ...styles.passBtnAction,
-                  borderColor: '#F0C23A',
-                  color: '#F0C23A',
+                  borderColor: 'var(--accent-gold)',
+                  color: 'var(--accent-gold)',
                 }}
                 title="Feature 2: Share trip completion milestones"
               >
                 <span>🏆</span>
                 <span>Milestones</span>
               </button>
+              {trip?.isOwner && (
+                <button
+                  onClick={handleToggleTripStatus}
+                  style={{
+                    ...styles.passBtnAction,
+                    borderColor: trip.status === 'completed' ? '#10B981' : 'var(--border-subtle)',
+                    color: trip.status === 'completed' ? '#10B981' : 'var(--text-primary)',
+                  }}
+                  title={trip.status === 'completed' ? 'Reopen expedition for planning' : 'Mark expedition as completed'}
+                >
+                  <span>{trip.status === 'completed' ? '✓' : '🏁'}</span>
+                  <span>{trip.status === 'completed' ? 'Completed' : 'Finish Trip'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {/* Feature 2: Trip Completed Celebration & Milestones Banner */}
-        {milestoneSummary && (
+        {/* Feature 2: Trip Completed Celebration & Milestones Banner (Only when trip is completed and not dismissed) */}
+        {!dismissCompletedBanner && trip?.status === 'completed' && !activeSession && milestoneSummary && (
           <TripCompletedBanner
             fromPlace={trip.from_place}
             toPlace={trip.to_place}
             days={trip.days}
             distanceKm={milestoneSummary.totalDistanceKm}
             onShareMilestones={() => setShowMilestoneModal(true)}
+            onDismiss={() => setDismissCompletedBanner(true)}
           />
         )}
 
@@ -886,10 +918,10 @@ export default function TripDetailPage() {
                 onClick={() => setShowProposeModal(true)}
                 style={{
                   padding: '7px 14px',
-                  backgroundColor: 'rgba(240, 194, 58, 0.15)',
-                  border: '1.5px solid #F0C23A',
+                  backgroundColor: 'var(--accent-gold-bg)',
+                  border: '1.5px solid var(--accent-gold)',
                   borderRadius: 10,
-                  color: '#F0C23A',
+                  color: 'var(--accent-gold)',
                   fontSize: 12,
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -1291,35 +1323,39 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
   },
   heroCard: {
-    background: 'var(--bg-hero)',
-    border: '1px solid var(--border-card)',
-    borderRadius: 20,
-    padding: '28px 24px',
+    background: 'var(--pz-surface, var(--bg-card))',
+    border: '1px solid var(--pz-line, var(--border-card))',
+    borderRadius: 16,
+    padding: '22px 20px',
     boxShadow: 'var(--card-shadow)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 20,
+    gap: 16,
     flexWrap: 'wrap',
-    marginBottom: 20,
-    color: '#ffffff',
+    marginBottom: 16,
+    color: 'var(--text-primary)',
   },
   tripBadge: {
-    background: 'rgba(255, 255, 255, 0.12)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    borderRadius: 6,
-    padding: '3px 8px',
+    background: 'var(--pz-bg, var(--bg-subtle))',
+    border: '1px solid var(--pz-line, var(--border-subtle))',
+    borderRadius: 999,
+    padding: '3px 10px',
     fontSize: 12,
     fontWeight: 700,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     textTransform: 'capitalize',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
   },
   heroTitle: {
-    fontSize: 'clamp(20px, 5vw, 26px)',
-    fontWeight: 900,
-    color: '#ffffff',
-    margin: '0 0 8px',
-    letterSpacing: -0.4,
+    font: "700 clamp(24px, 5vw, 30px)/1.05 'Barlow Condensed', sans-serif",
+    textTransform: 'uppercase',
+    fontWeight: 700,
+    color: 'var(--text-primary)',
+    margin: '4px 0 8px',
+    letterSpacing: '0.01em',
   },
   heroRoute: {
     fontSize: 15,
@@ -1332,18 +1368,18 @@ const styles: Record<string, React.CSSProperties> = {
   heroActions: {
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     flexWrap: 'wrap',
   },
   btnActiveRide: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 8,
-    padding: '12px 20px',
-    background: '#10b981',
+    padding: '11px 20px',
+    background: 'var(--pz-ok, #10b981)',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 10,
+    borderRadius: 12,
     fontSize: 14,
     fontWeight: 800,
     cursor: 'pointer',
@@ -1353,35 +1389,35 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 8,
-    padding: '12px 20px',
-    background: '#ffffff',
-    color: '#0f172a',
+    padding: '11px 20px',
+    background: 'var(--pz-accent, var(--btn-primary-bg))',
+    color: 'var(--pz-on-accent, var(--btn-primary-text))',
     border: 'none',
-    borderRadius: 10,
+    borderRadius: 12,
     fontSize: 14,
     fontWeight: 800,
     cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
   },
   btnShare: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
     padding: '11px 16px',
-    background: 'rgba(255, 255, 255, 0.12)',
-    border: '1px solid rgba(255, 255, 255, 0.25)',
-    color: '#ffffff',
-    borderRadius: 10,
+    background: 'var(--pz-surface, var(--bg-subtle))',
+    border: '1px solid var(--pz-line, var(--border-card))',
+    color: 'var(--text-primary)',
+    borderRadius: 12,
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer',
   },
   convoyPassCard: {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border-card)',
+    background: 'var(--pz-surface, var(--bg-card))',
+    border: '1px solid var(--pz-line, var(--border-card))',
     borderRadius: 16,
     padding: '16px 20px',
-    marginBottom: 20,
+    marginBottom: 16,
     boxShadow: 'var(--card-shadow)',
   },
   passTopRow: {
