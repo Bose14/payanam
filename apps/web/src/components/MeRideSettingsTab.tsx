@@ -176,8 +176,8 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
 
         {/* SECTION: Picture-in-Picture (PiP HUD) Settings */}
         <div style={styles.sectionHeader}>
-          <span style={styles.sectionTitle}>PICTURE-IN-PICTURE (PIP HUD)</span>
-          <span style={styles.sectionBadge}>60 FPS TELEMETRY</span>
+          <span style={styles.sectionTitle}>FLOATING RIDE VIEW</span>
+          <span style={styles.sectionBadge}>LIVE STATS</span>
         </div>
 
         <PipSettingsCard />

@@ -82,7 +82,7 @@ export default function MeTab() {
         ))}
       </div>
 
-      <div className="pz-label">Picture-in-Picture (PiP HUD)</div>
+      <div className="pz-label">Floating ride view</div>
       <PipSettingsCard style={{ marginBottom: 16 }} />
 
       <div className="pz-label">Privacy</div>
