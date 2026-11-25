@@ -343,6 +343,29 @@ export default function RidePage() {
     const t = new URLSearchParams(window.location.search).get('tab');
     return t === 'chat' || t === 'plan' || t === 'riders' || t === 'nav' || t === 'discover' || t === 'me' ? t : 'map';
   });
+  // Make the phone/browser back gesture behave like the header arrow: from any convoy tab
+  // it returns to the ride map instead of leaving the ride.
+  const tabEntryPushed = useRef(false);
+  useEffect(() => {
+    if (tab !== 'map' && !tabEntryPushed.current) {
+      window.history.pushState({ ...(window.history.state || {}), rideTab: true }, '');
+      tabEntryPushed.current = true;
+    } else if (tab === 'map' && tabEntryPushed.current) {
+      tabEntryPushed.current = false;
+      window.history.back();
+    }
+  }, [tab]);
+  useEffect(() => {
+    const onPop = () => {
+      if (tabEntryPushed.current) {
+        tabEntryPushed.current = false;
+        setTab('map');
+        setPlanSection('itinerary');
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [showStatusDrawer, setShowStatusDrawer] = useState(false);
   const [myStatus, setMyStatus] = useState('');
   const [sosActive, setSosActive] = useState(false);
