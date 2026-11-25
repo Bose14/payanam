@@ -67,6 +67,8 @@ import {
   getCachedNearbyServices,
   makeServicePinIcon,
   TrackingPausedBanner,
+  PictureInPictureHud,
+  PipRiderData,
   backgroundTrackingEngine,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem, BackgroundTrackingStatus } from '../components';
@@ -76,7 +78,7 @@ import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 import Icon, { iconSvg } from '../components/Icon';
 
-const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+const RIDER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 interface NavStep { instruction: string; distance: number; duration: number; }
 
@@ -558,7 +560,7 @@ export default function RidePage() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current?.release().catch(() => { });
     };
   }, [session, ended, userName, user?.id]);
 
@@ -645,7 +647,7 @@ export default function RidePage() {
       if (d?.trails) {
         setRiderTrails((prev) => ({ ...d.trails, ...prev }));
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     const handleOnline = () => {
       offlinePositionQueue.setOnlineStatus(true);
@@ -758,7 +760,7 @@ export default function RidePage() {
     const dbIntervalMs = batterySaver ? 30000 : 15000;
     dbSyncRef.current = setInterval(() => {
       if (myPosRef.current && navigator.onLine) {
-        rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => {});
+        rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => { });
       }
     }, dbIntervalMs);
 
@@ -774,7 +776,7 @@ export default function RidePage() {
     if (!sessionId || !session || ended || !user) return;
 
     // One-time REST fetch: current rider positions + message history
-    rideService.getAllLocations(sessionId).then((d) => setRiders(d.locations ?? [])).catch(() => {});
+    rideService.getAllLocations(sessionId).then((d) => setRiders(d.locations ?? [])).catch(() => { });
     rideService.getMessages(sessionId).then((d) => {
       const msgs = d.messages ?? [];
       setMessages(msgs);
@@ -803,7 +805,7 @@ export default function RidePage() {
           break;
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Supabase Broadcast channel — real-time, no DB writes for locations
     const channel = supabase.channel(`ride:${sessionId}`, {
@@ -1096,7 +1098,7 @@ export default function RidePage() {
     setMyStatus(value);
     setShowStatusDrawer(false);
     setShowTellGroupSheet(false);
-    await rideService.updateQuickStatus(sessionId, value).catch(() => {});
+    await rideService.updateQuickStatus(sessionId, value).catch(() => { });
     // Broadcast status change so others see rider dot badge update instantly
     channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: value } });
     if (value) {
@@ -1658,13 +1660,13 @@ export default function RidePage() {
       // Feature E2 route status (Ahead, on plan, behind, off route, unknown)
       const routeStatus = prog
         ? evaluateRiderRouteStatus({
-            riderProgressMeters: prog.distanceAlong,
-            refProgressMeters,
-            crossTrackMeters: prog.crossTrack,
-            isOffRouteAlert: isOffRoute,
-            isStaleOrUnknown: freshness.isStale || freshness.isUnknown,
-            progressPercent: prog.percent,
-          })
+          riderProgressMeters: prog.distanceAlong,
+          refProgressMeters,
+          crossTrackMeters: prog.crossTrack,
+          isOffRouteAlert: isOffRoute,
+          isStaleOrUnknown: freshness.isStale || freshness.isUnknown,
+          progressPercent: prog.percent,
+        })
         : undefined;
 
       return {
@@ -1720,7 +1722,7 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
-  // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop)
+  // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop distance tracking)
   const distToPinnedStop = useMemo(() => {
     if (!pinnedStop || !myLat || !myLng) return null;
     return haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng);
@@ -1745,6 +1747,57 @@ export default function RidePage() {
     const prog = calculateRouteProgress([myLat, myLng], activeRoute, totalRouteDist);
     return prog.distanceAlongMeters;
   }, [myLat, myLng, activeRoute, totalRouteDist]);
+
+  // 60 FPS Picture-in-Picture Telemetry Dataset with Fellow Riders Relative Positions (Ahead / Behind)
+  const pipRiders: PipRiderData[] = useMemo(() => {
+    const myDistM = myRouteProgressMeters ?? 0;
+
+    return ridersWithFreshness.map((r) => {
+      const isMe = r.isMe || r.userId === user?.id;
+      const progressInfo = ridersForProgressStrip.find((rp) => rp.userId === r.userId);
+      const directDistM = r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) * 1000 : 0;
+
+      let relativePosition: 'ahead' | 'behind' | 'you' = 'you';
+      let relativeDistanceMeters = 0;
+
+      if (!isMe) {
+        if (myRouteProgressMeters != null && progressInfo?.distanceAlongMeters != null) {
+          const delta = progressInfo.distanceAlongMeters - myDistM;
+          if (delta > 15) {
+            relativePosition = 'ahead';
+            relativeDistanceMeters = Math.round(delta);
+          } else if (delta < -15) {
+            relativePosition = 'behind';
+            relativeDistanceMeters = Math.round(Math.abs(delta));
+          } else {
+            relativePosition = 'ahead';
+            relativeDistanceMeters = Math.max(1, Math.round(directDistM));
+          }
+        } else {
+          const myProg = ridersForProgressStrip.find((rp) => rp.isMe)?.progressPercent ?? 50;
+          const riderProg = progressInfo?.progressPercent ?? 50;
+          relativePosition = riderProg >= myProg ? 'ahead' : 'behind';
+          relativeDistanceMeters = Math.max(1, Math.round(directDistM));
+        }
+      }
+
+      return {
+        userId: r.userId,
+        userName: r.userName,
+        speedKmh: r.speedKmh,
+        isCaptain: r.isCaptain,
+        isMe,
+        isLive: r.freshness.isLive,
+        isStale: r.freshness.isStale || r.freshness.isUnknown,
+        staleAgeLabel: r.freshness.ageLabel,
+        distanceKm: r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) : undefined,
+        progressPercent: progressInfo?.progressPercent ?? 30,
+        distanceAlongMeters: progressInfo?.distanceAlongMeters,
+        relativePosition,
+        relativeDistanceMeters,
+      };
+    });
+  }, [ridersWithFreshness, myLat, myLng, user?.id, myRouteProgressMeters, ridersForProgressStrip]);
 
   // Format riders for StopDetailSheet (Feature J arrival status)
   const ridersForStopDetail = useMemo(() => {
@@ -2650,6 +2703,19 @@ export default function RidePage() {
                 <span><Icon name="wrench" /></span>
                 <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
               </button>
+
+              {/* 60 FPS Picture-in-Picture Convoy Floating HUD */}
+              <PictureInPictureHud
+                pinnedStop={pinnedStop}
+                distToPinnedStop={distToPinnedStop}
+                arrivedCount={arrivedCount}
+                totalRiders={ridersWithFreshness.length}
+                riders={pipRiders}
+                currentSpeedKmh={mySpeedKmh}
+                sosActive={sosActive}
+                activeAnnouncement={activeAnnouncement ? { message: activeAnnouncement.message, urgency: activeAnnouncement.urgency, icon: activeAnnouncement.icon } : null}
+                tripTitle={session?.trips?.title}
+              />
             </div>
 
             {/* Right Status Indicator */}
