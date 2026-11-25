@@ -6,7 +6,8 @@ interface ItineraryStopItemProps {
   stop: ItineraryStopLike;
   index: number;
   isPinned: boolean;
-  onPinStop: (stop: ItineraryStopLike) => void;
+  /** Captain only. Omit for riders to hide the pin action. */
+  onPinStop?: (stop: ItineraryStopLike) => void;
   onOpenNavigation?: (stop: ItineraryStopLike) => void;
 }
 
@@ -136,7 +137,7 @@ export default function ItineraryStopItem({
           >
             <span><Icon name="pin" /></span> PINNED TARGET
           </span>
-        ) : (
+        ) : onPinStop ? (
           <button
             type="button"
             onClick={() => onPinStop(stop)}
@@ -157,7 +158,7 @@ export default function ItineraryStopItem({
           >
             <span><Icon name="pin" /></span> Pin as next stop
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

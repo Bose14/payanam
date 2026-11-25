@@ -1,4 +1,5 @@
 import { getDatabase } from '../config/database';
+import { ForbiddenError } from '../utils/errors';
 
 export async function startRide(tripId: string, userId: string) {
   const db = getDatabase();
@@ -202,6 +203,11 @@ export async function sendMessage(
   message: string, messageType: string = 'chat',
 ) {
   const db = getDatabase();
+  // Captain-only broadcasts: pinning the convoy target stop and announcements.
+  if (messageType === 'stop_pin' || messageType === 'announcement') {
+    const { data: session } = await db.from('ride_sessions').select('started_by').eq('id', sessionId).single();
+    if (!session || session.started_by !== userId) throw new ForbiddenError('Only the captain can do this');
+  }
   const { data, error } = await db.from('ride_messages')
     .insert({ session_id: sessionId, user_id: userId, user_name: userName, message, message_type: messageType })
     .select().single();

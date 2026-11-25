@@ -1,4 +1,5 @@
 import { getDatabase } from '../config/database';
+import { ForbiddenError } from '../utils/errors';
 import { generateItinerary } from './ai.service';
 import { readLocalProfiles } from './profile.service';
 import {
@@ -1061,6 +1062,7 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   const db = getDatabase();
   const auth = await assertUserTripMembership(tripId, userId);
   if (auth.status !== 'approved') throw new Error('Not authorized');
+  if (!auth.isOwner) throw new ForbiddenError('Only the captain can change the itinerary');
 
   await db.from('itinerary_items').delete().eq('trip_id', tripId);
   if (stops.length > 0) {
@@ -1087,6 +1089,7 @@ export async function addStopToTrip(
   const db = getDatabase();
   const auth = await assertUserTripMembership(tripId, userId);
   if (auth.status !== 'approved') throw new Error('Not authorized');
+  if (!auth.isOwner) throw new ForbiddenError('Only the captain can add stops to the itinerary');
 
   let day = stop.day_number ?? 1;
   const { data: existingStops } = await db
