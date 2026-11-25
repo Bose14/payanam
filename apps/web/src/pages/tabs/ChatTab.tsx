@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } from '../../services/api';
+import Icon from '../../components/Icon';
 
 type Filter = 'All' | 'Trips' | 'Groups' | 'Direct';
 
@@ -339,6 +340,8 @@ export default function ChatTab() {
   const [joinCode, setJoinCode] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sheet, setSheet] = useState<'menu' | 'create' | 'join' | null>(null);
+  const [sheetError, setSheetError] = useState('');
 
   const openKey = params.get('c');
   const groupId = params.get('group');
@@ -364,17 +367,19 @@ export default function ChatTab() {
     if (legacyTrip) setParams({ c: `trip:${legacyTrip}` }, { replace: true });
   }, [legacyTrip, setParams]);
 
+  const closeSheet = () => { setSheet(null); setSheetError(''); setGroupName(''); setJoinCode(''); };
+
   const createGroup = async () => {
     setBusy(true);
-    setNotice('');
+    setSheetError('');
     try {
-      const g = await chatService.createGroup(groupName);
-      setGroupName('');
-      setNotice(`Group ${g.name} created. Invite code ${g.inviteCode}.`);
+      const g = await chatService.createGroup(groupName.trim());
+      closeSheet();
+      setNotice(`Group "${g.name}" created. Invite code: ${g.inviteCode}`);
       await load();
       setParams({ c: `group:${g.id}` });
     } catch (e) {
-      setNotice(apiMessage(e, 'Could not create the group.'));
+      setSheetError(apiMessage(e, 'Could not create the group. Please try again.'));
     } finally {
       setBusy(false);
     }
@@ -382,14 +387,14 @@ export default function ChatTab() {
 
   const joinGroup = async () => {
     setBusy(true);
-    setNotice('');
+    setSheetError('');
     try {
-      const r = await chatService.joinGroup(joinCode);
-      setJoinCode('');
+      const r = await chatService.joinGroup(joinCode.trim());
+      closeSheet();
       setNotice(r.status === 'member' ? `You are already in ${r.name}.` : `Request sent to ${r.name}. The admin will approve you.`);
       await load();
     } catch (e) {
-      setNotice(apiMessage(e, 'Could not send the request.'));
+      setSheetError(apiMessage(e, 'Could not send the request. Check the code and try again.'));
     } finally {
       setBusy(false);
     }
@@ -480,20 +485,86 @@ export default function ChatTab() {
         </>
       )}
 
-      {(filter === 'All' || filter === 'Groups') && (
-        <>
-          <div className="pz-label">Groups</div>
-          <div className="pz-card">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-              <input className="pz-input" placeholder="New group name" aria-label="New group name" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
-              <button className="pz-btn primary" type="button" onClick={createGroup} disabled={busy || groupName.trim().length < 2}>Create</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 10 }}>
-              <input className="pz-input" placeholder="Group invite code" aria-label="Group invite code" value={joinCode} style={{ textTransform: 'uppercase' }} onChange={(e) => setJoinCode(e.target.value)} />
-              <button className="pz-btn" type="button" onClick={joinGroup} disabled={busy || joinCode.trim().length < 4}>Join</button>
-            </div>
+      <button
+        type="button"
+        aria-label="New chat options"
+        onClick={() => setSheet('menu')}
+        style={{
+          position: 'fixed', right: 18, bottom: 'calc(84px + env(safe-area-inset-bottom, 0px))', zIndex: 40,
+          width: 56, height: 56, borderRadius: 18, border: 'none', cursor: 'pointer',
+          background: 'var(--pz-accent)', color: 'var(--pz-on-accent)', boxShadow: '0 6px 18px rgba(0,0,0,0.28)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <Icon name="plus" size={26} />
+      </button>
+
+      {sheet && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={sheet === 'create' ? 'New group' : sheet === 'join' ? 'Join a group' : 'New chat options'}
+          onClick={closeSheet}
+          style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 560, margin: '0 auto', background: 'var(--pz-surface)', color: 'var(--pz-ink)',
+              borderRadius: '20px 20px 0 0', padding: '18px 18px calc(22px + env(safe-area-inset-bottom, 0px))',
+              boxShadow: '0 -8px 30px rgba(0,0,0,0.25)',
+            }}
+          >
+            {sheet === 'menu' && (
+              <div style={{ display: 'grid', gap: 10 }}>
+                <b style={{ fontSize: 16 }}>Start something new</b>
+                {([
+                  ['create', 'New group', 'Chat with riders you choose. You get an invite code to share.', 'users'],
+                  ['join', 'Join with code', 'Enter a group invite code. The admin approves your request.', 'link'],
+                ] as const).map(([key, title, hint, icon]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setSheet(key)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', padding: '12px 14px', borderRadius: 14, border: '1px solid var(--pz-line)', background: 'var(--pz-bg)', color: 'var(--pz-ink)', cursor: 'pointer' }}
+                  >
+                    <span style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--pz-warn-bg)', color: 'var(--pz-warn)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon name={icon} size={20} />
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontWeight: 800, fontSize: 15 }}>{title}</span>
+                      <span style={{ display: 'block', fontSize: 12.5, color: 'var(--pz-muted)', marginTop: 2 }}>{hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {sheet === 'create' && (
+              <form onSubmit={(e) => { e.preventDefault(); if (!busy && groupName.trim().length >= 2) createGroup(); }} style={{ display: 'grid', gap: 12 }}>
+                <b style={{ fontSize: 16 }}>New group</b>
+                <input className="pz-input" autoFocus placeholder="Group name" aria-label="Group name" maxLength={100} value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                {sheetError && <div className="pz-banner bad" role="alert">{sheetError}</div>}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button className="pz-btn" type="button" onClick={() => { setSheet('menu'); setSheetError(''); }}>Back</button>
+                  <button className="pz-btn primary" type="submit" disabled={busy || groupName.trim().length < 2}>{busy ? 'Creating...' : 'Create group'}</button>
+                </div>
+              </form>
+            )}
+
+            {sheet === 'join' && (
+              <form onSubmit={(e) => { e.preventDefault(); if (!busy && joinCode.trim().length >= 4) joinGroup(); }} style={{ display: 'grid', gap: 12 }}>
+                <b style={{ fontSize: 16 }}>Join with code</b>
+                <input className="pz-input" autoFocus placeholder="Invite code, for example ABC-123" aria-label="Group invite code" maxLength={12} autoCapitalize="characters" value={joinCode} style={{ textTransform: 'uppercase' }} onChange={(e) => setJoinCode(e.target.value)} />
+                {sheetError && <div className="pz-banner bad" role="alert">{sheetError}</div>}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button className="pz-btn" type="button" onClick={() => { setSheet('menu'); setSheetError(''); }}>Back</button>
+                  <button className="pz-btn primary" type="submit" disabled={busy || joinCode.trim().length < 4}>{busy ? 'Sending...' : 'Send request'}</button>
+                </div>
+              </form>
+            )}
           </div>
-        </>
+        </div>
       )}
 
       <p className="pz-note">General chat stays on your usual apps. Trip chat is for stops, status and the itinerary.</p>
