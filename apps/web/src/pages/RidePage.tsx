@@ -3997,6 +3997,8 @@ export default function RidePage() {
           isOpen={showMilestoneModal}
           onClose={() => setShowMilestoneModal(false)}
           summary={milestoneSummary}
+          routePoints={activeRoute.length > 1 ? activeRoute : undefined}
+          routeKm={totalRouteDist > 0 ? totalRouteDist / 1000 : undefined}
           onOpenPublishFlow={() => setShowPublishModal(true)}
           onNavigateToDiscover={() => setTab('discover')}
         />

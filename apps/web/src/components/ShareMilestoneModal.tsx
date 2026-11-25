@@ -8,6 +8,7 @@ import {
   formatMilestoneShareText,
 } from '../utils/tripMilestones';
 import TripMilestoneCard from './TripMilestoneCard';
+import StoryMaker from './StoryMaker';
 import Icon from './Icon';
 
 interface ShareMilestoneModalProps {
@@ -16,6 +17,10 @@ interface ShareMilestoneModalProps {
   summary: TripMilestoneSummary;
   onOpenPublishFlow?: () => void;
   onNavigateToDiscover?: (url: string) => void;
+  /** Planned route, drawn as a line on the share picture. */
+  routePoints?: Array<[number, number]>;
+  /** Real route length in km, used instead of an estimate when known. */
+  routeKm?: number;
 }
 
 export default function ShareMilestoneModal({
@@ -24,6 +29,8 @@ export default function ShareMilestoneModal({
   summary,
   onOpenPublishFlow,
   onNavigateToDiscover,
+  routePoints,
+  routeKm,
 }: ShareMilestoneModalProps) {
   const [customization, setCustomization] = useState<MilestoneCardCustomization>(
     DEFAULT_MILESTONE_CUSTOMIZATION
@@ -32,13 +39,14 @@ export default function ShareMilestoneModal({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
+  const shown: TripMilestoneSummary = routeKm && routeKm > 0 ? { ...summary, totalDistanceKm: Math.round(routeKm) } : summary;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const shareText = formatMilestoneShareText(summary, customization);
+  const shareText = formatMilestoneShareText(shown, customization);
 
   // Step 3: Native Share
   const handleNativeShare = async () => {
@@ -109,7 +117,7 @@ export default function ShareMilestoneModal({
               YOUR BADGE
             </div>
             <TripMilestoneCard
-              summary={summary}
+              summary={shown}
               customization={customization}
               onLinkClick={() => {
                 if (summary.publicLink) {
@@ -117,6 +125,10 @@ export default function ShareMilestoneModal({
                 }
               }}
             />
+          </div>
+
+          <div style={{ marginBottom: 18 }}>
+            <StoryMaker summary={shown} customization={customization} route={routePoints} />
           </div>
 
           {/* Privacy Guarantee Note (Step 2 requirement) */}
