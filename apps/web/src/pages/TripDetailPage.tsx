@@ -641,23 +641,28 @@ export default function TripDetailPage() {
               <span style={styles.passHintSmall}>{trip?.isOwner ? 'Join with code or link' : 'Share with riders'}</span>
             </div>
 
-            <button type="button" onClick={handleCopyCode} style={styles.passCodeBox} aria-label="Copy invite code">
-              <span style={styles.passCodeValue}>{inviteCode}</span>
-              <span style={styles.passCodeCopy}><Icon name="list" /> Copy</span>
-            </button>
+            <div style={styles.passCodeRow}>
+              <button type="button" onClick={handleCopyCode} style={styles.passCodeBox} aria-label="Copy invite code" title="Copy invite code">
+                <span style={styles.passCodeValue}>{inviteCode}</span>
+                <span style={styles.passCodeCopy}><Icon name="list" /></span>
+              </button>
+              <button onClick={() => setShowQrModal(true)} style={styles.iconBtn} aria-label="QR boarding pass" title="QR boarding pass">
+                <Icon name="ticket" />
+              </button>
+            </div>
 
-            <div style={styles.tileGrid4}>
-              <button onClick={handleWhatsAppShare} style={{ ...styles.tile, ...styles.tileWhatsApp }}>
-                <Icon name="chat" /><span>WhatsApp</span>
+            <div style={styles.iconRow}>
+              <button onClick={handleWhatsAppShare} style={{ ...styles.iconBtn, ...styles.iconBtnWhatsApp, width: 'auto', flex: 1 }} aria-label="Invite on WhatsApp" title="Invite on WhatsApp">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.3z" />
+                  <path d="M9 8.5c0 3.3 2.7 6 6 6l1-1.5-2-1-1 .8a3 3 0 0 1-1.6-1.6l.8-1-1-2z" />
+                </svg>
               </button>
-              <button onClick={() => setShowQrModal(true)} style={styles.tile}>
-                <Icon name="ticket" /><span>QR pass</span>
+              <button onClick={handleCopy} style={{ ...styles.iconBtn, width: 'auto', flex: 1, color: copied ? 'var(--pz-ok)' : undefined }} aria-label="Copy link" title={copied ? 'Link copied' : 'Copy link'}>
+                <Icon name={copied ? 'check' : 'link'} />
               </button>
-              <button onClick={handleCopy} style={styles.tile}>
-                <Icon name="link" /><span>{copied ? 'Copied' : 'Copy link'}</span>
-              </button>
-              <button onClick={handleNativeShare} style={styles.tile}>
-                <Icon name="arrowRight" /><span>Share</span>
+              <button onClick={handleNativeShare} style={{ ...styles.iconBtn, width: 'auto', flex: 1 }} aria-label="Share" title="Share">
+                <Icon name="arrowRight" />
               </button>
             </div>
           </div>
@@ -1404,11 +1409,19 @@ const styles: Record<string, React.CSSProperties> = {
   passHeadRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 },
   passHintSmall: { fontSize: 12, color: 'var(--pz-muted, var(--text-secondary))' },
   passCodeBox: {
-    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    padding: '10px 14px', marginBottom: 10, cursor: 'pointer', font: 'inherit',
+    flex: 1, minWidth: 0, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    padding: '0 14px', cursor: 'pointer', font: 'inherit',
     background: 'var(--pz-bg, var(--bg-subtle))', border: '1.5px dashed var(--pz-line, var(--border-subtle))', borderRadius: 12,
     color: 'var(--pz-ink, var(--text-primary))',
   },
+  passCodeRow: { display: 'flex', gap: 8, marginBottom: 8 },
+  iconRow: { display: 'flex', gap: 8 },
+  iconBtn: {
+    width: 52, height: 48, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+    background: 'var(--pz-bg, var(--bg-subtle))', border: '1px solid var(--pz-line, var(--border-card))', borderRadius: 12,
+    color: 'var(--pz-ink, var(--text-primary))', fontSize: 18,
+  },
+  iconBtnWhatsApp: { background: '#25D366', borderColor: '#25D366', color: '#ffffff' },
   passCodeValue: { fontSize: 22, fontWeight: 900, letterSpacing: 3, color: 'var(--accent-gold)', overflowWrap: 'anywhere' },
   passCodeCopy: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, flexShrink: 0 },
   tileGrid4: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(64px, 1fr))', gap: 8 },
