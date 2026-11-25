@@ -47,6 +47,8 @@ export { default as AddNearbyServiceModal } from './AddNearbyServiceModal';
 export { default as TrackingPausedBanner } from './TrackingPausedBanner';
 export { default as PictureInPictureHud } from './PictureInPictureHud';
 export type { PipRiderData } from './PictureInPictureHud';
+export { default as PipSettingsCard } from './PipSettingsCard';
+export type { PipSettingsCardProps } from './PipSettingsCard';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
@@ -62,5 +64,6 @@ export * from '../utils/publicItinerary';
 export * from '../utils/tripMilestones';
 export * from '../utils/nearbyServices';
 export * from '../utils/backgroundTracking';
+export * from '../utils/pipPreferences';
 
 
