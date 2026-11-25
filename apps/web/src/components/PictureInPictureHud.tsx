@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { PinnedStopData } from './PinStopModal';
-import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
+import { getPipPreferences, savePipPreferences, isPlatformIos } from '../utils/pipPreferences';
 
 export interface PipRiderData {
   userId: string;
@@ -66,8 +66,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   renderTrigger,
   onPipStateChange,
 }) => {
-  const [isPipActive, setIsPipActive] = useState(() => getPipPreferences().autoOpenOnRide);
-  const [isFloatingInApp, setIsFloatingInApp] = useState(() => getPipPreferences().autoOpenOnRide);
+  const [isPipActive, setIsPipActive] = useState(false);
+  const [isFloatingInApp, setIsFloatingInApp] = useState(false);
   const [hudDockPosition, setHudDockPosition] = useState<'top' | 'bottom'>(
     () => getPipPreferences().dockPosition
   );
@@ -78,6 +78,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const autoOpenedRef = useRef(false);
 
   // Live state refs for 60 FPS loop
   const stateRef = useRef({
@@ -108,7 +109,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
   // Check if platform supports native video PiP (iOS WebKit blocks canvas captureStream PiP; Android & Desktop support it)
   useEffect(() => {
-    const isIos = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+    const isIos = isPlatformIos();
     const hasVideoPip = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
     const hasDocPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
     setNativePipAvailable((hasVideoPip || hasDocPip) && !isIos);
@@ -438,38 +439,32 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     };
   }, [drawFrame]);
 
-  // Dual-mode PiP Toggle Handler (Native OS PiP with Seamless In-App Floating Ribbon Fallback)
-  const togglePip = useCallback(async () => {
-    // 1. If Floating In-App HUD is active, dismiss it
-    if (isFloatingInApp) {
-      setIsFloatingInApp(false);
-      setIsPipActive(false);
-      onPipStateChange?.(false);
-      return;
-    }
-
-    // 2. If Native OS PiP is active, exit it
+  // Close PiP HUD (both native OS PiP and in-app floating ribbon)
+  const closePip = useCallback(async () => {
     if (typeof document !== 'undefined' && document.pictureInPictureElement) {
       try {
         await document.exitPictureInPicture();
       } catch {
         // ignore
       }
-      setIsPipActive(false);
-      onPipStateChange?.(false);
-      return;
     }
+    setIsFloatingInApp(false);
+    setIsPipActive(false);
+    onPipStateChange?.(false);
+  }, [onPipStateChange]);
 
+  // Open PiP HUD (Native OS PiP on supported Android/Desktop; 60 FPS In-App ribbon on iOS & fallback)
+  const openPip = useCallback(async () => {
+    const prefs = getPipPreferences();
+    const isIos = isPlatformIos();
+    const forceInApp = prefs.preferredMode === 'in_app' || isIos;
     const canvas = canvasRef.current;
     const video = videoRef.current;
-    const prefs = getPipPreferences();
-    const forceInApp = prefs.preferredMode === 'in_app';
-    const forceNative = prefs.preferredMode === 'native';
 
-    // 3. Try Native OS PiP if available (Desktop & Android Chrome) unless in-app is forced
-    if (!forceInApp && (nativePipAvailable || forceNative) && canvas && video) {
+    // 1. Try Native OS PiP if available (Desktop & Android Chrome) unless in-app is forced or on iOS
+    if (!forceInApp && nativePipAvailable && canvas && video) {
       try {
-        if (!streamRef.current) {
+        if (!streamRef.current && typeof canvas.captureStream === 'function') {
           const stream = canvas.captureStream(60);
           streamRef.current = stream;
           video.srcObject = stream;
@@ -478,18 +473,28 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         await video.play();
         await video.requestPictureInPicture();
         setIsPipActive(true);
+        setIsFloatingInApp(false);
         onPipStateChange?.(true);
         return;
       } catch (err) {
-        console.warn('[PiP HUD] Native OS PiP failed, opening Floating In-App HUD:', err);
+        console.warn('[PiP HUD] Native OS PiP failed, opening 60 FPS Floating In-App HUD:', err);
       }
     }
 
-    // 4. Mobile & iOS Safari Guaranteed Fallback: 60 FPS Floating In-App Cockpit Ribbon
+    // 2. Mobile & iOS Safari Guaranteed Fallback: 60 FPS Floating In-App Cockpit Ribbon
     setIsFloatingInApp(true);
     setIsPipActive(true);
     onPipStateChange?.(true);
-  }, [isFloatingInApp, nativePipAvailable, onPipStateChange]);
+  }, [nativePipAvailable, onPipStateChange]);
+
+  // Toggle handler for button taps
+  const togglePip = useCallback(() => {
+    if (isPipActive || isFloatingInApp) {
+      closePip();
+    } else {
+      openPip();
+    }
+  }, [isPipActive, isFloatingInApp, closePip, openPip]);
 
   // Handle Dock Position toggle & persist to preferences
   const handleDockToggle = useCallback(() => {
@@ -500,16 +505,15 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     });
   }, []);
 
-  // Auto-launch HUD if enabled in rider preferences
+  // Auto-launch HUD exactly once if enabled in rider preferences
   useEffect(() => {
+    if (autoOpenedRef.current) return;
     const prefs = getPipPreferences();
     if (prefs.autoOpenOnRide) {
-      const timer = setTimeout(() => {
-        togglePip();
-      }, 1000);
-      return () => clearTimeout(timer);
+      autoOpenedRef.current = true;
+      openPip();
     }
-  }, [togglePip]);
+  }, [openPip]);
 
   // Handle Native OS PiP event listeners
   useEffect(() => {
@@ -538,146 +542,142 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
   return (
     <>
-      {/* 60 FPS Canvas: Rendered inside Floating In-App HUD when active, or positioned offscreen when native/idle */}
-      {isFloatingInApp ? (
+      {/* 60 FPS Floating In-App HUD Ribbon Container (Single Persistent DOM Node) */}
+      <div
+        style={{
+          position: 'fixed',
+          ...(isFloatingInApp
+            ? {
+                ...(hudDockPosition === 'bottom'
+                  ? { bottom: 'calc(65px + env(safe-area-inset-bottom, 0px))' }
+                  : { top: 'calc(65px + env(safe-area-inset-top, 0px))' }),
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 'min(94vw, 420px)',
+                zIndex: 9999,
+                opacity: 1,
+                pointerEvents: 'auto',
+                visibility: 'visible',
+              }
+            : {
+                top: -9999,
+                left: -9999,
+                width: 420,
+                opacity: 0,
+                pointerEvents: 'none',
+                visibility: 'hidden',
+              }),
+          backgroundColor: 'rgba(9, 11, 14, 0.96)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1.5px solid rgba(240, 194, 58, 0.8)',
+          borderRadius: 16,
+          padding: 8,
+          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.8), 0 0 15px rgba(240, 194, 58, 0.2)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          touchAction: 'manipulation',
+          transition: 'opacity 0.15s ease',
+        }}
+      >
+        {/* Header strip: Title, Dock position switch, Close */}
         <div
           style={{
-            position: 'fixed',
-            ...(hudDockPosition === 'bottom'
-              ? { bottom: 'calc(65px + env(safe-area-inset-bottom, 0px))' }
-              : { top: 'calc(65px + env(safe-area-inset-top, 0px))' }),
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'min(94vw, 420px)',
-            zIndex: 9999,
-            backgroundColor: 'rgba(9, 11, 14, 0.96)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1.5px solid rgba(240, 194, 58, 0.8)',
-            borderRadius: 16,
-            padding: 8,
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.8), 0 0 15px rgba(240, 194, 58, 0.2)',
             display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            touchAction: 'manipulation',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '2px 4px',
           }}
         >
-          {/* Header strip: Title, Dock position switch, Close */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '2px 4px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 13 }}>📺</span>
-              <span
-                style={{
-                  fontSize: 10.5,
-                  fontWeight: 900,
-                  letterSpacing: 0.8,
-                  textTransform: 'uppercase',
-                  color: 'var(--pz-accent, #F0C23A)',
-                }}
-              >
-                Convoy Floating HUD
-              </span>
-              <span
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                  color: '#10B981',
-                  borderRadius: 10,
-                  padding: '1px 6px',
-                }}
-              >
-                60 FPS
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                type="button"
-                onClick={handleDockToggle}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#FFFFFF',
-                  borderRadius: 8,
-                  padding: '3px 8px',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  touchAction: 'manipulation',
-                }}
-                title={hudDockPosition === 'bottom' ? 'Dock to top' : 'Dock to bottom'}
-              >
-                {hudDockPosition === 'bottom' ? '⬆ Dock Top' : '⬇ Dock Bottom'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsFloatingInApp(false);
-                  setIsPipActive(false);
-                  onPipStateChange?.(false);
-                }}
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: '50%',
-                  background: 'rgba(239, 68, 68, 0.2)',
-                  border: '1px solid #EF4444',
-                  color: '#EF4444',
-                  fontSize: 12,
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0,
-                  touchAction: 'manipulation',
-                }}
-                title="Close Floating HUD"
-                aria-label="Close Floating HUD"
-              >
-                ✕
-              </button>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 13 }}>📺</span>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontWeight: 900,
+                letterSpacing: 0.8,
+                textTransform: 'uppercase',
+                color: 'var(--pz-accent, #F0C23A)',
+              }}
+            >
+              Convoy Floating HUD
+            </span>
+            <span
+              style={{
+                fontSize: 9.5,
+                fontWeight: 700,
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                color: '#10B981',
+                borderRadius: 10,
+                padding: '1px 6px',
+              }}
+            >
+              60 FPS
+            </span>
           </div>
 
-          {/* Visible 60 FPS Canvas in Ribbon Ratio */}
-          <canvas
-            ref={canvasRef}
-            width={420}
-            height={155}
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-              borderRadius: 12,
-              background: '#090B0E',
-            }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              type="button"
+              onClick={handleDockToggle}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                borderRadius: 8,
+                padding: '3px 8px',
+                fontSize: 10,
+                fontWeight: 700,
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+              title={hudDockPosition === 'bottom' ? 'Dock to top' : 'Dock to bottom'}
+            >
+              {hudDockPosition === 'bottom' ? '⬆ Dock Top' : '⬇ Dock Bottom'}
+            </button>
+
+            <button
+              type="button"
+              onClick={closePip}
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid #EF4444',
+                color: '#EF4444',
+                fontSize: 12,
+                fontWeight: 900,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                touchAction: 'manipulation',
+              }}
+              title="Close Floating HUD"
+              aria-label="Close Floating HUD"
+            >
+              ✕
+            </button>
+          </div>
         </div>
-      ) : (
+
+        {/* Persistent 60 FPS Canvas in Ribbon Ratio */}
         <canvas
           ref={canvasRef}
           width={420}
           height={155}
           style={{
-            position: 'fixed',
-            top: -9999,
-            left: -9999,
-            visibility: 'hidden',
-            pointerEvents: 'none',
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            borderRadius: 12,
+            background: '#090B0E',
           }}
         />
-      )}
+      </div>
 
       {/* Hidden Video element feeding Native PiP window if triggered */}
       <video
