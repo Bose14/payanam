@@ -22,6 +22,8 @@ export interface CaptainAnnouncementPreset {
   description: string;
   urgency: 'high' | 'medium' | 'info';
   color: string;
+  /** 'road' presets are the default weather and road alerts. */
+  group?: 'road';
 }
 
 export const CAPTAIN_ANNOUNCEMENT_PRESETS: CaptainAnnouncementPreset[] = [
@@ -78,6 +80,66 @@ export const CAPTAIN_ANNOUNCEMENT_PRESETS: CaptainAnnouncementPreset[] = [
     description: 'Route diversion or schedule change. Follow lead.',
     urgency: 'high',
     color: '#F0C23A',
+  },
+  {
+    id: 'road_diversion',
+    label: 'Road diversion',
+    title: 'Road diversion ahead',
+    icon: 'refresh',
+    description: 'Road is diverted ahead. Follow the captain and do not use the old route.',
+    urgency: 'high',
+    color: '#F0C23A',
+    group: 'road',
+  },
+  {
+    id: 'fog_ahead',
+    label: 'Fog ahead',
+    title: 'Fog ahead',
+    icon: 'rain',
+    description: 'Dense fog ahead. Switch on low beam and hazard lights, keep distance, slow down.',
+    urgency: 'high',
+    color: '#EF4444',
+    group: 'road',
+  },
+  {
+    id: 'heavy_rain',
+    label: 'Heavy rain',
+    title: 'Heavy rain ahead',
+    icon: 'rain',
+    description: 'Heavy rain ahead. Wear rain gear, brake early, avoid sudden turns.',
+    urgency: 'high',
+    color: '#38BDF8',
+    group: 'road',
+  },
+  {
+    id: 'road_blocked',
+    label: 'Road blocked',
+    title: 'Road blocked',
+    icon: 'stop',
+    description: 'Road is blocked ahead. Stop safely and wait for the captain.',
+    urgency: 'high',
+    color: '#EF4444',
+    group: 'road',
+  },
+  {
+    id: 'waterlogging',
+    label: 'Waterlogging or landslide',
+    title: 'Waterlogging or landslide',
+    icon: 'warning',
+    description: 'Water on the road or landslide debris ahead. Slow down and stay in line.',
+    urgency: 'high',
+    color: '#EF4444',
+    group: 'road',
+  },
+  {
+    id: 'traffic_jam',
+    label: 'Traffic jam',
+    title: 'Traffic jam ahead',
+    icon: 'clock',
+    description: 'Heavy traffic or roadwork ahead. Expect delay and keep the group together.',
+    urgency: 'medium',
+    color: '#F59E0B',
+    group: 'road',
   },
 ];
 

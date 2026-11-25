@@ -123,11 +123,17 @@ export default function CaptainAnnouncementModal({
 
         {/* 6 Presets List matching Feature K */}
         <div style={styles.presetsList}>
-          {CAPTAIN_ANNOUNCEMENT_PRESETS.map((p) => {
+          {CAPTAIN_ANNOUNCEMENT_PRESETS.map((p, idx) => {
             const isSelected = selectedId === p.id;
+            const firstRoad = p.group === 'road' && CAPTAIN_ANNOUNCEMENT_PRESETS[idx - 1]?.group !== 'road';
             return (
+              <React.Fragment key={p.id}>
+                {firstRoad && (
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.6, color: 'var(--pz-muted)', padding: '8px 2px 2px' }}>
+                    WEATHER AND ROAD ALERTS
+                  </div>
+                )}
               <button
-                key={p.id}
                 type="button"
                 onClick={() => setSelectedId(p.id)}
                 style={{
@@ -153,6 +159,7 @@ export default function CaptainAnnouncementModal({
                   <span style={styles.checkMark}><Icon name="check" /></span>
                 )}
               </button>
+              </React.Fragment>
             );
           })}
         </div>
@@ -310,7 +317,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
-    maxHeight: '36vh',
+    maxHeight: "44vh",
     overflowY: 'auto',
     paddingRight: 2,
   },

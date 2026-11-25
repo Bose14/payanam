@@ -77,6 +77,10 @@ import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 import Icon, { iconSvg } from '../components/Icon';
+import RideReadyModal from '../components/RideReadyModal';
+import {
+  loadChecked, isReadyDone, saveReady, loadFuelState, saveFuelState, rangeLeftKm, FuelState,
+} from '../utils/rideReady';
 import ExpenseTracker from '../components/ExpenseTracker';
 
 const RIDER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
@@ -1742,6 +1746,21 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
+  // Pre-ride checklist and fuel range planner (each rider sets their own, stored on this device)
+  const [readyStep, setReadyStep] = useState<'checklist' | 'fuel' | null>(null);
+  const [fuelState, setFuelState] = useState<FuelState | null>(null);
+  const readyPrompted = useRef(false);
+  const myAlong = user?.id ? ridersWithFreshness.find((r) => r.userId === user.id)?.routeStatus?.distanceAlongMeters ?? null : null;
+  const routeLeftKm = totalRouteDist > 0 ? Math.max(0, (totalRouteDist - (myAlong ?? 0)) / 1000) : null;
+  useEffect(() => {
+    if (!sessionId || !user?.id) return;
+    setFuelState(loadFuelState(sessionId, user.id));
+    if (!readyPrompted.current && !isReadyDone(sessionId, user.id)) {
+      readyPrompted.current = true;
+      setReadyStep('checklist');
+    }
+  }, [sessionId, user?.id]);
+
   // Missing riders: no position for over 5 minutes. Shown to the captain as a dedicated alert.
   const [dismissedMissing, setDismissedMissing] = useState<string[]>([]);
   const missingRiders = useMemo(
@@ -2292,6 +2311,45 @@ export default function RidePage() {
           <button type="button" className="pz-btn small" onClick={() => setDismissedMissing((p) => [...p, r.userId])}>Dismiss</button>
         </div>
       ))}
+
+      {/* Fuel range chip (ride map tab only) */}
+      {tab === 'map' && fuelState && (() => {
+        const left = rangeLeftKm(fuelState, myAlong);
+        const short = routeLeftKm != null && left < routeLeftKm;
+        const low = left < 40;
+        return (
+          <button type="button" onClick={() => setReadyStep('fuel')} style={{
+            margin: '4px 12px 2px', padding: '8px 12px', borderRadius: 14, flexShrink: 0, cursor: 'pointer', textAlign: 'left',
+            display: 'flex', alignItems: 'center', gap: 10, color: 'var(--pz-ink)',
+            background: 'var(--pz-surface)', border: `1.5px solid ${low ? 'var(--pz-bad)' : short ? 'var(--pz-warn)' : 'var(--pz-line)'}`,
+          }}>
+            <span style={{ display: 'inline-flex', color: low ? 'var(--pz-bad)' : 'var(--pz-accent)' }}><Icon name="fuel" /></span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
+              Fuel range about {left} km
+              {routeLeftKm != null && <span style={{ fontWeight: 500, color: 'var(--pz-muted)' }}>{short ? `, route has ${Math.round(routeLeftKm)} km left: plan a fuel stop` : `, enough for the ${Math.round(routeLeftKm)} km left`}</span>}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--pz-accent)', fontWeight: 800 }}>Refuelled?</span>
+          </button>
+        );
+      })()}
+      {tab === 'map' && !fuelState && (
+        <button type="button" onClick={() => setReadyStep('fuel')} className="pz-btn small" style={{ margin: '4px 12px 2px', alignSelf: 'flex-start' }}>
+          Set fuel range
+        </button>
+      )}
+
+      {readyStep && sessionId && user?.id && (
+        <RideReadyModal
+          step={readyStep}
+          initialChecked={loadChecked(sessionId, user.id)}
+          initialFuel={fuelState}
+          currentAlongM={myAlong}
+          routeLeftKm={routeLeftKm}
+          onClose={() => { saveReady(sessionId, user.id, loadChecked(sessionId, user.id), true); setReadyStep(null); }}
+          onSaveChecklist={(checked) => saveReady(sessionId, user.id, checked, true)}
+          onSaveFuel={(f) => { saveFuelState(sessionId, user.id, f); setFuelState(f); setReadyStep(null); }}
+        />
+      )}
 
       {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
       {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (
