@@ -10,8 +10,21 @@ const CITIES = ['Bengaluru', 'Mysuru', 'Mangaluru', 'Hubli', 'Kochi', 'Other'];
 const INVITE_KEY = 'payanam_pending_invite';
 
 function apiMessage(err: unknown, fallback: string): string {
-  const e = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
-  return e?.response?.data?.error?.message || fallback;
+  const e = err as {
+    response?: {
+      data?: {
+        message?: string;
+        error?: { message?: string } | string;
+      };
+    };
+    message?: string;
+  };
+  const data = e?.response?.data;
+  if (typeof data?.message === 'string') return data.message;
+  if (typeof data?.error === 'object' && typeof data?.error?.message === 'string') return data.error.message;
+  if (typeof data?.error === 'string') return data.error;
+  if (typeof e?.message === 'string' && !e.message.startsWith('Request failed')) return e.message;
+  return fallback;
 }
 
 function maskPhone(digits: string): string {
@@ -101,6 +114,12 @@ export default function WelcomePage() {
 
   const sendCode = async () => {
     setErr('');
+    const cleaned = phone.replace(/[^\d]/g, '');
+    const ten = cleaned.length === 12 && cleaned.startsWith('91') ? cleaned.slice(2) : cleaned;
+    if (!/^[6-9]\d{9}$/.test(ten)) {
+      setErr('Enter a valid 10-digit Indian mobile number (e.g. 98765 43210).');
+      return;
+    }
     setBusy(true);
     try {
       const res = await authService.requestPhoneCode(phone);
@@ -131,9 +150,13 @@ export default function WelcomePage() {
 
   const verify = async () => {
     setErr('');
+    if (!/^\d{4}$/.test(otp.trim())) {
+      setErr('Enter the 4-digit verification code.');
+      return;
+    }
     setBusy(true);
     try {
-      const res = await authService.verifyPhoneCode(phone, otp);
+      const res = await authService.verifyPhoneCode(phone, otp.trim());
       completeLogin(res);
       setName(res.user.fullName || '');
       if (res.user.city) setCity(res.user.city);

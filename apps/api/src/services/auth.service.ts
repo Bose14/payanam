@@ -282,7 +282,10 @@ export async function exportUserData(userId: string) {
   if (!user) throw new NotFoundError('User');
 
   // Never hand back credential material.
-  const { password_hash: _ph, reset_password_token: _rt, reset_password_expires_at: _re, ...safeUser } = user;
+  const safeUser = { ...user };
+  delete (safeUser as Record<string, unknown>).password_hash;
+  delete (safeUser as Record<string, unknown>).reset_password_token;
+  delete (safeUser as Record<string, unknown>).reset_password_expires_at;
   return {
     exportedAt: new Date().toISOString(),
     user: safeUser,
