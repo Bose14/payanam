@@ -573,12 +573,26 @@ export default function TripDetailPage() {
               )}
             </div>
 
-            <h1 style={styles.heroTitle}>{trip.title}</h1>
-            <p style={styles.heroRoute}>
-              <span style={{ color: 'var(--accent-green, #10b981)' }}>● {trip.from_place}</span>
-              <span style={{ margin: '0 8px', color: 'var(--accent-gold, #f59e0b)' }}>→</span>
-              <span style={{ color: 'var(--pz-bad, #ef4444)' }}>● {trip.to_place}</span>
-            </p>
+            {!(trip.title || '').toLowerCase().includes((trip.from_place || '').toLowerCase()) && (
+              <h1 style={styles.heroTitle}>{trip.title}</h1>
+            )}
+            <div style={styles.routeStack}>
+              <div style={styles.routeRow}>
+                <span style={{ ...styles.routeDot, background: 'var(--pz-ok)' }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={styles.routeLabel}>From</div>
+                  <div style={styles.routePlace}>{trip.from_place}</div>
+                </div>
+              </div>
+              <div style={styles.routeLine} />
+              <div style={styles.routeRow}>
+                <span style={{ ...styles.routeDot, background: 'var(--pz-bad)' }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={styles.routeLabel}>To</div>
+                  <div style={styles.routePlace}>{trip.to_place}</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Action CTAs */}
@@ -616,106 +630,85 @@ export default function TripDetailPage() {
               </button>
             ) : null}
 
-            {shareUrl && trip?.isOwner && (
-              <button onClick={handleCopy} style={styles.btnShare}>
-                <span><Icon name="link" /></span>
-                <span>{copied ? 'Copied!' : 'Share Convoy Link'}</span>
-              </button>
-            )}
-
-            {trip?.isOwner && (
-              <button
-                onClick={() => setShowPublishModal(true)}
-                style={{
-                  ...styles.btnShare,
-                  borderColor: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--accent-gold)',
-                  color: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--accent-gold)',
-                }}
-                title="Feature 1B: Publish itinerary publicly to Discover"
-              >
-                <span><Icon name="globe" /></span>
-                <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish Itinerary'}</span>
-              </button>
-            )}
           </div>
         </div>
 
         {/* Convoy Pass & Sharing Hub */}
         {inviteCode && (
           <div style={styles.convoyPassCard}>
-            <div style={styles.passTopRow}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={styles.passTicketBadge}>CONVOY TRAVEL PASS</span>
-                <div style={styles.passCodePill} onClick={handleCopyCode} title="Click to copy invite code">
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CODE:</span>
-                  <span style={{ fontWeight: 900, letterSpacing: 2, color: 'var(--accent-gold)', fontSize: 15 }}>{inviteCode}</span>
-                  <span style={{ fontSize: 12 }}><Icon name="list" /></span>
-                </div>
-              </div>
-              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                {trip?.isOwner ? 'Riders can join with this code or link' : 'Share this convoy pass with fellow riders'}
-              </span>
-            </div>
+            <span style={styles.passTicketBadge}>CONVOY TRAVEL PASS</span>
+            <p style={styles.passHint}>
+              {trip?.isOwner ? 'Riders can join with this code or link.' : 'Share this convoy pass with fellow riders.'}
+            </p>
 
-            <div style={styles.passActionsRow}>
-              <button onClick={handleWhatsAppShare} style={styles.passBtnWhatsApp}>
-                <span><Icon name="chat" /></span>
-                <span>WhatsApp Share</span>
-              </button>
-              <button onClick={() => setShowQrModal(true)} style={styles.passBtnAction}>
-                <span><Icon name="phone" /></span>
-                <span>QR Boarding Pass</span>
-              </button>
+            <button type="button" onClick={handleCopyCode} style={styles.passCodeBox} aria-label="Copy invite code">
+              <span style={{ minWidth: 0, textAlign: 'left' }}>
+                <span style={styles.passCodeLabel}>INVITE CODE</span>
+                <span style={styles.passCodeValue}>{inviteCode}</span>
+              </span>
+              <span style={styles.passCodeCopy}><Icon name="list" /> Copy</span>
+            </button>
+
+            <button onClick={handleWhatsAppShare} style={styles.passBtnWhatsApp}>
+              <Icon name="chat" />
+              <span>Invite on WhatsApp</span>
+            </button>
+            <div style={styles.passTwoCol}>
               <button onClick={handleCopy} style={styles.passBtnAction}>
-                <span><Icon name="link" /></span>
-                <span>{copied ? 'Link Copied' : 'Copy Link'}</span>
-              </button>
-              <button onClick={() => setShowNearbyHelp(true)} style={styles.passBtnAction} title="Verified fuel, repair, food & rest along route">
-                <span><Icon name="wrench" /></span>
-                <span>Nearby Help</span>
+                <Icon name="link" />
+                <span>{copied ? 'Link copied' : 'Copy link'}</span>
               </button>
               <button onClick={handleNativeShare} style={styles.passBtnAction}>
-                <span><Icon name="arrowRight" /></span>
+                <Icon name="arrowRight" />
                 <span>Share</span>
               </button>
-              {trip?.isOwner && (
-                <button
-                  onClick={() => setShowPublishModal(true)}
-                  style={{
-                    ...styles.passBtnAction,
-                    borderColor: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--border-subtle)',
-                    color: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--text-primary)',
-                  }}
-                  title="Feature 1B: Publish itinerary publicly to Discover"
-                >
-                  <span><Icon name="globe" /></span>
-                  <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish'}</span>
-                </button>
-              )}
-              <button
-                onClick={() => setShowMilestoneModal(true)}
-                style={{
-                  ...styles.passBtnAction,
-                  borderColor: 'var(--accent-gold)',
-                  color: 'var(--accent-gold)',
-                }}
-                title="Feature 2: Share trip completion milestones"
-              >
-                <span><Icon name="trophy" /></span>
-                <span>Milestones</span>
+            </div>
+
+            <div style={styles.passList}>
+              <button onClick={() => setShowQrModal(true)} style={styles.passRow}>
+                <span style={styles.passRowIcon}><Icon name="ticket" /></span>
+                <span style={styles.passRowText}>
+                  <b>QR boarding pass</b>
+                  <small>Let riders scan to join</small>
+                </span>
+                <span style={styles.passChevron}>›</span>
+              </button>
+              <button onClick={() => setShowNearbyHelp(true)} style={styles.passRow}>
+                <span style={styles.passRowIcon}><Icon name="pin" /></span>
+                <span style={styles.passRowText}>
+                  <b>Nearby help</b>
+                  <small>Fuel, repair, food and rest on the route</small>
+                </span>
+                <span style={styles.passChevron}>›</span>
+              </button>
+              <button onClick={() => setShowMilestoneModal(true)} style={styles.passRow}>
+                <span style={styles.passRowIcon}><Icon name="trophy" /></span>
+                <span style={styles.passRowText}>
+                  <b>Milestones</b>
+                  <small>Share your achievements and photo post</small>
+                </span>
+                <span style={styles.passChevron}>›</span>
               </button>
               {trip?.isOwner && (
-                <button
-                  onClick={handleToggleTripStatus}
-                  style={{
-                    ...styles.passBtnAction,
-                    borderColor: trip.status === 'completed' ? 'var(--pz-ok)' : 'var(--border-subtle)',
-                    color: trip.status === 'completed' ? 'var(--pz-ok)' : 'var(--text-primary)',
-                  }}
-                  title={trip.status === 'completed' ? 'Reopen expedition for planning' : 'Mark expedition as completed'}
-                >
-                  <span><Icon name={trip.status === 'completed' ? 'check' : 'flag'} /></span>
-                  <span>{trip.status === 'completed' ? 'Completed' : 'Finish Trip'}</span>
+                <button onClick={() => setShowPublishModal(true)} style={styles.passRow}>
+                  <span style={{ ...styles.passRowIcon, color: isTripPublished(trip.id) ? 'var(--pz-ok)' : undefined }}><Icon name="globe" /></span>
+                  <span style={styles.passRowText}>
+                    <b>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish itinerary'}</b>
+                    <small>{isTripPublished(trip.id) ? 'Tap to manage' : 'Show this trip to other riders'}</small>
+                  </span>
+                  <span style={styles.passChevron}>›</span>
+                </button>
+              )}
+              {trip?.isOwner && (
+                <button onClick={handleToggleTripStatus} style={styles.passRow}>
+                  <span style={{ ...styles.passRowIcon, color: trip.status === 'completed' ? 'var(--pz-ok)' : undefined }}>
+                    <Icon name={trip.status === 'completed' ? 'check' : 'flag'} />
+                  </span>
+                  <span style={styles.passRowText}>
+                    <b>{trip.status === 'completed' ? 'Trip completed' : 'Finish trip'}</b>
+                    <small>{trip.status === 'completed' ? 'Tap to reopen for planning' : 'Mark this expedition as done'}</small>
+                  </span>
+                  <span style={styles.passChevron}>›</span>
                 </button>
               )}
             </div>
@@ -1435,69 +1428,35 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 16,
     boxShadow: 'var(--card-shadow)',
   },
-  passTopRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
-    marginBottom: 14,
+  passHint: { margin: '8px 0 14px', fontSize: 13, color: 'var(--pz-muted, var(--text-secondary))' },
+  passCodeBox: {
+    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+    padding: '12px 14px', marginBottom: 12, cursor: 'pointer', font: 'inherit',
+    background: 'var(--pz-bg, var(--bg-subtle))', border: '1.5px dashed var(--pz-line, var(--border-subtle))', borderRadius: 12,
+    color: 'var(--pz-ink, var(--text-primary))',
   },
-  passTicketBadge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    background: 'var(--accent-gold-bg)',
-    border: '1px solid var(--accent-gold)',
-    color: 'var(--accent-gold)',
-    fontSize: 11,
-    fontWeight: 800,
-    padding: '4px 10px',
-    borderRadius: 999,
-    letterSpacing: 0.8,
+  passCodeLabel: { display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: 'var(--pz-muted, var(--text-muted))' },
+  passCodeValue: { display: 'block', fontSize: 24, fontWeight: 900, letterSpacing: 3, color: 'var(--accent-gold)', marginTop: 2, overflowWrap: 'anywhere' },
+  passCodeCopy: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: 'var(--pz-ink, var(--text-primary))', flexShrink: 0 },
+  passTwoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 },
+  passList: { display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--pz-line, var(--border-card))', marginTop: 4 },
+  passRow: {
+    display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 2px', cursor: 'pointer', font: 'inherit',
+    background: 'transparent', border: 'none', borderBottom: '1px solid var(--pz-line, var(--border-card))',
+    color: 'var(--pz-ink, var(--text-primary))', textAlign: 'left',
   },
-  passCodePill: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    background: 'var(--bg-subtle)',
-    border: '1px solid var(--border-subtle)',
-    padding: '5px 12px',
-    borderRadius: 8,
-    cursor: 'pointer',
+  passRowIcon: {
+    width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    background: 'var(--pz-bg, var(--bg-subtle))', border: '1px solid var(--pz-line, var(--border-card))', color: 'var(--accent-gold)',
   },
-  passActionsRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-    gap: 10,
-  },
-  passBtnWhatsApp: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: '10px 14px',
-    background: '#25D366',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 10,
-    fontSize: 13,
-    fontWeight: 800,
-    cursor: 'pointer',
-  },
-  passBtnAction: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    padding: '10px 14px',
-    background: 'var(--bg-subtle)',
-    border: '1px solid var(--border-card)',
-    borderRadius: 10,
-    color: 'var(--text-primary)',
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
+  passRowText: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, fontSize: 14 },
+  passChevron: { fontSize: 22, color: 'var(--pz-muted, var(--text-muted))', lineHeight: 1 },
+  routeStack: { display: 'flex', flexDirection: 'column', marginTop: 6 },
+  routeRow: { display: 'flex', alignItems: 'flex-start', gap: 12 },
+  routeDot: { width: 12, height: 12, borderRadius: 999, marginTop: 5, flexShrink: 0, boxShadow: '0 0 0 4px var(--pz-bg, rgba(0,0,0,0.05))' },
+  routeLine: { width: 2, height: 14, background: 'var(--pz-line, var(--border-card))', margin: '3px 0 3px 5px' },
+  routeLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--pz-muted, var(--text-muted))' },
+  routePlace: { fontSize: 17, fontWeight: 800, color: 'var(--pz-ink, var(--text-primary))', overflowWrap: 'anywhere', textTransform: 'capitalize' },
   leadPill: {
     fontSize: 11,
     fontWeight: 800,
