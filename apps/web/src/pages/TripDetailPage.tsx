@@ -555,9 +555,9 @@ export default function TripDetailPage() {
 
             <h1 style={styles.heroTitle}>{trip.title}</h1>
             <p style={styles.heroRoute}>
-              <span style={{ color: '#34d399' }}>● {trip.from_place}</span>
-              <span style={{ margin: '0 8px', color: '#f59e0b' }}>➔</span>
-              <span style={{ color: '#f87171' }}>● {trip.to_place}</span>
+              <span style={{ color: 'var(--accent-green, #10b981)' }}>● {trip.from_place}</span>
+              <span style={{ margin: '0 8px', color: 'var(--accent-gold, #f59e0b)' }}>➔</span>
+              <span style={{ color: 'var(--pz-bad, #ef4444)' }}>● {trip.to_place}</span>
             </p>
           </div>
 
@@ -608,8 +608,8 @@ export default function TripDetailPage() {
                 onClick={() => setShowPublishModal(true)}
                 style={{
                   ...styles.btnShare,
-                  borderColor: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
-                  color: isTripPublished(trip.id) ? '#10B981' : '#F0C23A',
+                  borderColor: isTripPublished(trip.id) ? '#10B981' : 'var(--accent-gold)',
+                  color: isTripPublished(trip.id) ? '#10B981' : 'var(--accent-gold)',
                 }}
                 title="Feature 1B: Publish itinerary publicly to Discover"
               >
@@ -676,8 +676,8 @@ export default function TripDetailPage() {
                 onClick={() => setShowMilestoneModal(true)}
                 style={{
                   ...styles.passBtnAction,
-                  borderColor: '#F0C23A',
-                  color: '#F0C23A',
+                  borderColor: 'var(--accent-gold)',
+                  color: 'var(--accent-gold)',
                 }}
                 title="Feature 2: Share trip completion milestones"
               >
@@ -886,10 +886,10 @@ export default function TripDetailPage() {
                 onClick={() => setShowProposeModal(true)}
                 style={{
                   padding: '7px 14px',
-                  backgroundColor: 'rgba(240, 194, 58, 0.15)',
-                  border: '1.5px solid #F0C23A',
+                  backgroundColor: 'var(--accent-gold-bg)',
+                  border: '1.5px solid var(--accent-gold)',
                   borderRadius: 10,
-                  color: '#F0C23A',
+                  color: 'var(--accent-gold)',
                   fontSize: 12,
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -1291,7 +1291,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
   },
   heroCard: {
-    background: 'var(--bg-hero)',
+    background: 'var(--bg-card)',
     border: '1px solid var(--border-card)',
     borderRadius: 20,
     padding: '28px 24px',
@@ -1302,22 +1302,22 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 20,
     flexWrap: 'wrap',
     marginBottom: 20,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
   },
   tripBadge: {
-    background: 'rgba(255, 255, 255, 0.12)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: 6,
     padding: '3px 8px',
     fontSize: 12,
     fontWeight: 700,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     textTransform: 'capitalize',
   },
   heroTitle: {
     fontSize: 'clamp(20px, 5vw, 26px)',
     fontWeight: 900,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     margin: '0 0 8px',
     letterSpacing: -0.4,
   },
@@ -1354,23 +1354,23 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 8,
     padding: '12px 20px',
-    background: '#ffffff',
-    color: '#0f172a',
+    background: 'var(--btn-primary-bg)',
+    color: 'var(--btn-primary-text)',
     border: 'none',
     borderRadius: 10,
     fontSize: 14,
     fontWeight: 800,
     cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+    boxShadow: 'var(--card-shadow)',
   },
   btnShare: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
     padding: '11px 16px',
-    background: 'rgba(255, 255, 255, 0.12)',
-    border: '1px solid rgba(255, 255, 255, 0.25)',
-    color: '#ffffff',
+    background: 'var(--bg-subtle)',
+    border: '1px solid var(--border-card)',
+    color: 'var(--text-primary)',
     borderRadius: 10,
     fontSize: 13,
     fontWeight: 700,
