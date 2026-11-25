@@ -22,7 +22,7 @@ export default function TripCompletedBanner({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={styles.completedTag}>EXPEDITION COMPLETED</span>
-            <span style={{ fontSize: 12, color: '#9D9C9A' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               {days} Day{days !== 1 ? 's' : ''} Touring
               {distanceKm ? ` · ${distanceKm} km` : ''}
             </span>
@@ -47,8 +47,8 @@ export default function TripCompletedBanner({
 
 const styles: Record<string, React.CSSProperties> = {
   banner: {
-    backgroundColor: 'rgba(240, 194, 58, 0.1)',
-    border: '1.5px solid rgba(240, 194, 58, 0.45)',
+    backgroundColor: 'var(--accent-gold-bg, rgba(240, 194, 58, 0.1))',
+    border: '1.5px solid var(--accent-gold, rgba(240, 194, 58, 0.45))',
     borderRadius: 16,
     padding: '14px 18px',
     display: 'flex',
@@ -63,7 +63,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(240, 194, 58, 0.2)',
+    backgroundColor: 'var(--accent-gold-bg, rgba(240, 194, 58, 0.2))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -74,19 +74,19 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
     padding: '2px 8px',
     borderRadius: 6,
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--accent-gold, #F0C23A)',
+    color: 'var(--pz-on-accent, #111316)',
   },
   routeText: {
     margin: '3px 0 0',
     fontSize: 15,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   btnShare: {
     padding: '10px 18px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--accent-gold, #F0C23A)',
+    color: 'var(--pz-on-accent, #111316)',
     border: 'none',
     borderRadius: 10,
     fontWeight: 900,

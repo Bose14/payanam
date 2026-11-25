@@ -203,6 +203,11 @@ export const tripService = {
     return response.data;
   },
 
+  updateTripStatus: async (tripId: string, status: 'planning' | 'active' | 'completed') => {
+    const response = await api.patch(`/api/trips/${tripId}/status`, { status });
+    return response.data.data;
+  },
+
   getTripParticipants: async (tripId: string) => {
     const response = await api.get(`/api/trips/${tripId}/participants`);
     return response.data.data.participants;

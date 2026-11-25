@@ -2931,8 +2931,8 @@ export default function RidePage() {
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Feature 2: Trip Completed Celebration Banner */}
-            {milestoneSummary && (
+            {/* Feature 2: Trip Completed Celebration Banner (Only when ride is ended) */}
+            {ended && milestoneSummary && (
               <TripCompletedBanner
                 fromPlace={session?.trips?.from_place || 'Bengaluru'}
                 toPlace={session?.trips?.to_place || 'Kasaragod'}

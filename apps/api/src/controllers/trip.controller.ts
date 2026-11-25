@@ -19,6 +19,7 @@ import {
   removeMember,
   getRoomMemberStatus,
   getPendingRequestsCount,
+  updateTripStatus,
 } from '../services/trip.service';
 
 export async function createTripHandler(req: Request, res: Response, next: NextFunction) {
@@ -120,6 +121,19 @@ export async function deleteTripHandler(req: Request, res: Response, next: NextF
     await deleteTrip(req.params.id, req.userId!);
     return sendSuccess(res, { message: 'Trip deleted' });
   } catch (err) { next(err); }
+}
+
+export async function updateTripStatusHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { status } = req.body;
+    if (!status || !['planning', 'active', 'completed'].includes(status)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid status. Must be planning, active, or completed.' });
+    }
+    const result = await updateTripStatus(req.params.id, req.userId!, status);
+    return sendSuccess(res, result);
+  } catch (err) {
+    next(err);
+  }
 }
 
 export async function joinRoomHandler(req: Request, res: Response, next: NextFunction) {

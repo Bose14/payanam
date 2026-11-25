@@ -244,6 +244,22 @@ export default function TripDetailPage() {
     setTimeout(() => setToast(''), 2500);
   };
 
+  const handleToggleTripStatus = async () => {
+    if (!trip || !id) return;
+    const newStatus = trip.status === 'completed' ? 'planning' : 'completed';
+    const confirmMsg = newStatus === 'completed'
+      ? 'Mark this trip as completed? This will celebrate your expedition milestones.'
+      : 'Reopen this trip for planning and live convoys?';
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await tripService.updateTripStatus(id, newStatus);
+      setTrip((prev) => (prev ? { ...prev, status: newStatus } : null));
+      showToast(newStatus === 'completed' ? '🏆 Expedition marked as completed!' : 'Trip reopened for planning');
+    } catch {
+      showToast('Failed to update trip status');
+    }
+  };
+
   const tripIdRef = useRef<string | null>(null);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userEditedRef = useRef(false);
@@ -684,12 +700,26 @@ export default function TripDetailPage() {
                 <span>🏆</span>
                 <span>Milestones</span>
               </button>
+              {trip?.isOwner && (
+                <button
+                  onClick={handleToggleTripStatus}
+                  style={{
+                    ...styles.passBtnAction,
+                    borderColor: trip.status === 'completed' ? '#10B981' : 'var(--border-subtle)',
+                    color: trip.status === 'completed' ? '#10B981' : 'var(--text-primary)',
+                  }}
+                  title={trip.status === 'completed' ? 'Reopen expedition for planning' : 'Mark expedition as completed'}
+                >
+                  <span>{trip.status === 'completed' ? '✓' : '🏁'}</span>
+                  <span>{trip.status === 'completed' ? 'Completed' : 'Finish Trip'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {/* Feature 2: Trip Completed Celebration & Milestones Banner */}
-        {milestoneSummary && (
+        {/* Feature 2: Trip Completed Celebration & Milestones Banner (Only when trip is completed) */}
+        {trip?.status === 'completed' && milestoneSummary && (
           <TripCompletedBanner
             fromPlace={trip.from_place}
             toPlace={trip.to_place}
