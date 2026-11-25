@@ -18,6 +18,7 @@ import DiscoverPage from './pages/tabs/DiscoverPage';
 import ChatTab from './pages/tabs/ChatTab';
 import MeTab from './pages/tabs/MeTab';
 import { enablePush } from './utils/push';
+import { resumeLiveShares } from './utils/liveShare';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/shell/AppShell';
 
@@ -30,7 +31,7 @@ function Home() {
 /** Once signed in with permission granted, keep this device subscribed to push. */
 function PushSync() {
   const { isAuthenticated } = useAuth();
-  useEffect(() => { if (isAuthenticated) void enablePush(); }, [isAuthenticated]);
+  useEffect(() => { if (isAuthenticated) { void enablePush(); resumeLiveShares(); } }, [isAuthenticated]);
   return null;
 }
 

@@ -381,7 +381,7 @@ export interface ChatMessage {
   mine: boolean;
   kind: 'text' | 'location';
   body: string;
-  meta: { place: string; lat: number; lng: number; confirmed: boolean } | null;
+  meta: { place: string; lat: number; lng: number; confirmed: boolean; live?: { until: string }; updatedAt?: string } | null;
   createdAt: string;
 }
 
@@ -406,8 +406,12 @@ export const chatService = {
     isLead: boolean;
     dm?: { sentUnreplied: number; blocked: boolean; limit: number };
   }> => (await api.get('/api/chat/messages', { params: { key } })).data.data,
-  send: async (key: string, data: { body?: string; kind?: 'text' | 'location'; place?: string; lat?: number; lng?: number }): Promise<ChatMessage> =>
+  send: async (key: string, data: { body?: string; kind?: 'text' | 'location'; place?: string; lat?: number; lng?: number; liveMinutes?: 15 | 60 | 480 }): Promise<ChatMessage> =>
     (await api.post('/api/chat/messages', data, { params: { key } })).data.data.message,
+  updateLive: async (key: string, messageId: string, lat: number, lng: number): Promise<{ active: boolean }> =>
+    (await api.put(`/api/chat/messages/${messageId}/live`, { lat, lng }, { params: { key } })).data.data,
+  stopLive: async (key: string, messageId: string) =>
+    (await api.post(`/api/chat/messages/${messageId}/stop-live`, {}, { params: { key } })).data.data,
   confirmStop: async (key: string, messageId: string) =>
     (await api.post(`/api/chat/messages/${messageId}/confirm-stop`, {}, { params: { key } })).data.data,
   createGroup: async (name: string): Promise<{ id: string; name: string; inviteCode: string }> =>

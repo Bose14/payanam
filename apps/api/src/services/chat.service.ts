@@ -123,6 +123,7 @@ export interface SendInput {
   place?: string;
   lat?: number;
   lng?: number;
+  liveMinutes?: 15 | 60 | 480;
 }
 
 export async function sendMessage(key: string, userId: string, input: SendInput) {
@@ -133,14 +134,14 @@ export async function sendMessage(key: string, userId: string, input: SendInput)
 
   if (kind === 'location') {
     if (auth.type !== 'trip') throw new ValidationError('Locations can only be shared in a trip chat');
-    const place = (input.place ?? '').trim().slice(0, 120);
-    if (!place) throw new ValidationError('Name the place you are sharing');
+    const live = input.liveMinutes ? new Date(Date.now() + input.liveMinutes * 60000).toISOString() : null;
+    const place = (input.place ?? '').trim().slice(0, 120) || (live ? 'Live location' : 'My location');
     if (typeof input.lat !== 'number' || typeof input.lng !== 'number' ||
         Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180) {
       throw new ValidationError('Location is missing');
     }
     body = place;
-    meta = { place, lat: input.lat, lng: input.lng, confirmed: false };
+    meta = { place, lat: input.lat, lng: input.lng, confirmed: false, ...(live ? { live: { until: live }, updatedAt: new Date().toISOString() } : {}) };
   } else {
     if (!body) throw new ValidationError('Write a message first');
     if (body.length > MAX_BODY) throw new ValidationError(`Messages can be up to ${MAX_BODY} characters`);
@@ -160,13 +161,13 @@ export async function sendMessage(key: string, userId: string, input: SendInput)
     .single();
   if (error || !data) throw new Error(`Failed to send message: ${error?.message}`);
   const names = await nameMap([userId]);
-  void notifyChat(auth, key, userId, kind, body, names[userId] ?? 'Rider');
+  void notifyChat(auth, key, userId, kind, body, names[userId] ?? 'Rider', meta);
   return shape(data as MessageRow, names, userId);
 }
 
 /** Push to everyone else in the conversation. Best effort, never blocks the send. */
 async function notifyChat(
-  auth: ParsedKey, key: string, senderId: string, kind: string, body: string, senderName: string,
+  auth: ParsedKey, key: string, senderId: string, kind: string, body: string, senderName: string, meta: Record<string, unknown> | null,
 ) {
   try {
     let recipients: string[] = [];
@@ -186,11 +187,39 @@ async function notifyChat(
     recipients = recipients.filter((id) => id !== senderId);
     await sendPush(recipients, {
       title,
-      body: kind === 'location' ? `Shared a place: ${body}` : body.slice(0, 140),
+      body: kind === 'location' ? (meta && (meta as { live?: unknown }).live ? 'Started sharing live location' : `Shared a place: ${body}`) : body.slice(0, 140),
       url: `/chat?c=${encodeURIComponent(key)}`,
       tag: `chat:${key}`,
     });
   } catch { /* ignore */ }
+}
+
+async function ownLiveMessage(key: string, userId: string, messageId: string) {
+  const auth = await authorize(key, userId);
+  if (auth.type !== 'trip') throw new ValidationError('Live location is for trip chats');
+  const db = getDatabase();
+  const { data: msg } = await db.from('chat_messages').select('*')
+    .eq('id', messageId).eq('conversation_key', key).maybeSingle();
+  if (!msg || msg.kind !== 'location' || !msg.meta?.live) throw new NotFoundError('Live location');
+  if (msg.sender_id !== userId) throw new ForbiddenError('Only the sender can update a live location');
+  return msg;
+}
+
+/** The sender's phone calls this every few seconds while a live location is on. */
+export async function updateLiveLocation(key: string, userId: string, messageId: string, lat: number, lng: number) {
+  const msg = await ownLiveMessage(key, userId, messageId);
+  const until = new Date(msg.meta.live.until as string).getTime();
+  if (Date.now() >= until) return { active: false };
+  await getDatabase().from('chat_messages')
+    .update({ meta: { ...msg.meta, lat, lng, updatedAt: new Date().toISOString() } }).eq('id', messageId);
+  return { active: true };
+}
+
+export async function stopLiveLocation(key: string, userId: string, messageId: string) {
+  const msg = await ownLiveMessage(key, userId, messageId);
+  await getDatabase().from('chat_messages')
+    .update({ meta: { ...msg.meta, live: { until: new Date().toISOString() } } }).eq('id', messageId);
+  return { active: false };
 }
 
 /** Trip leader turns a shared location into a stop everyone sees on the itinerary. */
