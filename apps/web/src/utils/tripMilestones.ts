@@ -57,42 +57,42 @@ export const BACKDROP_PRESETS: Array<{
   {
     id: 'ghats',
     name: 'Western Ghats Mist',
-    icon: '🏔️',
+    icon: 'map',
     gradient: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)',
     accent: '#10B981',
   },
   {
     id: 'coastal',
     name: 'Coastal Highway NH66',
-    icon: '🌊',
+    icon: 'map',
     gradient: 'linear-gradient(135deg, #0369a1 0%, #082f49 100%)',
     accent: '#38BDF8',
   },
   {
     id: 'sunset',
     name: 'Golden Hour Dusk',
-    icon: '🌅',
+    icon: 'sun',
     gradient: 'linear-gradient(135deg, #854d0e 0%, #451a03 100%)',
     accent: '#F0C23A',
   },
   {
     id: 'hairpins',
     name: '40 Hairpins Asphalt',
-    icon: '🏁',
+    icon: 'flag',
     gradient: 'linear-gradient(135deg, #18181b 0%, #09090b 100%)',
     accent: '#F59E0B',
   },
   {
     id: 'night',
     name: 'Midnight Convoy',
-    icon: '🌙',
+    icon: 'moon',
     gradient: 'linear-gradient(135deg, #1e1b4b 0%, #090a0f 100%)',
     accent: '#818CF8',
   },
   {
     id: 'minimal',
     name: 'Obsidian Matte',
-    icon: '🖤',
+    icon: 'star',
     gradient: 'linear-gradient(135deg, #1B1E23 0%, #111316 100%)',
     accent: '#F1EFEA',
   },
@@ -204,34 +204,34 @@ export function formatMilestoneShareText(
   customization: MilestoneCardCustomization
 ): string {
   const parts: string[] = [
-    '🏍️ MISSION COMPLETED · PAYANAM EXPEDITION',
-    `🗺️ ${summary.fromPlace} ➔ ${summary.toPlace}`,
+    'MISSION COMPLETED · PAYANAM EXPEDITION',
+    `${summary.fromPlace} to ${summary.toPlace}`,
   ];
 
   const statBadges: string[] = [];
-  if (customization.showDistance) statBadges.push(`📍 ${summary.totalDistanceKm} km total`);
-  if (customization.showDays) statBadges.push(`📅 ${summary.daysCount} Day${summary.daysCount > 1 ? 's' : ''}`);
-  if (customization.showStops) statBadges.push(`🏁 ${summary.stopsClearedCount} Waypoints cleared`);
-  if (customization.showRiders && summary.coRidersCount > 1) statBadges.push(`👥 ${summary.coRidersCount} Convoy Riders`);
+  if (customization.showDistance) statBadges.push(`${summary.totalDistanceKm} km total`);
+  if (customization.showDays) statBadges.push(`${summary.daysCount} Day${summary.daysCount > 1 ? 's' : ''}`);
+  if (customization.showStops) statBadges.push(`${summary.stopsClearedCount} Waypoints cleared`);
+  if (customization.showRiders && summary.coRidersCount > 1) statBadges.push(`${summary.coRidersCount} Convoy Riders`);
 
   if (statBadges.length > 0) {
     parts.push(statBadges.join(' · '));
   }
 
   if (customization.showBikeModel && summary.bikeModel) {
-    parts.push(`🏍️ Steed: ${summary.bikeModel}`);
+    parts.push(`Steed: ${summary.bikeModel}`);
   }
 
   if (customization.customNote) {
-    parts.push(`\n💬 "${customization.customNote}"`);
+    parts.push(`\n"${customization.customNote}"`);
   }
 
   // Step 4: Link leads back
   if (summary.publicLink) {
     if (summary.isPublished) {
-      parts.push(`\n✨ View our verified route on Payanam Discover & copy this itinerary:\n${summary.publicLink}`);
+      parts.push(`\nView our verified route on Payanam Discover & copy this itinerary:\n${summary.publicLink}`);
     } else {
-      parts.push(`\n✨ Tracked live on Payanam Touring:\n${summary.publicLink}`);
+      parts.push(`\nTracked live on Payanam Touring:\n${summary.publicLink}`);
     }
   }
 

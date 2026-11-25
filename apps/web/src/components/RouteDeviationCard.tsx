@@ -4,6 +4,7 @@ import {
   formatOffRouteDistance,
   formatOffRouteDuration,
 } from '../utils/routeDeviation';
+import Icon from './Icon';
 
 export interface RouteDeviationCardProps {
   alerts: OffRouteAlert[];
@@ -38,7 +39,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
       {/* Alert Header Row */}
       <div style={styles.headerRow}>
         <div style={styles.badgeWrap}>
-          <span style={styles.alertIcon}>⚠️</span>
+          <span style={styles.alertIcon}><Icon name="warning" /></span>
           <span style={styles.badgeText}>
             ROUTE DEVIATION{otherCount > 0 ? ` (+${otherCount})` : ''}
           </span>
@@ -57,7 +58,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
               style={styles.dismissBtn}
               aria-label="Dismiss alert"
             >
-              ✕
+
             </button>
           )}
         </div>
@@ -91,7 +92,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
             onClick={() => onNavigateBack(primaryAlert.nearestRoutePoint[0], primaryAlert.nearestRoutePoint[1])}
             style={styles.rejoinBtn}
           >
-            🧭 Rejoin route
+            Rejoin route
           </button>
         )}
 
@@ -101,7 +102,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
           onClick={() => onFocusRider(primaryAlert.lat, primaryAlert.lng)}
           style={styles.secondaryBtn}
         >
-          📍 Show on map
+          Show on map
         </button>
 
         {/* Requirement 4: Captain acts -> "The captain can tap Regroup, which sends an announcement to everyone." */}
@@ -111,7 +112,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
             onClick={() => onRegroup(primaryAlert)}
             style={styles.regroupBtn}
           >
-            📢 Regroup
+            Regroup
           </button>
         )}
       </div>

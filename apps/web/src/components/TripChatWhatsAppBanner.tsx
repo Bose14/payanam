@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 interface TripChatWhatsAppBannerProps {
   whatsAppGroupLink?: string;
@@ -45,7 +46,7 @@ export default function TripChatWhatsAppBanner({
             flexShrink: 0,
           }}
         >
-          🏍️
+
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -101,7 +102,7 @@ export default function TripChatWhatsAppBanner({
             transition: 'background-color 0.2s',
           }}
         >
-          <span>💬</span>
+          <span><Icon name="chat" /></span>
           <span>WhatsApp</span>
         </a>
 
@@ -119,7 +120,7 @@ export default function TripChatWhatsAppBanner({
           }}
           title="Dismiss note"
         >
-          ✕
+
         </button>
       </div>
     </div>

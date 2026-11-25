@@ -31,7 +31,7 @@ export interface ItineraryStopLike {
 /**
  * Extracts location details, coordinates, place name, and optional note from chat messages.
  * Matches patterns:
- * - "📍 Shared Location: Place Name [lat, lng] — Note"
+ * - "Shared Location: Place Name [lat, lng] — Note"
  * - "Some message text [lat, lng]"
  * - Direct coordinate strings
  */
@@ -53,10 +53,10 @@ export function parseLocationFromMessage(messageText: string): ParsedLocationMes
 
   if (!match) {
     // Also check if text explicitly mentions shared location or pin
-    const isKeywordLoc = messageText.includes('📍') || messageText.includes('📌 Pinned Target Stop:');
+    const isKeywordLoc = /pinned target stop|shared location|live location/i.test(messageText);
     return {
       isLocation: isKeywordLoc,
-      placeName: isKeywordLoc ? messageText.replace(/^(?:📍|📌)\s*/, '').split('\n')[0].trim() : '',
+      placeName: isKeywordLoc ? messageText.replace(/^(?:|)\s*/, '').split('\n')[0].trim() : '',
       lat: null,
       lng: null,
       note: '',
@@ -68,12 +68,12 @@ export function parseLocationFromMessage(messageText: string): ParsedLocationMes
   const lng = parseFloat(match[2]);
 
   // Extract place name and note
-  // Common format: "📍 Shared Location: Place Name [lat,lng] — Note"
+  // Common format: "Shared Location: Place Name [lat,lng] — Note"
   let placeName = '';
   let note = '';
 
-  const prefixPattern = /📍\s*Shared Location:\s*([^[\n]+)/i;
-  const pinPrefixPattern = /📌\s*Pinned Target Stop:\s*([^[\n]+)/i;
+  const prefixPattern = /\s*Shared Location:\s*([^[\n]+)/i;
+  const pinPrefixPattern = /\s*Pinned Target Stop:\s*([^[\n]+)/i;
 
   const prefixMatch = messageText.match(prefixPattern) || messageText.match(pinPrefixPattern);
   if (prefixMatch && prefixMatch[1]) {
@@ -82,7 +82,7 @@ export function parseLocationFromMessage(messageText: string): ParsedLocationMes
     // Take text before the bracket as place name or message
     const beforeBracket = messageText.slice(0, match.index).trim();
     if (beforeBracket) {
-      placeName = beforeBracket.replace(/^(?:📍|📌)\s*/, '').trim();
+      placeName = beforeBracket.replace(/^(?:|)\s*/, '').trim();
     }
   }
 
@@ -157,6 +157,6 @@ export function formatLocationShareMessage(
   lng: number,
   note?: string
 ): string {
-  const base = `📍 Shared Location: ${placeName.trim()} [${lat.toFixed(6)},${lng.toFixed(6)}]`;
+  const base = `Shared Location: ${placeName.trim()} [${lat.toFixed(6)},${lng.toFixed(6)}]`;
   return note && note.trim() ? `${base} — "${note.trim()}"` : base;
 }

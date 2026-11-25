@@ -14,7 +14,7 @@ export function initializeDatabase(): void {
 
   if (isPlaceholderKey) {
     console.warn(
-      '⚠️ SUPABASE_SERVICE_ROLE_KEY is using a placeholder. Falling back to SUPABASE_ANON_KEY. ' +
+      'SUPABASE_SERVICE_ROLE_KEY is using a placeholder. Falling back to SUPABASE_ANON_KEY. ' +
       'Please update SUPABASE_SERVICE_ROLE_KEY in .env.local for full backend permissions.'
     );
   }

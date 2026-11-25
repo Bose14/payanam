@@ -29,7 +29,12 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       from_place, to_place, days,
       bike_type = 'motorcycle', trip_type = 'one_way', preferences = '',
       from_lat = null, from_lng = null, to_lat = null, to_lng = null,
+      itinerary_mode = 'ai',
     } = req.body;
+
+    if (itinerary_mode !== 'ai' && itinerary_mode !== 'manual') {
+      return sendError(res, "itinerary_mode must be 'ai' or 'manual'", 400, 'VALIDATION_ERROR');
+    }
 
     if (!from_place || !to_place || !days) {
       return sendError(res, 'from_place, to_place, and days are required', 400, 'VALIDATION_ERROR');
@@ -53,17 +58,20 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
     });
     console.log('[createTrip] trip created:', trip.id);
 
-    let itinerary;
-    try {
-      itinerary = await generateItinerary(from_place, to_place, parsedDays, bike_type, trip_type, preferences);
-    } catch (aiErr: unknown) {
-      const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
-      console.error('[createTrip] AI generation failed:', msg);
-      throw new Error(`AI service failed: ${msg}`);
+    // The AI planner only runs when the rider explicitly chooses it. A manual trip starts
+    // with an empty itinerary and the rider adds stops one by one.
+    let itinerary: Awaited<ReturnType<typeof generateItinerary>> = [];
+    if (itinerary_mode === 'ai') {
+      try {
+        itinerary = await generateItinerary(from_place, to_place, parsedDays, bike_type, trip_type, preferences);
+      } catch (aiErr: unknown) {
+        const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+        console.error('[createTrip] AI generation failed:', msg);
+        throw new Error(`AI service failed: ${msg}`);
+      }
+      console.log('[createTrip] itinerary generated, days:', itinerary.length);
+      await saveItinerary(trip.id, itinerary, { from_place, from_lat, from_lng, to_place, to_lat, to_lng });
     }
-    console.log('[createTrip] itinerary generated, days:', itinerary.length);
-
-    await saveItinerary(trip.id, itinerary, { from_place, from_lat, from_lng, to_place, to_lat, to_lng });
     const room = await createRoom(trip.id, userId);
 
     return sendSuccess(res, { trip, itinerary, room }, 201);

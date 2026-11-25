@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NearbyServiceItem, addNearbyPlace } from '../utils/nearbyServices';
+import Icon from './Icon';
 
 interface AddNearbyServiceModalProps {
   isOpen: boolean;
@@ -46,11 +47,11 @@ export default function AddNearbyServiceModal({
   };
 
   const CATEGORIES: Array<{ id: 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY'; label: string; icon: string }> = [
-    { id: 'FUEL', label: 'Fuel', icon: '⛽' },
-    { id: 'REPAIR', label: 'Repair', icon: '🔧' },
-    { id: 'FOOD', label: 'Food', icon: '🍽️' },
-    { id: 'REST', label: 'Rest', icon: '☕' },
-    { id: 'STAY', label: 'Stay', icon: '🏨' },
+    { id: 'FUEL', label: 'Fuel', icon: 'fuel' },
+    { id: 'REPAIR', label: 'Repair', icon: 'wrench' },
+    { id: 'FOOD', label: 'Food', icon: 'food' },
+    { id: 'REST', label: 'Rest', icon: 'coffee' },
+    { id: 'STAY', label: 'Stay', icon: 'bed' },
   ];
 
   return (
@@ -58,13 +59,13 @@ export default function AddNearbyServiceModal({
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>📍</span>
+            <span style={{ fontSize: 24 }}><Icon name="pin" /></span>
             <div>
               <h3 style={styles.title}>Add Place to Route Corridor</h3>
               <p style={styles.subtitle}>Feature 3 · Community verified service for riders in need</p>
             </div>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}><Icon name="close" /></button>
         </div>
 
         <form onSubmit={handleSubmit} style={styles.body}>
@@ -86,7 +87,7 @@ export default function AddNearbyServiceModal({
                       borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                     }}
                   >
-                    <span>{cat.icon}</span>
+                    <span><Icon name={cat.icon} /></span>
                     <span>{cat.label}</span>
                   </button>
                 );
@@ -133,7 +134,7 @@ export default function AddNearbyServiceModal({
 
           {/* Location note */}
           <div style={styles.gpsRow}>
-            <span>📍 Location:</span>
+            <span>Location:</span>
             <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
               {lat.toFixed(4)}, {lng.toFixed(4)}
             </span>
@@ -169,7 +170,7 @@ export default function AddNearbyServiceModal({
               Cancel
             </button>
             <button type="submit" style={styles.btnAdd}>
-              ✓ Add to Nearby Help
+              Add to Nearby Help
             </button>
           </div>
         </form>

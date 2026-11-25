@@ -7,6 +7,7 @@ import {
 } from '../utils/publicItinerary';
 import DiscoverTripCard from './DiscoverTripCard';
 import DiscoverTripDetailModal from './DiscoverTripDetailModal';
+import Icon from './Icon';
 
 interface DiscoverTabProps {
   currentUser?: {
@@ -72,7 +73,7 @@ export default function DiscoverTab({
     const userObj = currentUser || { id: 'anon', fullName: 'Rider' };
     const draft = copyTripToMyTrips(trip, userObj);
     setCopiedTripId(trip.id);
-    showToast(`✓ Copied "${trip.title}" to My Trips! Draft credited to @${trip.authorName}`);
+    showToast(`Copied "${trip.title}" to My Trips! Draft credited to @${trip.authorName}`);
     onTripCopied?.(draft);
 
     // Refresh trips list to reflect updated copies count
@@ -90,7 +91,7 @@ export default function DiscoverTab({
 
       {/* Destination Search Box matching Mockup Screen 8 */}
       <div style={styles.searchWrapper}>
-        <span style={styles.searchIcon}>🔍</span>
+        <span style={styles.searchIcon}><Icon name="search" /></span>
         <input
           type="text"
           value={searchQuery}
@@ -104,7 +105,7 @@ export default function DiscoverTab({
             style={styles.clearBtn}
             title="Clear search"
           >
-            ✕
+
           </button>
         )}
       </div>
@@ -129,7 +130,7 @@ export default function DiscoverTab({
       {onOpenPublishFlow && (
         <div style={styles.publishCtaCard}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-            <span style={{ fontSize: 20 }}>🌐</span>
+            <span style={{ fontSize: 20 }}><Icon name="globe" /></span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                 Have a great route? Publish your itinerary!
@@ -154,7 +155,7 @@ export default function DiscoverTab({
           Discover Routes ({filteredTrips.length})
         </span>
         <span style={{ fontSize: 11, color: '#F0C23A' }}>
-          ⭐ Community Verified
+          Community Verified
         </span>
       </div>
 
@@ -162,7 +163,7 @@ export default function DiscoverTab({
       <div style={styles.tripsList}>
         {filteredTrips.length === 0 ? (
           <div style={styles.emptyState}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>🗺️</div>
+            <div style={{ fontSize: 36, marginBottom: 8 }}><Icon name="map" /></div>
             <p style={{ fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px', fontSize: 15 }}>
               No itineraries found for "{searchQuery}"
             </p>

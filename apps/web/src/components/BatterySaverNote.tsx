@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 export interface BatterySaverNoteProps {
   enabled: boolean;
@@ -19,7 +20,7 @@ export const BatterySaverNote: React.FC<BatterySaverNoteProps> = ({
       title="Tap to manage Ride Settings in Me"
     >
       <div style={styles.contentWrap}>
-        <span style={styles.boltIcon}>⚡</span>
+        <span style={styles.boltIcon}><Icon name="bolt" /></span>
         <span style={styles.textPrimary}>
           Battery saver on
         </span>

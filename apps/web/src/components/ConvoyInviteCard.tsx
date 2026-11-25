@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 interface ConvoyInviteCardProps {
   inviteCode?: string;
@@ -41,8 +42,8 @@ export default function ConvoyInviteCard({
   };
 
   const handleWhatsAppShare = () => {
-    const routeText = fromPlace && toPlace ? `${fromPlace} ➔ ${toPlace}` : (tripTitle || 'Motorcycle Convoy');
-    const msg = `🏍️ Join our motorcycle convoy on Payanam!\n\n🗺️ Route: ${routeText}\n🎟️ Convoy Code: ${inviteCode}\n\nTap to join live convoy:\n${shareUrl}`;
+    const routeText = fromPlace && toPlace ? `${fromPlace} to ${toPlace}` : (tripTitle || 'Motorcycle Convoy');
+    const msg = `Join our motorcycle convoy on Payanam!\n\nRoute: ${routeText}\nConvoy Code: ${inviteCode}\n\nTap to join live convoy:\n${shareUrl}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -115,7 +116,7 @@ export default function ConvoyInviteCard({
             gap: 4,
           }}
         >
-          <span>{copiedCode ? '✓' : '📋'}</span>
+          <span><Icon name={copiedCode ? 'check' : 'list'} /></span>
           <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
         </button>
       </div>
@@ -141,7 +142,7 @@ export default function ConvoyInviteCard({
             gap: 5,
           }}
         >
-          <span>🔗</span>
+          <span><Icon name="link" /></span>
           <span>{copiedLink ? 'Link Copied' : 'Copy Link'}</span>
         </button>
 
@@ -164,7 +165,7 @@ export default function ConvoyInviteCard({
             gap: 5,
           }}
         >
-          <span>💬</span>
+          <span><Icon name="chat" /></span>
           <span>WhatsApp</span>
         </button>
       </div>

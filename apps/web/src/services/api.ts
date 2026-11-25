@@ -125,6 +125,12 @@ export const tripService = {
     days: number;
     bike_type: string;
     preferences?: string;
+    trip_type?: string;
+    from_lat?: number | null;
+    from_lng?: number | null;
+    to_lat?: number | null;
+    to_lng?: number | null;
+    itinerary_mode?: 'ai' | 'manual';
   }) => {
     const response = await api.post('/api/trips', data);
     return response.data.data;

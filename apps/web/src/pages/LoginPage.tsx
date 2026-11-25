@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
+import Icon from '../components/Icon';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
@@ -67,7 +68,7 @@ function LoginPage() {
     >
       {error && (
         <div style={styles.errorBox}>
-          <span style={{ fontSize: '16px' }}>⚠️</span>
+          <span style={{ fontSize: '16px' }}><Icon name="warning" /></span>
           <span>{error}</span>
         </div>
       )}
@@ -112,7 +113,7 @@ function LoginPage() {
         <div style={styles.field}>
           <label style={styles.label}>Email Address</label>
           <div style={styles.inputWrapper}>
-            <span style={styles.inputIcon}>✉️</span>
+            <span style={styles.inputIcon}><Icon name="mail" /></span>
             <input
               type="email"
               value={email}
@@ -133,7 +134,7 @@ function LoginPage() {
             </Link>
           </div>
           <div style={styles.inputWrapper}>
-            <span style={styles.inputIcon}>🔒</span>
+            <span style={styles.inputIcon}><Icon name="lock" /></span>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -148,7 +149,7 @@ function LoginPage() {
               style={styles.eyeBtn}
               title={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? '🙈' : '👁️'}
+              <Icon name={showPassword ? 'eyeOff' : 'eye'} />
             </button>
           </div>
         </div>
@@ -161,7 +162,7 @@ function LoginPage() {
         >
           {isLoading ? (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <span>⏳</span> Signing in...
+              <span><Icon name="clock" /></span> Signing in...
             </span>
           ) : (
             'Sign In →'

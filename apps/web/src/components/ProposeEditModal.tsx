@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PROPOSAL_PRESET_SUGGESTIONS } from '../utils/itineraryProposals';
+import Icon from './Icon';
 
 interface ProposeEditModalProps {
   isOpen: boolean;
@@ -73,7 +74,7 @@ export default function ProposeEditModal({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>💡</span>
+            <span style={{ fontSize: 20 }}><Icon name="bulb" /></span>
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--text-primary)' }}>
                 Propose Itinerary Edit
@@ -95,7 +96,7 @@ export default function ProposeEditModal({
               padding: 4,
             }}
           >
-            ✕
+
           </button>
         </div>
 
@@ -200,7 +201,7 @@ export default function ProposeEditModal({
               boxShadow: '0 4px 12px rgba(240, 194, 58, 0.25)',
             }}
           >
-            <span>💡</span>
+            <span><Icon name="bulb" /></span>
             <span>{submitting ? 'Submitting...' : 'Submit Proposal to Captain'}</span>
           </button>
         </form>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from './Icon';
 
 interface TripCompletedBannerProps {
   fromPlace: string;
@@ -29,7 +30,7 @@ export default function TripCompletedBanner({
   return (
     <div className="trip-completed-banner" style={styles.banner}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-        <div style={styles.trophyIcon}>🏆</div>
+        <div style={styles.trophyIcon}><Icon name="trophy" /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={styles.completedTag}>EXPEDITION COMPLETED</span>
@@ -39,7 +40,7 @@ export default function TripCompletedBanner({
             </span>
           </div>
           <div style={styles.routeText}>
-            {fromPlace} ➔ {toPlace}
+            {fromPlace} to {toPlace}
           </div>
         </div>
       </div>
@@ -50,7 +51,7 @@ export default function TripCompletedBanner({
           style={styles.btnShare}
           title="Share trip completion milestones"
         >
-          <span>🏆</span>
+          <span><Icon name="trophy" /></span>
           <span>Share Milestones</span>
         </button>
         <button
@@ -59,7 +60,7 @@ export default function TripCompletedBanner({
           title="Dismiss completed banner"
           aria-label="Dismiss banner"
         >
-          ✕
+
         </button>
       </div>
     </div>

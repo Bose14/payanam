@@ -176,7 +176,7 @@ export async function requestPasswordReset(email: string): Promise<{
     .maybeSingle();
 
   if (error) {
-    console.error('❌ Database error finding user for reset:', error);
+    console.error('Database error finding user for reset:', error);
     const msg = (error.message || '').toLowerCase();
     if (msg.includes('fetch failed') || msg.includes('failed to fetch') || msg.includes('enotfound') || msg.includes('econnrefused')) {
       throw new Error(
@@ -204,7 +204,7 @@ export async function requestPasswordReset(email: string): Promise<{
     .eq('id', user.id);
 
   if (updateError) {
-    console.error('❌ Database error updating reset_password_token:', updateError);
+    console.error('Database error updating reset_password_token:', updateError);
     if (updateError.message?.includes('reset_password_token') || updateError.message?.includes('schema cache')) {
       throw new Error(
         'Database is missing the reset_password_token column. Please run docs/PASSWORD_RESET_SETUP.sql in Supabase SQL editor.'
@@ -217,8 +217,8 @@ export async function requestPasswordReset(email: string): Promise<{
   const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
 
   console.log(`\n========================================`);
-  console.log(`🔐 Password Reset Link for ${user.email}:`);
-  console.log(`🔗 ${resetLink}`);
+  console.log(`Password Reset Link for ${user.email}:`);
+  console.log(`${resetLink}`);
   console.log(`========================================\n`);
 
   return {
@@ -239,7 +239,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
     .maybeSingle();
 
   if (error) {
-    console.error('❌ Database error reading reset token:', error);
+    console.error('Database error reading reset token:', error);
     const msg = (error.message || '').toLowerCase();
     if (msg.includes('fetch failed') || msg.includes('failed to fetch') || msg.includes('enotfound') || msg.includes('econnrefused')) {
       throw new Error(

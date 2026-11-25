@@ -1,6 +1,7 @@
 import React from 'react';
 import { FreshnessInfo } from '../utils/lastSeen';
 import { RiderRouteStatus } from '../utils/plannedRouteProgress';
+import Icon from './Icon';
 
 export interface RiderRosterData {
   userId: string;
@@ -138,7 +139,7 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
             {userName}
             {isMe && <span style={styles.youTag}> (You)</span>}
           </span>
-          {isCaptain && <span style={styles.crownTag} title="Trip Captain">👑</span>}
+          {isCaptain && <span style={styles.crownTag} title="Trip Captain"><Icon name="crown" /></span>}
         </div>
         <p style={styles.subtitle} title={rider.updatedAt ? new Date(rider.updatedAt).toLocaleTimeString() : undefined}>
           {subtitle}

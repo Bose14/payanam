@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 export interface PinnedStopData {
   id?: string;
@@ -30,12 +31,12 @@ interface PinStopModalProps {
 }
 
 const STOP_TYPES = [
-  { value: 'fuel_stop', label: 'Fuel Pump', icon: '⛽' },
-  { value: 'meal', label: 'Food / Dhaba', icon: '🍽️' },
-  { value: 'rest', label: 'Chai / Rest', icon: '☕' },
-  { value: 'attraction', label: 'Viewpoint', icon: '📍' },
-  { value: 'stop', label: 'Regroup Point', icon: '📌' },
-  { value: 'stay', label: 'Hotel / Stay', icon: '🏨' },
+  { value: 'fuel_stop', label: 'Fuel Pump', icon: 'fuel' },
+  { value: 'meal', label: 'Food / Dhaba', icon: 'food' },
+  { value: 'rest', label: 'Chai / Rest', icon: 'coffee' },
+  { value: 'attraction', label: 'Viewpoint', icon: 'pin' },
+  { value: 'stop', label: 'Regroup Point', icon: 'pin' },
+  { value: 'stay', label: 'Hotel / Stay', icon: 'bed' },
 ];
 
 export default function PinStopModal({
@@ -132,12 +133,12 @@ export default function PinStopModal({
         <div style={styles.dragHandle} />
 
         <div style={styles.header}>
-          <div style={{ fontSize: 26 }}>📍</div>
+          <div style={{ fontSize: 26 }}><Icon name="pin" /></div>
           <div style={{ flex: 1 }}>
             <h3 style={styles.title}>Pin Convoy Target Stop</h3>
             <p style={styles.subtitle}>Sets shared destination & live ETA countdown for all riders</p>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}><Icon name="close" /></button>
         </div>
 
         {/* Tab switch */}
@@ -152,7 +153,7 @@ export default function PinStopModal({
               fontWeight: 900,
             }}
           >
-            📋 Planned Stops ({validPlannedStops.length})
+            Planned Stops ({validPlannedStops.length})
           </button>
           <button
             type="button"
@@ -164,7 +165,7 @@ export default function PinStopModal({
               fontWeight: 900,
             }}
           >
-            ⚡ Live Custom Pin
+            Live Custom Pin
           </button>
         </div>
 
@@ -190,7 +191,7 @@ export default function PinStopModal({
                   style={styles.stopCard}
                 >
                   <div style={{ fontSize: 24, flexShrink: 0 }}>
-                    {STOP_TYPES.find((t) => t.value === s.item_type)?.icon || '📌'}
+                    <Icon name={STOP_TYPES.find((t) => t.value === s.item_type)?.icon || 'pin'} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                     <div style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>
@@ -202,7 +203,7 @@ export default function PinStopModal({
                       </div>
                     )}
                   </div>
-                  <span style={styles.pinTag}>Pin Stop ➔</span>
+                  <span style={styles.pinTag}>Pin Stop →</span>
                 </button>
               ))
             )}
@@ -238,7 +239,7 @@ export default function PinStopModal({
                         color: isSel ? '#60a5fa' : '#9ca3af',
                       }}
                     >
-                      <span>{t.icon}</span> {t.label}
+                      <span><Icon name={t.icon} /></span> {t.label}
                     </button>
                   );
                 })}
@@ -253,7 +254,7 @@ export default function PinStopModal({
                     checked={useCurrentLocation}
                     onChange={(e) => setUseCurrentLocation(e.target.checked)}
                   />
-                  <span>📍 Pin at my current GPS location ({currentGps.lat.toFixed(4)}, {currentGps.lng.toFixed(4)})</span>
+                  <span>Pin at my current GPS location ({currentGps.lat.toFixed(4)}, {currentGps.lng.toFixed(4)})</span>
                 </label>
               </div>
             )}
@@ -305,7 +306,7 @@ export default function PinStopModal({
                 disabled={saving || !customName.trim()}
                 style={styles.btnSubmit}
               >
-                {saving ? '⏳ Pinning...' : '📍 Pin & Alert Convoy'}
+                {saving ? 'Pinning...' : 'Pin & Alert Convoy'}
               </button>
             </div>
           </form>

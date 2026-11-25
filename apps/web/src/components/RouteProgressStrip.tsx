@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RiderRouteStatus } from '../utils/plannedRouteProgress';
+import Icon from './Icon';
 
 export interface RouteProgressRider {
   userId: string;
@@ -51,7 +52,7 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
       {/* Top Header Row */}
       <div style={styles.headerRow}>
         <div style={styles.headerLeft}>
-          <span style={styles.routeIcon}>🛣️</span>
+          <span style={styles.routeIcon}><Icon name="road" /></span>
           <span style={styles.routeTitle}>{routeTitle || 'Planned Route Progress'}</span>
           <span style={styles.routeKm}>{totalKm} km</span>
         </div>
@@ -59,7 +60,7 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
         <div style={styles.headerRight}>
           {offRouteCount > 0 && (
             <span style={styles.offRouteTag}>
-              ⚠️ {offRouteCount} off route
+              {offRouteCount} off route
             </span>
           )}
           <button
@@ -109,7 +110,7 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
                       boxShadow: isSelected ? '0 0 0 3px rgba(240, 194, 58, 0.35)' : undefined,
                     }}
                   >
-                    {stop.itemType === 'fuel' ? '⛽' : stop.itemType === 'food' ? '🍲' : '⭐'}
+                    <Icon name={stop.itemType === 'fuel' ? 'fuel' : stop.itemType === 'food' ? 'food' : 'star'} />
                   </div>
                   {isSelected && (
                     <div

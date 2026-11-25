@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import React from 'react';
 import { PinnedStopData } from './PinStopModal';
 import { StopApproachStage } from '../utils/stopPinning';
@@ -32,9 +33,9 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
   if (!pinnedStop || stage === 'far') return null;
 
   const isArrivedStage = stage === 'arrived' || isMeArrived;
-  const stopTypeIcon = pinnedStop.type === 'fuel_stop' ? '⛽' :
-                       pinnedStop.type === 'meal' ? '🍽️' :
-                       pinnedStop.type === 'rest' ? '☕' : '📍';
+  const stopTypeIcon = pinnedStop.type === 'fuel_stop' ? 'fuel' :
+                       pinnedStop.type === 'meal' ? 'food' :
+                       pinnedStop.type === 'rest' ? 'coffee' : 'pin';
 
   return (
     <div style={{
@@ -45,7 +46,7 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
       {/* Top Header Row */}
       <div style={styles.headerRow}>
         <div style={styles.headerLeft}>
-          <span style={styles.iconCircle}>{stopTypeIcon}</span>
+          <span style={styles.iconCircle}><Icon name={stopTypeIcon} /></span>
           <div>
             <div style={styles.pretitle}>
               {isArrivedStage ? 'STOP REACHED' : 'PRE-ALERT · NEXT STOP'}
@@ -70,7 +71,7 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
               style={styles.closeBtn}
               title="Dismiss banner"
             >
-              ✕
+
             </button>
           )}
         </div>
@@ -101,7 +102,7 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
             color: '#111316',
           }}
         >
-          {isMeArrived ? '✓ You are here' : "I'm here"}
+          {isMeArrived ? 'You are here' : "I'm here"}
         </button>
 
         <button
@@ -119,7 +120,7 @@ export const StopApproachCard: React.FC<StopApproachCardProps> = ({
             style={styles.iconNavBtn}
             title="Open in Maps"
           >
-            🧭
+
           </button>
         )}
       </div>

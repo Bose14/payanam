@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 interface ChatLocationCardProps {
   placeName: string;
@@ -140,7 +141,7 @@ export default function ChatLocationCard({
               flexShrink: 0,
             }}
           >
-            📍
+
           </div>
         )}
       </div>
@@ -167,7 +168,7 @@ export default function ChatLocationCard({
             transition: 'background-color 0.2s',
           }}
         >
-          <span>🧭</span>
+          <span><Icon name="compass" /></span>
           <span>Open in navigation app</span>
         </button>
       )}
@@ -187,7 +188,7 @@ export default function ChatLocationCard({
           }}
         >
           <span style={{ fontSize: 12, fontWeight: 800, color: '#10B981', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span>✓</span> Confirmed in itinerary
+            <span><Icon name="check" /></span> Confirmed in itinerary
           </span>
           {onViewInPlan && (
             <button
@@ -232,7 +233,7 @@ export default function ChatLocationCard({
             transition: 'background-color 0.2s',
           }}
         >
-          <span>📌</span>
+          <span><Icon name="pin" /></span>
           <span>{confirming ? 'Adding to Itinerary...' : 'Confirm as stop'}</span>
         </button>
       ) : (
@@ -251,7 +252,7 @@ export default function ChatLocationCard({
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span>⏳</span> Waiting for Captain to confirm as stop
+            <span><Icon name="clock" /></span> Waiting for Captain to confirm as stop
           </span>
           <span style={{ fontWeight: 700, color: '#F0C23A' }}>Captain only</span>
         </div>

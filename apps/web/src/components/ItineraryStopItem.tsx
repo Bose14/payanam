@@ -1,5 +1,6 @@
 import React from 'react';
 import { isStopFromChat, ItineraryStopLike } from '../utils/tripChatItinerary';
+import Icon from './Icon';
 
 interface ItineraryStopItemProps {
   stop: ItineraryStopLike;
@@ -22,18 +23,18 @@ export default function ItineraryStopItem({
     switch (type) {
       case 'meal':
       case 'food':
-        return '🍽️';
+        return 'food';
       case 'rest':
       case 'chai':
-        return '☕';
+        return 'coffee';
       case 'fuel_stop':
       case 'fuel':
-        return '⛽';
+        return 'fuel';
       case 'stay':
       case 'hotel':
-        return '🏨';
+        return 'bed';
       default:
-        return '📌';
+        return 'pin';
     }
   };
 
@@ -111,7 +112,7 @@ export default function ItineraryStopItem({
                 gap: 3,
               }}
             >
-              <span>🧭</span> Open in navigation app
+              <span><Icon name="compass" /></span> Open in navigation app
             </button>
           )}
         </div>
@@ -133,7 +134,7 @@ export default function ItineraryStopItem({
               boxShadow: '0 2px 4px rgba(240, 194, 58, 0.3)',
             }}
           >
-            <span>📌</span> PINNED TARGET
+            <span><Icon name="pin" /></span> PINNED TARGET
           </span>
         ) : (
           <button
@@ -154,7 +155,7 @@ export default function ItineraryStopItem({
               transition: 'background-color 0.2s',
             }}
           >
-            <span>📌</span> Pin as next stop
+            <span><Icon name="pin" /></span> Pin as next stop
           </button>
         )}
       </div>

@@ -4,6 +4,7 @@ import {
   MilestoneCardCustomization,
   BACKDROP_PRESETS,
 } from '../utils/tripMilestones';
+import Icon from './Icon';
 
 interface TripMilestoneCardProps {
   summary: TripMilestoneSummary;
@@ -33,7 +34,7 @@ export default function TripMilestoneCard({
       {/* Top Banner Ribbon */}
       <div style={styles.topRow}>
         <div style={styles.badgePill}>
-          <span style={{ fontSize: 13 }}>🏆</span>
+          <span style={{ fontSize: 13 }}><Icon name="trophy" /></span>
           <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: '#F0C23A' }}>
             EXPEDITION COMPLETED
           </span>
@@ -44,7 +45,7 @@ export default function TripMilestoneCard({
       {/* Main Route Title */}
       <div style={{ margin: '8px 0 12px' }}>
         <h2 style={styles.routeTitle}>
-          {summary.fromPlace} <span style={{ color: currentBackdrop.accent }}>➔</span> {summary.toPlace}
+          {summary.fromPlace} <span style={{ color: currentBackdrop.accent }}>→</span> {summary.toPlace}
         </h2>
         <div style={styles.subtitleText}>{summary.title}</div>
       </div>
@@ -84,12 +85,12 @@ export default function TripMilestoneCard({
 
       {/* Waypoint Amenities Breakdown */}
       <div style={styles.amenitiesStrip}>
-        {summary.fuelStopsCount > 0 && <span>⛽ {summary.fuelStopsCount} Fuel</span>}
-        {summary.mealStopsCount > 0 && <span>🍽️ {summary.mealStopsCount} Meals</span>}
-        {summary.scenicPointsCount > 0 && <span>📸 {summary.scenicPointsCount} Scenic Passes</span>}
+        {summary.fuelStopsCount > 0 && <span>{summary.fuelStopsCount} Fuel</span>}
+        {summary.mealStopsCount > 0 && <span>{summary.mealStopsCount} Meals</span>}
+        {summary.scenicPointsCount > 0 && <span>{summary.scenicPointsCount} Scenic Passes</span>}
         {customization.showBikeModel && summary.bikeModel && (
           <span style={{ marginLeft: 'auto', color: '#F0C23A', fontWeight: 800 }}>
-            🏍️ {summary.bikeModel}
+            {summary.bikeModel}
           </span>
         )}
       </div>
@@ -97,7 +98,7 @@ export default function TripMilestoneCard({
       {/* Custom Note Quote */}
       {customization.customNote && (
         <div style={styles.quoteBox}>
-          <span>💬</span>
+          <span><Icon name="chat" /></span>
           <span style={{ fontStyle: 'italic', color: 'var(--text-primary)', fontSize: 12 }}>
             "{customization.customNote}"
           </span>
@@ -112,19 +113,19 @@ export default function TripMilestoneCard({
             style={styles.discoverPill}
             title="Click to view public itinerary in Discover"
           >
-            <span>🌐</span>
+            <span><Icon name="globe" /></span>
             <span style={{ fontWeight: 800 }}>Verified on Payanam Discover · Open Itinerary</span>
             <span>↗</span>
           </div>
         ) : (
           <div style={styles.privacySealPill}>
-            <span>🛡️</span>
+            <span><Icon name="shield" /></span>
             <span>Residential & home coordinates omitted for safety</span>
           </div>
         )}
 
         <div style={styles.brandWatermark}>
-          <span>🏍️</span>
+          <span><Icon name="bike" /></span>
           <span>PAYANAM</span>
         </div>
       </div>

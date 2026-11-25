@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
+import Icon from '../components/Icon';
 
 function RegisterPage() {
   const [searchParams] = useSearchParams();
@@ -89,7 +90,7 @@ function RegisterPage() {
     >
       {error && (
         <div style={styles.errorBox}>
-          <span style={{ fontSize: '16px' }}>⚠️</span>
+          <span style={{ fontSize: '16px' }}><Icon name="warning" /></span>
           <span>{error}</span>
         </div>
       )}
@@ -134,7 +135,7 @@ function RegisterPage() {
         <div style={styles.field}>
           <label style={styles.label}>Full Name</label>
           <div style={styles.inputWrapper}>
-            <span style={styles.inputIcon}>👤</span>
+            <span style={styles.inputIcon}><Icon name="user" /></span>
             <input
               type="text"
               value={fullName}
@@ -150,7 +151,7 @@ function RegisterPage() {
         <div style={styles.field}>
           <label style={styles.label}>Email Address</label>
           <div style={styles.inputWrapper}>
-            <span style={styles.inputIcon}>✉️</span>
+            <span style={styles.inputIcon}><Icon name="mail" /></span>
             <input
               type="email"
               value={email}
@@ -166,7 +167,7 @@ function RegisterPage() {
         <div style={styles.field}>
           <label style={styles.label}>Create Password</label>
           <div style={styles.inputWrapper}>
-            <span style={styles.inputIcon}>🔒</span>
+            <span style={styles.inputIcon}><Icon name="lock" /></span>
             <input
               type={showPassword ? 'text' : 'password'}
               value={password}
@@ -181,7 +182,7 @@ function RegisterPage() {
               style={styles.eyeBtn}
               title={showPassword ? 'Hide password' : 'Show password'}
             >
-              {showPassword ? '🙈' : '👁️'}
+              <Icon name={showPassword ? 'eyeOff' : 'eye'} />
             </button>
           </div>
         </div>
@@ -190,16 +191,16 @@ function RegisterPage() {
         {password.length > 0 && (
           <div style={styles.checklist}>
             <div style={hasLength ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasLength ? '✓' : '•'}</span> At least 8 characters
+              <span><Icon name={hasLength ? 'check' : 'dot'} /></span> At least 8 characters
             </div>
             <div style={hasUpper ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasUpper ? '✓' : '•'}</span> At least 1 uppercase letter (A-Z)
+              <span><Icon name={hasUpper ? 'check' : 'dot'} /></span> At least 1 uppercase letter (A-Z)
             </div>
             <div style={hasLower ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasLower ? '✓' : '•'}</span> At least 1 lowercase letter (a-z)
+              <span><Icon name={hasLower ? 'check' : 'dot'} /></span> At least 1 lowercase letter (a-z)
             </div>
             <div style={hasNumber ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasNumber ? '✓' : '•'}</span> At least 1 number (0-9)
+              <span><Icon name={hasNumber ? 'check' : 'dot'} /></span> At least 1 number (0-9)
             </div>
           </div>
         )}
@@ -216,7 +217,7 @@ function RegisterPage() {
         >
           {isLoading ? (
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <span>⏳</span> Creating account...
+              <span><Icon name="clock" /></span> Creating account...
             </span>
           ) : (
             'Create Account →'

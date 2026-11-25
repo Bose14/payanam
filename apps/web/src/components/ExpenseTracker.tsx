@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { tripService } from '../services/api';
+import Icon from './Icon';
 
 interface Participant {
   id: string;
@@ -35,29 +36,29 @@ interface Props {
 }
 
 const CATEGORY_MAP: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  fuel: { label: 'Fuel', icon: '⛽', color: '#d97706', bg: '#fef3c7' },
-  food: { label: 'Food & Chai', icon: '🍽️', color: '#059669', bg: '#d1fae5' },
-  stay: { label: 'Stay', icon: '🏨', color: '#2563eb', bg: '#dbeafe' },
-  toll: { label: 'Tolls', icon: '🚧', color: '#7c3aed', bg: '#ede9fe' },
-  repairs: { label: 'Spares & Repair', icon: '🔧', color: '#dc2626', bg: '#fee2e2' },
-  parking: { label: 'Parking', icon: '🅿️', color: '#0891b2', bg: '#cffafe' },
-  settlement: { label: 'Debt Settlement', icon: '🤝', color: '#4f46e5', bg: '#e0e7ff' },
-  other: { label: 'Other', icon: '💸', color: '#4b5563', bg: '#f3f4f6' },
+  fuel: { label: 'Fuel', icon: 'fuel', color: '#d97706', bg: '#fef3c7' },
+  food: { label: 'Food & Chai', icon: 'food', color: '#059669', bg: '#d1fae5' },
+  stay: { label: 'Stay', icon: 'bed', color: '#2563eb', bg: '#dbeafe' },
+  toll: { label: 'Tolls', icon: 'warning', color: '#7c3aed', bg: '#ede9fe' },
+  repairs: { label: 'Spares & Repair', icon: 'wrench', color: '#dc2626', bg: '#fee2e2' },
+  parking: { label: 'Parking', icon: 'pin', color: '#0891b2', bg: '#cffafe' },
+  settlement: { label: 'Debt Settlement', icon: 'users', color: '#4f46e5', bg: '#e0e7ff' },
+  other: { label: 'Other', icon: 'card', color: '#4b5563', bg: '#f3f4f6' },
 };
 
 const CATEGORIES = Object.entries(CATEGORY_MAP).map(([value, info]) => ({
   ...info,
   value,
-  label: `${info.icon} ${info.label}`,
+  label: info.label,
 }));
 
 const QUICK_PRESETS = [
-  { label: '⛽ Full Tank', category: 'fuel', title: 'Petrol / Fuel Refill', amount: '1500' },
-  { label: '🍽️ Dhaba / Meal', category: 'food', title: 'Highway Dhaba Lunch', amount: '500' },
-  { label: '☕ Chai & Snacks', category: 'food', title: 'Chai & Snacks Break', amount: '150' },
-  { label: '🚧 Highway Toll', category: 'toll', title: 'Fastag Toll Plaza', amount: '135' },
-  { label: '🏨 Hotel / Stay', category: 'stay', title: 'Hotel / Homestay Room', amount: '2200' },
-  { label: '🔧 Chain / Puncture', category: 'repairs', title: 'Puncture / Chain Lube', amount: '250' },
+  { label: 'Full Tank', category: 'fuel', title: 'Petrol / Fuel Refill', amount: '1500' },
+  { label: 'Dhaba / Meal', category: 'food', title: 'Highway Dhaba Lunch', amount: '500' },
+  { label: 'Chai & Snacks', category: 'food', title: 'Chai & Snacks Break', amount: '150' },
+  { label: 'Highway Toll', category: 'toll', title: 'Fastag Toll Plaza', amount: '135' },
+  { label: 'Hotel / Stay', category: 'stay', title: 'Hotel / Homestay Room', amount: '2200' },
+  { label: 'Chain / Puncture', category: 'repairs', title: 'Puncture / Chain Lube', amount: '250' },
 ];
 
 function fmt(n: number) {
@@ -165,7 +166,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
       setParticipants(parts);
       setExpenses(exps);
     } catch {
-      showToast('❌ Failed to load trip expenses');
+      showToast('Failed to load trip expenses');
     } finally {
       setLoading(false);
     }
@@ -200,21 +201,21 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
   const handleSubmit = async () => {
     const amount = parseFloat(form.amount);
     if (!form.title.trim()) {
-      showToast('❌ Enter an expense description');
+      showToast('Enter an expense description');
       return;
     }
     if (!amount || amount <= 0) {
-      showToast('❌ Enter a valid amount greater than 0');
+      showToast('Enter a valid amount greater than 0');
       return;
     }
     if (form.split_type === 'equal' && form.split_among.length === 0) {
-      showToast('❌ Select at least one person to split');
+      showToast('Select at least one person to split');
       return;
     }
     if (form.split_type === 'custom') {
       const total = Object.values(form.custom_splits).reduce((s, v) => s + (parseFloat(v) || 0), 0);
       if (Math.abs(total - amount) > 0.05) {
-        showToast(`❌ Splits total ₹${total.toFixed(2)}, must equal ₹${amount.toFixed(2)}`);
+        showToast(`Splits total ₹${total.toFixed(2)}, must equal ₹${amount.toFixed(2)}`);
         return;
       }
     }
@@ -234,10 +235,10 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           : undefined,
       });
       setShowModal(false);
-      showToast('✅ Expense recorded');
+      showToast('Expense recorded');
       await loadData();
     } catch {
-      showToast('❌ Failed to add expense');
+      showToast('Failed to add expense');
     } finally {
       setSaving(false);
     }
@@ -249,9 +250,9 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
     try {
       await tripService.deleteExpense(tripId, expenseId);
       setExpenses(prev => prev.filter(e => e.id !== expenseId));
-      showToast('✅ Expense deleted');
+      showToast('Expense deleted');
     } catch {
-      showToast('❌ Failed to delete expense');
+      showToast('Failed to delete expense');
     } finally {
       setDeletingId(null);
     }
@@ -262,9 +263,9 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
     try {
       await tripService.toggleSplitSettled(tripId, splitId);
       await loadData();
-      showToast('✅ Split status updated');
+      showToast('Split status updated');
     } catch {
-      showToast('❌ Failed to update split status');
+      showToast('Failed to update split status');
     } finally {
       setSettlingSplitId(null);
     }
@@ -294,11 +295,11 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
         toUserId: settleModal.to.id,
         amount: settleModal.amount,
       });
-      showToast(`✅ Recorded ₹${settleModal.amount} settlement!`);
+      showToast(`Recorded ₹${settleModal.amount} settlement!`);
       setSettleModal({ show: false, from: null, to: null, amount: 0, upiId: '', isSettling: false });
       await loadData();
     } catch {
-      showToast('❌ Failed to record settlement');
+      showToast('Failed to record settlement');
       setSettleModal(prev => ({ ...prev, isSettling: false }));
     }
   };
@@ -357,35 +358,35 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
 
   // WhatsApp summary generator
   const generateWhatsAppSummary = () => {
-    let msg = `🏍️ *${tripTitle.toUpperCase()} - EXPENSE SUMMARY*\n`;
+    let msg = `*${tripTitle.toUpperCase()} - EXPENSE SUMMARY*\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `💰 *Total Trip Spend:* ${fmt(totalAmount)} (${nonSettlementExpenses.length} items)\n`;
+    msg += `*Total Trip Spend:* ${fmt(totalAmount)} (${nonSettlementExpenses.length} items)\n`;
     if (participants.length > 0) {
-      msg += `👥 *Avg per Rider:* ${fmt(totalAmount / participants.length)}\n\n`;
+      msg += `*Avg per Rider:* ${fmt(totalAmount / participants.length)}\n\n`;
     }
 
     if (categoryStats.length > 0) {
-      msg += `📊 *Category Breakdown:*\n`;
+      msg += `*Category Breakdown:*\n`;
       categoryStats.forEach(c => {
-        msg += `${c.icon} ${c.label}: ${fmt(c.amount)} (${Math.round(c.percentage)}%)\n`;
+        msg += `${c.label}: ${fmt(c.amount)} (${Math.round(c.percentage)}%)\n`;
       });
       msg += `\n`;
     }
 
     if (settlements.length > 0) {
-      msg += `⚖️ *Pending Settle-Ups:*\n`;
+      msg += `*Pending Settle-Ups:*\n`;
       settlements.forEach(s => {
-        msg += `• ${s.from.full_name} ➔ ${s.to.full_name}: *${fmt(s.amount)}*\n`;
+        msg += `• ${s.from.full_name} to ${s.to.full_name}: *${fmt(s.amount)}*\n`;
       });
     } else {
-      msg += `✅ *All accounts are settled up!*\n`;
+      msg += `*All accounts are settled up!*\n`;
     }
 
     msg += `\n━━━━━━━━━━━━━━━━━━━━━\n`;
-    msg += `🛣️ _Tracked with Payanam Convoy_`;
+    msg += `_Tracked with Payanam Convoy_`;
 
     navigator.clipboard.writeText(msg).then(() => {
-      showToast('📋 Copied WhatsApp summary to clipboard!');
+      showToast('Copied WhatsApp summary to clipboard!');
     }).catch(() => {
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     });
@@ -423,7 +424,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('📥 Downloaded CSV report');
+    showToast('Downloaded CSV report');
   };
 
   const customTotal = Object.values(form.custom_splits).reduce((s, v) => s + (parseFloat(v) || 0), 0);
@@ -447,7 +448,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
     return (
       <div style={styles.card}>
         <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-          <div style={{ fontSize: 32, marginBottom: 8, animation: 'spin 1s linear infinite' }}>⏳</div>
+          <div style={{ fontSize: 32, marginBottom: 8, animation: 'spin 1s linear infinite' }}><Icon name="clock" /></div>
           <p style={{ margin: 0, fontWeight: 600 }}>Loading trip expenses & balances...</p>
         </div>
       </div>
@@ -463,7 +464,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           top: 24,
           left: '50%',
           transform: 'translateX(-50%)',
-          background: toast.startsWith('✅') ? '#065f46' : '#991b1b',
+          background: toast.startsWith('check') ? '#065f46' : '#991b1b',
           color: '#ffffff',
           padding: '12px 24px',
           borderRadius: 10,
@@ -484,7 +485,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
       <div style={styles.header}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 24 }}>💸</span>
+            <span style={{ fontSize: 24 }}><Icon name="card" /></span>
             <h3 style={styles.headerTitle}>Trip Expenses & Split</h3>
           </div>
           <p style={styles.headerSubtitle}>
@@ -506,14 +507,14 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             title="Share summary on WhatsApp"
             style={styles.btnSecondary}
           >
-            <span>📱</span> WhatsApp
+            <span><Icon name="phone" /></span> WhatsApp
           </button>
           <button
             onClick={exportCSV}
             title="Download CSV spreadsheet"
             style={styles.btnSecondary}
           >
-            <span>📥</span> CSV
+            <span><Icon name="download" /></span> CSV
           </button>
           <button
             onClick={openModal}
@@ -536,7 +537,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             background: activeTab === 'expenses' ? 'var(--accent-gold-bg)' : 'transparent',
           }}
         >
-          <span>📋 Expenses</span>
+          <span>Expenses</span>
           <span style={styles.tabCountPill}>({expenses.length})</span>
         </button>
         <button
@@ -549,7 +550,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             background: activeTab === 'analytics' ? 'var(--accent-gold-bg)' : 'transparent',
           }}
         >
-          <span>📊 Analytics</span>
+          <span>Analytics</span>
           <span className="desktop-tab-sub"> & Breakdown</span>
         </button>
         <button
@@ -562,7 +563,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             background: activeTab === 'balances' ? 'var(--accent-gold-bg)' : 'transparent',
           }}
         >
-          <span>⚖️ Settle Up</span>
+          <span>Settle Up</span>
           <span className="desktop-tab-sub"> & Balances</span>
           {settlements.length > 0 && <span style={styles.pendingBadge}>{settlements.length}</span>}
         </button>
@@ -574,7 +575,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           {/* Search & Category Filter Bar */}
           <div className="expense-search-row" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
             <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>🔍</span>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}><Icon name="search" /></span>
               <input
                 type="text"
                 placeholder="Search by title or rider..."
@@ -598,7 +599,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           {/* List items */}
           {filteredExpenses.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 16px', color: '#94a3b8' }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🛣️</div>
+              <div style={{ fontSize: 48, marginBottom: 12 }}><Icon name="road" /></div>
               <p style={{ margin: 0, fontWeight: 600, color: '#475569', fontSize: 16 }}>No expenses found</p>
               <p style={{ margin: '4px 0 16px', fontSize: 13 }}>
                 {searchQuery || selectedCategory !== 'all'
@@ -624,7 +625,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                   <div key={expense.id} style={styles.expenseCard}>
                     {/* Category Icon Badge */}
                     <div style={{ ...styles.categoryBadge, background: cat.bg, color: cat.color }}>
-                      <span style={{ fontSize: 22 }}>{cat.icon}</span>
+                      <span style={{ fontSize: 22 }}><Icon name={cat.icon} size={22} /></span>
                     </div>
 
                     {/* Middle Details */}
@@ -672,7 +673,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                             alignItems: 'center',
                             gap: 4,
                           }}>
-                            Your share: {fmtDec(myShare.amount)} {myShare.is_settled ? '✅ Settled' : '⏳ Unsettled'}
+                            Your share: {fmtDec(myShare.amount)} {myShare.is_settled ? 'Settled' : 'Unsettled'}
                           </span>
 
                           <button
@@ -706,7 +707,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                           disabled={deletingId === expense.id}
                           style={styles.btnDelete}
                         >
-                          {deletingId === expense.id ? 'Deleting...' : '🗑️ Delete'}
+                          {deletingId === expense.id ? 'Deleting...' : 'Delete'}
                         </button>
                       )}
                     </div>
@@ -738,7 +739,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
             <div style={styles.metricCard}>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Top Category</span>
               <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
-                {categoryStats[0] ? `${categoryStats[0].icon} ${categoryStats[0].label}` : 'None'}
+                {categoryStats[0] ? categoryStats[0].label : 'None'}
               </div>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 {categoryStats[0] ? `${fmt(categoryStats[0].amount)} (${Math.round(categoryStats[0].percentage)}%)` : '-'}
@@ -758,7 +759,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           {/* Category Breakdown Progress Bars */}
           <div style={{ marginTop: 24, background: 'var(--bg-subtle)', borderRadius: 12, padding: 18, border: '1px solid var(--border-subtle)' }}>
             <h4 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-              📊 Spending by Category
+              Spending by Category
             </h4>
             {categoryStats.length === 0 ? (
               <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 14 }}>No category data available yet.</p>
@@ -768,7 +769,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                   <div key={cat.category}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 13 }}>
                       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                        {cat.icon} {cat.label}
+                        <Icon name={cat.icon} /> {cat.label}
                       </span>
                       <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                         {fmtDec(cat.amount)} <span style={{ fontWeight: 500, color: 'var(--text-secondary)' }}>({cat.percentage.toFixed(1)}%)</span>
@@ -793,7 +794,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           {/* Rider Contributions Breakdown */}
           <div style={{ marginTop: 20, background: 'var(--bg-subtle)', borderRadius: 12, padding: 18, border: '1px solid var(--border-subtle)' }}>
             <h4 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-              👥 Paid Out of Pocket
+              Paid Out of Pocket
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {contributorStats.map(contributor => (
@@ -863,7 +864,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                         {p.full_name}{isMe ? ' (You)' : ''}
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                        {p.role === 'owner' ? '👑 Convoy Lead' : '🏍️ Rider'}
+                        {p.role === 'owner' ? 'Convoy Lead' : 'Rider'}
                       </div>
                     </div>
                   </div>
@@ -889,13 +890,13 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           <div style={{ borderTop: '1px solid var(--border-card)', paddingTop: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>⚡</span> Recommended Settle-Up Transactions
+                <span><Icon name="bolt" /></span> Recommended Settle-Up Transactions
               </h4>
             </div>
 
             {settlements.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 16px', background: 'var(--accent-green-bg)', borderRadius: 12, border: '1px solid var(--accent-green)' }}>
-                <span style={{ fontSize: 32 }}>🎉</span>
+                <span style={{ fontSize: 32 }}><Icon name="spark" /></span>
                 <p style={{ margin: '8px 0 0', fontWeight: 700, color: 'var(--accent-green)', fontSize: 15 }}>All accounts are settled up!</p>
                 <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>Nobody owes anyone anything in this convoy.</p>
               </div>
@@ -922,7 +923,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220 }}>
-                        <span style={{ fontSize: 24 }}>💸</span>
+                        <span style={{ fontSize: 24 }}><Icon name="card" /></span>
                         <div>
                           <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
                             <strong style={{ color: isDebtor ? '#ef4444' : 'var(--text-primary)' }}>
@@ -943,7 +944,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                         onClick={() => openSettleModal(txn.from, txn.to, txn.amount)}
                         style={styles.btnSettle}
                       >
-                        <span>📲</span> Pay / Settle via UPI
+                        <span><Icon name="phone" /></span> Pay / Settle via UPI
                       </button>
                     </div>
                   );
@@ -962,10 +963,10 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           <div style={styles.modalContent}>
             <div style={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 22 }}>➕</span>
+                <span style={{ fontSize: 22 }}><Icon name="plus" /></span>
                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Add Road Trip Expense</h3>
               </div>
-              <button onClick={() => setShowModal(false)} style={styles.modalClose}>✕</button>
+              <button onClick={() => setShowModal(false)} style={styles.modalClose}><Icon name="close" /></button>
             </div>
 
             {/* Quick Presets */}
@@ -1073,7 +1074,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                         color: form.split_type === t ? 'var(--btn-primary-text)' : 'var(--text-secondary)',
                       }}
                     >
-                      {t === 'equal' ? '👥 Split Equally' : '✏️ Custom Split'}
+                      {t === 'equal' ? 'Split Equally' : 'Custom Split'}
                     </button>
                   ))}
                 </div>
@@ -1192,7 +1193,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                       color: Math.abs(customRemaining) < 0.05 ? 'var(--accent-green)' : 'var(--accent-gold)',
                     }}>
                       {Math.abs(customRemaining) < 0.05
-                        ? '✅ Total amounts match perfectly!'
+                        ? 'Total amounts match perfectly!'
                         : `${customRemaining > 0 ? `₹${customRemaining.toFixed(2)} left to allocate` : `₹${Math.abs(customRemaining).toFixed(2)} exceeds total`}`}
                     </div>
                   </div>
@@ -1229,7 +1230,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
           <div style={{ ...styles.modalContent, maxWidth: 440 }}>
             <div style={styles.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 24 }}>⚡</span>
+                <span style={{ fontSize: 24 }}><Icon name="bolt" /></span>
                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
                   UPI Instant Settle-Up
                 </h3>
@@ -1238,7 +1239,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                 onClick={() => setSettleModal(prev => ({ ...prev, show: false }))}
                 style={styles.modalClose}
               >
-                ✕
+
               </button>
             </div>
 
@@ -1306,7 +1307,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                 marginBottom: 10,
               }}
             >
-              📲 Open in GPay / PhonePe / Paytm
+              Open in GPay / PhonePe / Paytm
             </a>
 
             {/* Confirm & Record Settlement Button */}
@@ -1322,7 +1323,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
                 justifyContent: 'center',
               }}
             >
-              {settleModal.isSettling ? 'Recording Settlement...' : '✅ Confirm & Mark as Settled'}
+              {settleModal.isSettling ? 'Recording Settlement...' : 'Confirm & Mark as Settled'}
             </button>
           </div>
         </div>

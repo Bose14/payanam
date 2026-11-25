@@ -6,6 +6,7 @@ import {
   getPreferredNavigationApp,
   setPreferredNavigationApp,
 } from '../utils/navigationHandoff';
+import Icon from './Icon';
 
 export interface NavigationTarget {
   name: string;
@@ -57,19 +58,19 @@ export default function NavigationAppModal({ isOpen, onClose, target }: Navigati
 
         {/* Header */}
         <div style={styles.header}>
-          <div style={styles.headerIcon}>🧭</div>
+          <div style={styles.headerIcon}><Icon name="compass" /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3 style={styles.title}>Open in navigation app</h3>
             <p style={styles.subtitle}>{name || 'Destination / Stop'}</p>
           </div>
-          <button onClick={onClose} style={styles.closeBtn} aria-label="Close">✕</button>
+          <button onClick={onClose} style={styles.closeBtn} aria-label="Close"><Icon name="close" /></button>
         </div>
 
         {/* Coordinates bar */}
         <div style={styles.coordBar}>
-          <span style={styles.coordText}>📍 {lat.toFixed(5)}, {lng.toFixed(5)}</span>
+          <span style={styles.coordText}>{lat.toFixed(5)}, {lng.toFixed(5)}</span>
           <button onClick={handleCopyCoords} style={styles.copyBtn}>
-            {copied ? '✓ Copied' : '📋 Copy'}
+            {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
 
@@ -91,7 +92,7 @@ export default function NavigationAppModal({ isOpen, onClose, target }: Navigati
                   backgroundColor: isPreferred ? opt.accentBg : '#1B1E23',
                 }}
               >
-                <div style={styles.appIcon}>{opt.icon}</div>
+                <div style={styles.appIcon}><Icon name={opt.icon} size={22} /></div>
                 <div style={styles.appInfo}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={styles.appName}>{opt.name}</span>
@@ -113,7 +114,7 @@ export default function NavigationAppModal({ isOpen, onClose, target }: Navigati
                   </div>
                   <div style={styles.appDesc}>{opt.desc}</div>
                 </div>
-                <span style={{ ...styles.chevron, color: opt.accentColor }}>➔</span>
+                <span style={{ ...styles.chevron, color: opt.accentColor }}>→</span>
               </button>
             );
           })}

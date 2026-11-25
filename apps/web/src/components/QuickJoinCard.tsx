@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Icon from './Icon';
 
 interface QuickJoinCardProps {
   onSuccess?: () => void;
@@ -44,7 +45,7 @@ export const QuickJoinCard: React.FC<QuickJoinCardProps> = ({ onSuccess, style }
     <div className="dashboard-quick-join" style={{ ...styles.quickJoinCard, ...style }}>
       <div style={styles.quickJoinHeader}>
         <div style={styles.quickJoinBadge}>
-          <span style={{ fontSize: 13 }}>🤝</span>
+          <span style={{ fontSize: 13 }}><Icon name="users" /></span>
           <span>CONVOY ACCESS</span>
         </div>
         <h3 style={styles.quickJoinTitle}>Have a Convoy Invite Code?</h3>
@@ -55,7 +56,7 @@ export const QuickJoinCard: React.FC<QuickJoinCardProps> = ({ onSuccess, style }
 
       <form onSubmit={handleJoinWithCode} className="dashboard-quick-join-form" style={styles.quickJoinForm}>
         <div className="quick-join-input-wrap" style={styles.quickJoinInputWrap}>
-          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>🔑</span>
+          <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><Icon name="lock" /></span>
           <input
             type="text"
             placeholder="e.g. 9QDA6FP5"
@@ -73,7 +74,7 @@ export const QuickJoinCard: React.FC<QuickJoinCardProps> = ({ onSuccess, style }
             className="quick-join-paste-btn"
             style={styles.quickJoinPasteBtn}
           >
-            📋 Paste
+            Paste
           </button>
         </div>
         <button
@@ -90,7 +91,7 @@ export const QuickJoinCard: React.FC<QuickJoinCardProps> = ({ onSuccess, style }
             whiteSpace: 'nowrap',
           }}
         >
-          Join Convoy ➔
+          Join Convoy →
         </button>
       </form>
     </div>

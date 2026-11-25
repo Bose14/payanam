@@ -74,6 +74,7 @@ import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQ
 import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
+import Icon, { iconSvg } from '../components/Icon';
 
 const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
 
@@ -96,8 +97,8 @@ function formatManeuver(maneuver: { type: string; modifier?: string }, name: str
 
 function stepIcon(instr: string): string {
   const l = instr.toLowerCase();
-  if (l.includes('arrive')) return '🏁';
-  if (l.includes('depart')) return '🚦';
+  if (l.includes('arrive')) return 'flag';
+  if (l.includes('depart')) return 'warning';
   if (l.includes('left')) return '↰';
   if (l.includes('right')) return '↱';
   if (l.includes('roundabout')) return '⟳';
@@ -176,7 +177,7 @@ function makeMyNavIcon(color: string, heading: number, status: string, isStale: 
 // Circle icon for other riders - replaced by createRiderMarkerIcon
 
 function makeStopIcon(placeName?: string, itemType?: string, orderIndex?: number) {
-  const iconEmoji = itemType === 'fuel' ? '⛽' : itemType === 'food' ? '🍲' : itemType === 'rest' ? '☕' : '📍';
+  const iconEmoji = itemType === 'fuel' ? 'fuel' : itemType === 'food' ? 'food' : itemType === 'rest' ? 'coffee' : 'pin';
   const label = placeName ? placeName.slice(0, 14) : `Stop ${orderIndex ?? ''}`;
   return L.divIcon({
     className: 'stop-milestone-marker',
@@ -184,8 +185,8 @@ function makeStopIcon(placeName?: string, itemType?: string, orderIndex?: number
     iconSize: [24, 24],
     html: `
       <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-        <div style="width:24px;height:24px;background:#1B1E23;border:2px solid #F0C23A;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.6);font-size:11px;">
-          ${iconEmoji}
+        <div style="width:24px;height:24px;background:#1B1E23;border:2px solid #F0C23A;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.6);font-size:11px;color:#F0C23A;">
+          ${iconSvg(iconEmoji, 16)}
         </div>
         <div style="position:absolute;top:26px;background:#111316;color:#F1EFEA;border:1px solid #2A2E35;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);letter-spacing:-0.2px;">
           ${label}
@@ -196,15 +197,15 @@ function makeStopIcon(placeName?: string, itemType?: string, orderIndex?: number
 }
 
 function makePinnedStopIcon(type: string) {
-  const icon = type === 'fuel_stop' ? '⛽' : type === 'meal' ? '🍽️' : type === 'rest' ? '☕' : '📍';
+  const icon = type === 'fuel_stop' ? 'fuel' : type === 'meal' ? 'food' : type === 'rest' ? 'coffee' : 'pin';
   return L.divIcon({
     className: '',
     iconAnchor: [20, 20],
     iconSize: [40, 40],
     html: `<div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
       <div style="position:absolute;inset:0;background:#f59e0b;opacity:0.35;border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
-      <div style="width:34px;height:34px;background:#f59e0b;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 10px rgba(0,0,0,0.5);">
-        ${icon}
+      <div style="width:34px;height:34px;background:#f59e0b;border:2px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 10px rgba(0,0,0,0.5);color:#fff;">
+        ${iconSvg(icon, 16)}
       </div>
     </div>`,
   });
@@ -422,7 +423,7 @@ export default function RidePage() {
     setBatterySaver(enabled);
     setBatterySaverPreference(enabled);
     backgroundTrackingEngine.setBatterySaver(enabled);
-    setToast(enabled ? '⚡ Battery saver enabled (30s update rate)' : '⚡ Standard telemetry restored (10s rate)');
+    setToast(enabled ? 'Battery saver enabled (30s update rate)' : 'Standard telemetry restored (10s rate)');
     setTimeout(() => setToast(''), 3000);
   }, []);
 
@@ -785,8 +786,8 @@ export default function RidePage() {
             if (m.message.startsWith('{')) {
               const parsed = JSON.parse(m.message);
               if (parsed.stop) setPinnedStop(parsed.stop);
-            } else if (m.message.includes('📍 Pinned Target Stop:')) {
-              const stopName = m.message.replace('📍 Pinned Target Stop:', '').trim();
+            } else if (m.message.includes('Pinned Target Stop:')) {
+              const stopName = m.message.replace('Pinned Target Stop:', '').trim();
               const foundInItin = (session?.itinerary ?? []).find(s => s.place === stopName && s.lat && s.lng);
               if (foundInItin) {
                 setPinnedStop({
@@ -823,7 +824,7 @@ export default function RidePage() {
           if (idx >= 0) { const u = [...prev]; u[idx] = entry; return u; }
           return [...prev, entry];
         });
-        if (payload.quickStatus?.includes('🆘')) setSosActive(true);
+        if (payload.quickStatus === 'SOS' || payload.quickStatus?.includes('SOS')) setSosActive(true);
         // Requirement 5: Append point to rider's trail
         if (payload.lat && payload.lng && payload.userId) {
           setRiderTrails((prev) => ({
@@ -922,7 +923,7 @@ export default function RidePage() {
         setRidersArrival({});
         if (payload.stop) {
           playAlertChime('chime');
-          setToast(`📍 Convoy Target Stop: ${payload.stop.name}`);
+          setToast(`Convoy Target Stop: ${payload.stop.name}`);
           setTimeout(() => setToast(''), 3500);
         }
       })
@@ -939,18 +940,18 @@ export default function RidePage() {
         }));
         if (payload.status === 'arrived') {
           playAlertChime('chime');
-          setToast(`🏁 ${payload.userName} arrived at stop!`);
+          setToast(`${payload.userName} arrived at stop!`);
           setTimeout(() => setToast(''), 3500);
         }
       })
       .on('broadcast', { event: 'stop_prealert' }, ({ payload }) => {
         playAlertChime('chime');
-        setToast(`⛽ Pre-alert: Approaching ${payload.stopName} in ${payload.distanceKm ? `${payload.distanceKm.toFixed(1)} km` : '2 km'} (~${payload.etaMinutes || 4} min) · Prepare to regroup!`);
+        setToast(`Pre-alert: Approaching ${payload.stopName} in ${payload.distanceKm ? `${payload.distanceKm.toFixed(1)} km` : '2 km'} (~${payload.etaMinutes || 4} min) · Prepare to regroup!`);
         setTimeout(() => setToast(''), 4500);
       })
       .on('broadcast', { event: 'stop_arrival_alert' }, ({ payload }) => {
         playAlertChime('urgent');
-        setToast(`🏁 Convoy reached ${payload.stopName}! (${payload.userName} is here)`);
+        setToast(`Convoy reached ${payload.stopName}! (${payload.userName} is here)`);
         setTimeout(() => setToast(''), 4500);
       })
       .on('broadcast', { event: 'announcement' }, ({ payload }) => {
@@ -964,7 +965,7 @@ export default function RidePage() {
       .on('broadcast', { event: 'route_deviation' }, ({ payload }) => {
         if (!payload || !payload.userId) return;
         playAlertChime('alert');
-        setToast(`⚠️ Route Deviation: ${payload.userName} is ${formatOffRouteDistance(payload.distanceMeters)} off the route`);
+        setToast(`Route Deviation: ${payload.userName} is ${formatOffRouteDistance(payload.distanceMeters)} off the route`);
         setTimeout(() => setToast(''), 4000);
         setDeviationTrackers((prev) => ({
           ...prev,
@@ -989,7 +990,7 @@ export default function RidePage() {
           delete updated[payload.userId];
           return updated;
         });
-        setToast(`✓ ${payload.userName} returned to the route`);
+        setToast(`${payload.userName} returned to the route`);
         setTimeout(() => setToast(''), 3000);
       })
       .on('broadcast', { event: 'itinerary_updated' }, ({ payload }) => {
@@ -1008,7 +1009,7 @@ export default function RidePage() {
             };
           });
           playAlertChime('chime');
-          setToast(`📌 Itinerary updated: ${newStop.place} (from chat)`);
+          setToast(`Itinerary updated: ${newStop.place} (from chat)`);
           setTimeout(() => setToast(''), 3500);
         }
       })
@@ -1020,7 +1021,7 @@ export default function RidePage() {
             return [prop, ...prev];
           });
           playAlertChime('chime');
-          setToast(`💡 ${prop.proposerName} proposed: "${prop.title}"`);
+          setToast(`${prop.proposerName} proposed: "${prop.title}"`);
           setTimeout(() => setToast(''), 4000);
         }
       })
@@ -1036,7 +1037,7 @@ export default function RidePage() {
           );
           if (status === 'accepted') {
             playAlertChime('chime');
-            setToast(`✓ Proposal accepted by ${resolverName || 'Captain'}!`);
+            setToast(`Proposal accepted by ${resolverName || 'Captain'}!`);
             if (updatedStop) {
               setSession((prev) => {
                 if (!prev) return prev;
@@ -1081,13 +1082,13 @@ export default function RidePage() {
 
   const sendSOS = useCallback(async () => {
     if (!sessionId) return;
-    if (!window.confirm('🚨 Send SOS alert to all riders?')) return;
-    const result = await rideService.sendMessage(sessionId, { message: '🆘 SOS! I need help! Check on me immediately.', messageType: 'sos', userName });
-    const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: '🆘 SOS! I need help!', message_type: 'sos', created_at: new Date().toISOString() };
+    if (!window.confirm('Send SOS alert to all riders?')) return;
+    const result = await rideService.sendMessage(sessionId, { message: 'SOS! I need help! Check on me immediately.', messageType: 'sos', userName });
+    const msg = result?.message ?? { id: Date.now().toString(), user_id: user?.id, user_name: userName, message: 'SOS! I need help!', message_type: 'sos', created_at: new Date().toISOString() };
     channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
-    await rideService.updateQuickStatus(sessionId, '🆘 SOS');
-    channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: '🆘 SOS' } });
-    setMyStatus('🆘 SOS');
+    await rideService.updateQuickStatus(sessionId, 'SOS');
+    channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: 'SOS' } });
+    setMyStatus('SOS');
   }, [sessionId, userName, user?.id]);
 
   const pickStatus = useCallback(async (value: string) => {
@@ -1124,7 +1125,7 @@ export default function RidePage() {
       });
 
       channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
-      setToast(`✓ Sent preset "${value}" to group!`);
+      setToast(`Sent preset "${value}" to group!`);
       setTimeout(() => setToast(''), 3000);
     }
   }, [sessionId, userName, user?.id]);
@@ -1134,7 +1135,7 @@ export default function RidePage() {
     setPinnedStop(stop);
     setRidersArrival({});
     playAlertChime('chime');
-    setToast(`📍 Convoy Target Stop: ${stop.name}`);
+    setToast(`Convoy Target Stop: ${stop.name}`);
     setTimeout(() => setToast(''), 3500);
 
     // If user asked to add to itinerary permanently
@@ -1147,7 +1148,7 @@ export default function RidePage() {
           lat: stop.lat,
           lng: stop.lng,
         });
-        setToast(`✓ Added ${stop.name} to trip itinerary!`);
+        setToast(`Added ${stop.name} to trip itinerary!`);
         setTimeout(() => setToast(''), 3500);
       } catch (err) {
         console.warn('Failed to add stop to itinerary:', err);
@@ -1163,7 +1164,7 @@ export default function RidePage() {
 
     // Also persist as a ride message
     await rideService.sendMessage(sessionId, {
-      message: `📍 Pinned Target Stop: ${stop.name}`,
+      message: `Pinned Target Stop: ${stop.name}`,
       messageType: 'stop_pin',
       userName,
     }).catch(() => null);
@@ -1204,7 +1205,7 @@ export default function RidePage() {
 
     if (isArrived) {
       playAlertChime('urgent');
-      setToast(`🏁 Marked as arrived at ${pinnedStop.name}!`);
+      setToast(`Marked as arrived at ${pinnedStop.name}!`);
       setTimeout(() => setToast(''), 3500);
 
       channelRef.current?.send({
@@ -1214,7 +1215,7 @@ export default function RidePage() {
       });
 
       await rideService.sendMessage(sessionId, {
-        message: `🏁 I have arrived at ${pinnedStop.name}!`,
+        message: `I have arrived at ${pinnedStop.name}!`,
         messageType: 'stop_arrival',
         userName,
       }).catch(() => null);
@@ -1244,12 +1245,12 @@ export default function RidePage() {
     });
 
     await rideService.sendMessage(sessionId, {
-      message: `${announcement.icon} ${announcement.title}: ${announcement.message}`,
+      message: `${announcement.title}: ${announcement.message}`,
       messageType: 'announcement',
       userName,
     }).catch(() => null);
 
-    setToast(`📢 Announcement broadcasted to all riders!`);
+    setToast(`Announcement broadcasted to all riders!`);
     setTimeout(() => setToast(''), 3500);
   }, [sessionId, userName]);
 
@@ -1260,7 +1261,7 @@ export default function RidePage() {
       return;
     }
     const locName = `Location (${myLat.toFixed(4)}, ${myLng.toFixed(4)})`;
-    const content = `📍 Shared Location: ${locName} [${myLat.toFixed(6)},${myLng.toFixed(6)}]`;
+    const content = `Shared Location: ${locName} [${myLat.toFixed(6)},${myLng.toFixed(6)}]`;
     const result = await rideService.sendMessage(sessionId, {
       message: content,
       messageType: 'location_share',
@@ -1278,7 +1279,7 @@ export default function RidePage() {
 
     channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
     setMessages((prev) => [...prev, msg]);
-    setToast('📍 Location shared with convoy!');
+    setToast('Location shared with convoy!');
     setTimeout(() => setToast(''), 2500);
   }, [myLat, myLng, sessionId, userName, user?.id]);
 
@@ -1314,7 +1315,7 @@ export default function RidePage() {
 
     channelRef.current?.send({ type: 'broadcast', event: 'message', payload: msg });
     setMessages((prev) => [...prev, msg]);
-    setToast(`📍 Shared ${locationData.placeName} with convoy!`);
+    setToast(`Shared ${locationData.placeName} with convoy!`);
     setTimeout(() => setToast(''), 2500);
   }, [sessionId, userName, user?.id]);
 
@@ -1387,7 +1388,7 @@ export default function RidePage() {
     });
 
     // 4. Send announcement/status message to group chat
-    const confirmationMsg = `👑 Captain confirmed "${placeName}" as an itinerary stop (from chat)!`;
+    const confirmationMsg = `Captain confirmed "${placeName}" as an itinerary stop (from chat)!`;
     const result = await rideService.sendMessage(sessionId, {
       message: confirmationMsg,
       messageType: 'status',
@@ -1406,7 +1407,7 @@ export default function RidePage() {
     setMessages((prev) => [...prev, statusMsg]);
 
     playAlertChime('chime');
-    setToast(`✓ "${placeName}" added to itinerary with 'from chat' tag!`);
+    setToast(`"${placeName}" added to itinerary with 'from chat' tag!`);
     setTimeout(() => setToast(''), 3500);
   }, [sessionId, session, user?.id, userName]);
 
@@ -1443,13 +1444,13 @@ export default function RidePage() {
     // Send chat status message
     if (sessionId) {
       await rideService.sendMessage(sessionId, {
-        message: `💡 ${userName} proposed itinerary edit: "${data.title}"`,
+        message: `${userName} proposed itinerary edit: "${data.title}"`,
         messageType: 'status',
         userName,
       }).catch(() => null);
     }
 
-    setToast('✓ Proposal submitted to Captain!');
+    setToast('Proposal submitted to Captain!');
     setTimeout(() => setToast(''), 3000);
   }, [session?.trip_id, sessionId, user?.id, userName]);
 
@@ -1517,13 +1518,13 @@ export default function RidePage() {
     // Send chat status message
     if (sessionId) {
       await rideService.sendMessage(sessionId, {
-        message: `👑 Captain approved ${prop.proposerName}'s proposal: "${prop.title}"`,
+        message: `Captain approved ${prop.proposerName}'s proposal: "${prop.title}"`,
         messageType: 'status',
         userName,
       }).catch(() => null);
     }
 
-    setToast(`✓ Approved proposal from ${prop.proposerName}`);
+    setToast(`Approved proposal from ${prop.proposerName}`);
     setTimeout(() => setToast(''), 3000);
   }, [session?.trip_id, session?.started_by, session?.itinerary, sessionId, user?.id, userName]);
 
@@ -1845,7 +1846,7 @@ export default function RidePage() {
     if (stopApproachEval.isApproaching && !preAlertTriggeredRef.current) {
       preAlertTriggeredRef.current = true;
       playAlertChime('chime');
-      setToast(`⛽ Pre-alert: Approaching ${pinnedStop.name} in ${distToPinnedStop?.toFixed(1) ?? '2'} km · Prepare to regroup!`);
+      setToast(`Pre-alert: Approaching ${pinnedStop.name} in ${distToPinnedStop?.toFixed(1) ?? '2'} km · Prepare to regroup!`);
       setTimeout(() => setToast(''), 4500);
 
       channelRef.current?.send({
@@ -1891,7 +1892,7 @@ export default function RidePage() {
             },
           });
           playAlertChime('alert');
-          setToast(`⚠️ You are ${formatOffRouteDistance(myTracker.distanceMeters)} off the planned route`);
+          setToast(`You are ${formatOffRouteDistance(myTracker.distanceMeters)} off the planned route`);
           setTimeout(() => setToast(''), 4000);
         } else if (!myTracker.isDeviated && prev[user.id]?.isDeviated) {
           // Requirement 5: Alert clears when back on line
@@ -1915,7 +1916,7 @@ export default function RidePage() {
         );
         if (rTracker.isDeviated && !prev[r.user_id]?.isDeviated) {
           playAlertChime('alert');
-          setToast(`⚠️ ${r.user_name || 'Rider'} is ${formatOffRouteDistance(rTracker.distanceMeters)} off the route`);
+          setToast(`${r.user_name || 'Rider'} is ${formatOffRouteDistance(rTracker.distanceMeters)} off the route`);
           setTimeout(() => setToast(''), 4000);
         }
         next[r.user_id] = rTracker;
@@ -1953,10 +1954,10 @@ export default function RidePage() {
       handleSendAnnouncement({
         title: 'Regroup Convoy',
         message: `${alert.userName} is ${formatOffRouteDistance(alert.distanceMeters)} off the route. Slow down or wait at next junction.`,
-        icon: '🛑',
+        icon: 'stop',
         urgency: 'high',
       });
-      setToast(`📢 Regroup announcement broadcasted to convoy!`);
+      setToast(`Regroup announcement broadcasted to convoy!`);
       setTimeout(() => setToast(''), 3000);
     },
     [handleSendAnnouncement]
@@ -1964,14 +1965,14 @@ export default function RidePage() {
 
   if (loading) return (
     <div style={s.fullCenter}>
-      <div style={{ fontSize: 40 }}>🏍️</div>
+      <div style={{ fontSize: 40 }}><Icon name="bike" /></div>
       <p style={{ color: '#fff', marginTop: 12 }}>Joining ride...</p>
     </div>
   );
 
   if (ended) return (
     <div style={s.fullCenter}>
-      <div style={{ fontSize: 48 }}>🏁</div>
+      <div style={{ fontSize: 48 }}><Icon name="flag" /></div>
       <h2 style={{ color: '#fff', marginTop: 12 }}>Ride Ended</h2>
       <p style={{ color: '#9ca3af' }}>This ride session has ended.</p>
       <button onClick={() => navigate(-1)} style={s.btnWhite}>← Go Back</button>
@@ -2013,7 +2014,7 @@ export default function RidePage() {
           fontWeight: 800,
           fontSize: 14,
         }}>
-          🆘 SOS ALERT — A rider needs help!
+          SOS ALERT — A rider needs help!
           <button onClick={() => setSosActive(false)} style={{ marginLeft: 12, background: 'rgba(255,255,255,0.25)', border: 'none', color: '#FFFFFF', borderRadius: 6, padding: '2px 10px', cursor: 'pointer', fontWeight: 700 }}>Dismiss</button>
         </div>
       )}
@@ -2085,7 +2086,7 @@ export default function RidePage() {
             }}
             title="Nearby Amenities (Fuel, Repair, Food, Rest)"
           >
-            🛠️
+
           </button>
 
           {/* Captain-only announcement control on Ride tab */}
@@ -2110,7 +2111,7 @@ export default function RidePage() {
               }}
               title="Captain Announcement"
             >
-              👑
+
             </button>
           )}
 
@@ -2162,7 +2163,7 @@ export default function RidePage() {
               }}
               title="End ride for everyone"
             >
-              {endingRide ? '...' : '⏹'}
+              {endingRide ? '...' : <Icon name="stop" />}
             </button>
           )}
         </div>
@@ -2196,7 +2197,7 @@ export default function RidePage() {
               fontSize: 12,
               flexShrink: 0,
             }}>
-              🗺️
+
             </span>
             <span style={{
               fontSize: 13,
@@ -2280,7 +2281,7 @@ export default function RidePage() {
             fontSize: 20,
             flexShrink: 0,
           }}>
-            {activeAnnouncement.icon}
+            <Icon name={activeAnnouncement.icon} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -2291,7 +2292,7 @@ export default function RidePage() {
                 letterSpacing: 0.8,
                 textTransform: 'uppercase',
               }}>
-                📢 CAPTAIN ANNOUNCEMENT
+                CAPTAIN ANNOUNCEMENT
               </span>
               <span style={{ fontSize: 9.5, color: '#9D9C9A', fontWeight: 600 }}>
                 {activeAnnouncement.timestamp}
@@ -2321,7 +2322,7 @@ export default function RidePage() {
               flexShrink: 0,
             }}
           >
-            Got it ✓
+            Got it
           </button>
         </div>
       )}
@@ -2535,7 +2536,7 @@ export default function RidePage() {
                     color: 'var(--text-primary)',
                     lineHeight: 1.45,
                   }}>
-                    💡 <strong>iPhone Safari Tip:</strong> If location is blocked, tap the <strong>aA</strong> icon in your address bar → <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>, then tap Allow below.
+                    <strong>iPhone Safari Tip:</strong> If location is blocked, tap the <strong>aA</strong> icon in your address bar → <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>, then tap Allow below.
                   </div>
                 </div>
               </div>
@@ -2623,7 +2624,7 @@ export default function RidePage() {
                 }}
                 title="Toggle split roster and map view"
               >
-                <span>{splitView ? '⛶ Full Map' : '📋 Map + Roster'}</span>
+                <span>{splitView ? 'Full Map' : 'Map + Roster'}</span>
               </button>
 
               <button
@@ -2646,7 +2647,7 @@ export default function RidePage() {
                 }}
                 title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
               >
-                <span>🛠️</span>
+                <span><Icon name="wrench" /></span>
                 <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
               </button>
             </div>
@@ -2671,7 +2672,7 @@ export default function RidePage() {
                 }}
                 title="Screen stay-awake is active"
               >
-                <span>🔆</span>
+                <span><Icon name="sun" /></span>
                 <span className="hide-on-mobile">Screen on</span>
               </div>
             )}
@@ -2701,7 +2702,7 @@ export default function RidePage() {
               }}
               title="Re-center on me"
             >
-              📍
+
             </button>
           )}
 
@@ -2730,7 +2731,7 @@ export default function RidePage() {
               }}
               title="Tell group presets"
             >
-              <span>📢</span>
+              <span><Icon name="megaphone" /></span>
               <span>Tell group</span>
             </button>
           )}
@@ -3020,7 +3021,7 @@ export default function RidePage() {
                     gap: 6,
                   }}
                 >
-                  <span>➕</span> Add planned stop
+                  <span><Icon name="plus" /></span> Add planned stop
                 </button>
 
                 <button
@@ -3042,7 +3043,7 @@ export default function RidePage() {
                     gap: 6,
                   }}
                 >
-                  <span>💡</span> Propose edit
+                  <span><Icon name="bulb" /></span> Propose edit
                 </button>
               </div>
             </div>
@@ -3086,8 +3087,8 @@ export default function RidePage() {
                   gap: 8,
                 }}
               >
-                <span>🌐</span>
-                <span>{isTripPublished(session.trips.id) ? '✓ Live in Discover (Settings)' : 'Publish Itinerary to Discover'}</span>
+                <span><Icon name="globe" /></span>
+                <span>{isTripPublished(session.trips.id) ? 'Live in Discover (Settings)' : 'Publish Itinerary to Discover'}</span>
               </button>
             )}
 
@@ -3111,7 +3112,7 @@ export default function RidePage() {
                   gap: 8,
                 }}
               >
-                <span>🏆</span>
+                <span><Icon name="trophy" /></span>
                 <span>Share Trip Milestones & Commemorative Card</span>
               </button>
             )}
@@ -3122,7 +3123,7 @@ export default function RidePage() {
               onClick={() => setShowNearbyHelp(true)}
               style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
             >
-              🛠️ View route-cached amenities (fuel, repair, food)
+              View route-cached amenities (fuel, repair, food)
             </button>
           </div>
         </div>
@@ -3133,7 +3134,7 @@ export default function RidePage() {
         <DiscoverTab
           currentUser={user}
           onTripCopied={(draft) => {
-            setToast(`✓ Copied "${draft.title}" to My Trips! Draft created with credit to source`);
+            setToast(`Copied "${draft.title}" to My Trips! Draft created with credit to source`);
             setTimeout(() => setToast(''), 3500);
           }}
           onOpenPublishFlow={session?.trips && isLead ? () => setShowPublishModal(true) : undefined}
@@ -3154,7 +3155,7 @@ export default function RidePage() {
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
                 <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
-                <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
+                <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group!</p>
               </div>
             )}
             {messages.map((m) => {
@@ -3210,7 +3211,7 @@ export default function RidePage() {
                     margin: '4px 0',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: '#F0C23A', textTransform: 'uppercase' }}>
-                      <span>📢</span>
+                      <span><Icon name="megaphone" /></span>
                       <span>Captain Announcement · {m.user_name}</span>
                     </div>
                     <div style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
@@ -3297,7 +3298,7 @@ export default function RidePage() {
                 gap: 5,
               }}
             >
-              <span>📢 Tell group</span>
+              <span>Tell group</span>
             </button>
 
             {/* Feature H2: Direct Share Location Button */}
@@ -3319,7 +3320,7 @@ export default function RidePage() {
                 gap: 5,
               }}
             >
-              <span>📍 Share Location</span>
+              <span>Share Location</span>
             </button>
 
             {RIDER_STATUS_PRESETS.map((p) => (
@@ -3342,7 +3343,7 @@ export default function RidePage() {
                   gap: 4,
                 }}
               >
-                <span>{p.icon}</span>
+                <span><Icon name={p.icon} /></span>
                 <span>{p.label}</span>
               </button>
             ))}
@@ -3351,21 +3352,21 @@ export default function RidePage() {
               onClick={handleShareCurrentLocation}
               style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📍 Quick GPS
+              Quick GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
               style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              📌 Propose Stop
+              Propose Stop
             </button>
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
               style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              🛠️ Nearby Amenities
+              Nearby Amenities
             </button>
           </div>
 
@@ -3390,7 +3391,7 @@ export default function RidePage() {
                 flexShrink: 0,
               }}
             >
-              📍
+
             </button>
             <input
               value={chatInput}
@@ -3419,7 +3420,7 @@ export default function RidePage() {
                 flexShrink: 0,
               }}
             >
-              ➤
+
             </button>
           </div>
         </div>
@@ -3499,7 +3500,7 @@ export default function RidePage() {
                 gap: 8,
               }}
             >
-              <span>🧭 Open in Navigation App (Google / Apple / Waze)</span>
+              <span>Open in Navigation App (Google / Apple / Waze)</span>
             </button>
           </div>
 
@@ -3528,7 +3529,7 @@ export default function RidePage() {
           })()}
           {navSteps.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 16px' }}>
-              <p style={{ fontSize: 32 }}>🗺️</p>
+              <p style={{ fontSize: 32 }}><Icon name="map" /></p>
               <p style={{ color: '#9D9C9A', fontSize: 14 }}>Fetching route directions…</p>
             </div>
           )}
@@ -3574,7 +3575,7 @@ export default function RidePage() {
           aria-current={tab === 'map' ? 'page' : undefined}
           onClick={() => setTab('map')}
         >
-          <span style={{ fontSize: 16 }}>🏍️</span>
+          <span style={{ fontSize: 16 }}><Icon name="bike" /></span>
           <span>RIDE</span>
         </button>
 
@@ -3585,7 +3586,7 @@ export default function RidePage() {
           aria-current={tab === 'plan' ? 'page' : undefined}
           onClick={() => setTab('plan')}
         >
-          <span style={{ fontSize: 16 }}>📋</span>
+          <span style={{ fontSize: 16 }}><Icon name="list" /></span>
           <span>PLAN</span>
         </button>
 
@@ -3596,7 +3597,7 @@ export default function RidePage() {
           aria-current={tab === 'discover' ? 'page' : undefined}
           onClick={() => setTab('discover')}
         >
-          <span style={{ fontSize: 16 }}>🧭</span>
+          <span style={{ fontSize: 16 }}><Icon name="compass" /></span>
           <span>DISCOVER</span>
         </button>
 
@@ -3607,7 +3608,7 @@ export default function RidePage() {
           aria-current={tab === 'chat' ? 'page' : undefined}
           onClick={() => setTab('chat')}
         >
-          <span style={{ fontSize: 16 }}>💬</span>
+          <span style={{ fontSize: 16 }}><Icon name="chat" /></span>
           <span>CHAT</span>
           {newMsgCount > 0 && tab !== 'chat' && (
             <span className="pz-tab-badge">{newMsgCount > 9 ? '9+' : newMsgCount}</span>
@@ -3621,7 +3622,7 @@ export default function RidePage() {
           aria-current={tab === 'me' ? 'page' : undefined}
           onClick={() => setTab('me')}
         >
-          <span style={{ fontSize: 16 }}>👤</span>
+          <span style={{ fontSize: 16 }}><Icon name="user" /></span>
           <span>ME</span>
         </button>
       </div>
@@ -3645,7 +3646,7 @@ export default function RidePage() {
             title: label,
             message: `Lead announced: ${label}`,
             urgency: 'high',
-            icon: '⚠️',
+            icon: 'warning',
           });
         }}
       />
@@ -3747,7 +3748,7 @@ export default function RidePage() {
           stops={allPlanStops}
           user={user}
           onPublishedSuccess={(published) => {
-            setToast(`✓ Published "${published.title}" publicly in Discover!`);
+            setToast(`Published "${published.title}" publicly in Discover!`);
             setTimeout(() => setToast(''), 3500);
           }}
           onUnpublishedSuccess={() => {

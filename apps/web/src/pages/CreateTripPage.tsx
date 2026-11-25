@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
 import PlaceInput from '../components/PlaceInput';
 import Navbar from '../components/Navbar';
+import Icon from '../components/Icon';
 
 async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
@@ -28,19 +29,19 @@ const TRIP_TYPES = [
 ];
 
 const VEHICLES = [
-  { value: 'motorcycle', label: 'Motorcycle', icon: '🏍️' },
-  { value: 'scooter', label: 'Scooter', icon: '🛵' },
-  { value: 'car', label: 'Car / 4x4', icon: '🚗' },
-  { value: 'bicycle', label: 'Bicycle', icon: '🚲' },
+  { value: 'motorcycle', label: 'Motorcycle', icon: 'bike' },
+  { value: 'scooter', label: 'Scooter', icon: 'bike' },
+  { value: 'car', label: 'Car / 4x4', icon: 'bike' },
+  { value: 'bicycle', label: 'Bicycle', icon: 'bike' },
 ];
 
 const PREFERENCE_CHIPS = [
-  '⛰️ Ghats & Hill Curves',
-  '🌊 Scenic Coastal Roads',
-  '🚧 Avoid Highway Tolls',
-  '☕ Frequent Chai & Fuel Stops',
-  '🍽️ Authentic Local Dhabas',
-  '📸 High-Altitude Viewpoints',
+  'Ghats & Hill Curves',
+  'Scenic Coastal Roads',
+  'Avoid Highway Tolls',
+  'Frequent Chai & Fuel Stops',
+  'Authentic Local Dhabas',
+  'High-Altitude Viewpoints',
 ];
 
 export default function CreateTripPage() {
@@ -57,6 +58,7 @@ export default function CreateTripPage() {
     trip_type: 'one_way',
     preferences: '',
   });
+  const [mode, setMode] = useState<'ai' | 'manual'>('ai');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [gettingFrom, setGettingFrom] = useState(false);
@@ -112,6 +114,8 @@ export default function CreateTripPage() {
     try {
       const result = await tripService.createTrip({
         ...form,
+        preferences: mode === 'ai' ? form.preferences : '',
+        itinerary_mode: mode,
         days: Number(form.days) || 1,
       });
       navigate(`/trips/${result.trip.id}`);
@@ -124,7 +128,7 @@ export default function CreateTripPage() {
         axiosErr.response?.data?.error?.message ??
         axiosErr.response?.data?.message ??
         axiosErr.message ??
-        'Failed to generate itinerary. Please try again.';
+        mode === 'ai' ? 'Failed to generate itinerary. Please try again.' : 'Failed to create the trip. Please try again.';
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -147,23 +151,59 @@ export default function CreateTripPage() {
         <div className="responsive-card" style={styles.card}>
           <div style={styles.header}>
             <div style={styles.badge}>
-              <span>🤖</span>
-              <span>AI Route Planner</span>
+              <span></span>
+              <span>Trip Planner</span>
             </div>
             <h1 style={styles.title}>Plan Your Expedition</h1>
             <p style={styles.subtitle}>
-              Enter your route details to automatically generate day-wise fuel stops, scenic viewpoints, dhabas, and stays.
+              {mode === 'ai' ? 'Enter your route details and AI will generate day-wise fuel stops, scenic viewpoints, dhabas, and stays.' : 'Enter your route details, then add the places you want to stop at one by one.'}
             </p>
           </div>
 
           {error && (
             <div style={styles.errorBox}>
-              <span>⚠️</span>
+              <span><Icon name="warning" /></span>
               <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Itinerary mode */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>How do you want to plan this trip?</label>
+              <div role="radiogroup" aria-label="Itinerary mode" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {([
+                  { value: 'ai', title: 'Generate with AI', desc: 'AI suggests a day-by-day route with fuel, food and rest stops. You can edit it afterwards.', icon: 'spark' },
+                  { value: 'manual', title: 'Build step by step', desc: 'Start with an empty plan. Search for places and add them one at a time.', icon: 'list' },
+                ] as const).map(o => {
+                  const on = mode === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setMode(o.value)}
+                      style={{
+                        textAlign: 'left',
+                        padding: '12px 14px',
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                        background: on ? 'var(--pz-accent-soft, rgba(240,194,58,0.12))' : 'var(--bg-card, transparent)',
+                        border: on ? '2px solid var(--pz-accent, #F0C23A)' : '1px solid var(--border-color, #3A3F47)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 15 }}>
+                        <Icon name={o.icon} /> {o.title}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4, lineHeight: 1.4 }}>{o.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Trip Type */}
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Trip Style</label>
@@ -210,7 +250,7 @@ export default function CreateTripPage() {
                   disabled={gettingFrom}
                   style={styles.gpsBtn}
                 >
-                  {gettingFrom ? '⏳ Finding GPS...' : '📍 Use My Location'}
+                  {gettingFrom ? 'Finding GPS...' : 'Use My Location'}
                 </button>
               </div>
 
@@ -240,7 +280,7 @@ export default function CreateTripPage() {
                   disabled={gettingTo}
                   style={styles.gpsBtn}
                 >
-                  {gettingTo ? '⏳ Finding GPS...' : '📍 Use My Location'}
+                  {gettingTo ? 'Finding GPS...' : 'Use My Location'}
                 </button>
               </div>
             </div>
@@ -294,7 +334,7 @@ export default function CreateTripPage() {
                         boxShadow: isSelected ? '0 0 0 1.5px var(--accent-cyan)' : 'none',
                       }}
                     >
-                      <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>{v.icon}</span>
+                      <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}><Icon name={v.icon} size={20} /></span>
                       <span style={{ fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>{v.label}</span>
                     </button>
                   );
@@ -302,7 +342,8 @@ export default function CreateTripPage() {
               </div>
             </div>
 
-            {/* Rider Preferences */}
+            {/* Rider Preferences (AI only) */}
+            {mode === 'ai' && (
             <div style={styles.fieldGroup}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <label style={styles.label}>Convoy Preferences & Detours</label>
@@ -332,6 +373,7 @@ export default function CreateTripPage() {
                 style={styles.textarea}
               />
             </div>
+            )}
 
             {/* Submit Action */}
             <button
@@ -343,9 +385,9 @@ export default function CreateTripPage() {
               }}
             >
               {loading ? (
-                <span>⏳ AI is planning your waypoints...</span>
+                <span>{mode === 'ai' ? 'AI is planning your waypoints...' : 'Creating your trip...'}</span>
               ) : (
-                <span>🚀 Generate Itinerary with AI</span>
+                <span>{mode === 'ai' ? 'Generate Itinerary with AI' : 'Create Trip and Add Stops'}</span>
               )}
             </button>
           </form>
