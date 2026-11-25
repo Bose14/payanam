@@ -246,9 +246,22 @@ export default function WelcomePage() {
   );
 
   const errorLine = err && (
-    <p role="alert" style={{ color: 'var(--pz-bad)', fontSize: 13, margin: '8px 0 0' }}>
-      {err}
-    </p>
+    <div
+      role="alert"
+      style={{
+        backgroundColor: 'var(--pz-bad-bg, rgba(239, 68, 68, 0.12))',
+        border: '1px solid var(--pz-bad, #EF4444)',
+        borderRadius: 10,
+        padding: '10px 14px',
+        color: 'var(--pz-bad, #EF4444)',
+        fontSize: 13,
+        fontWeight: 600,
+        margin: '12px 0 0',
+        lineHeight: 1.4,
+      }}
+    >
+      ⚠️ {err}
+    </div>
   );
 
   return (
@@ -313,12 +326,38 @@ export default function WelcomePage() {
                 Invite {invite} saved. You join the trip after sign-in.
               </div>
             )}
-            <label className="pz-label" htmlFor="pz-phone" style={{ marginTop: 12, display: 'block' }}>Mobile number</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: 8 }}>
-              <div className="pz-input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }}>+91</div>
+            <label className="pz-label" htmlFor="pz-phone" style={{ marginTop: 14, display: 'block' }}>Mobile number</label>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: '1px solid var(--pz-line)',
+                borderRadius: 10,
+                backgroundColor: 'var(--pz-surface)',
+                overflow: 'hidden',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+              }}
+            >
+              <div
+                style={{
+                  padding: '0 12px',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: 'var(--pz-muted)',
+                  borderRight: '1px solid var(--pz-line)',
+                  backgroundColor: 'var(--pz-bg)',
+                  height: 46,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  userSelect: 'none',
+                  flexShrink: 0,
+                }}
+              >
+                +91
+              </div>
               <input
                 id="pz-phone"
-                className="pz-input"
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel-national"
@@ -326,13 +365,28 @@ export default function WelcomePage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !busy && sendCode()}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  padding: '0 14px',
+                  height: 46,
+                  width: '100%',
+                  fontSize: 16,
+                  color: 'var(--pz-ink)',
+                  outline: 'none',
+                  fontWeight: 600,
+                }}
               />
             </div>
             {errorLine || <p className="pz-note" style={{ margin: '8px 0 0' }}>Type your 10-digit number. Spaces and +91 are fine.</p>}
-            <button className="pz-btn primary block" type="button" onClick={sendCode} disabled={busy} style={{ marginTop: 12 }}>
-              {busy ? 'Sending…' : 'Send code'}
-            </button>
-            <button className="pz-btn block" type="button" onClick={() => go('welcome')}>Back</button>
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button className="pz-btn primary" type="button" onClick={sendCode} disabled={busy} style={{ width: '100%', minHeight: 46 }}>
+                {busy ? 'Sending…' : 'Send code'}
+              </button>
+              <button className="pz-btn" type="button" onClick={() => go('welcome')} style={{ width: '100%', minHeight: 44 }}>
+                Back
+              </button>
+            </div>
           </>
         )}
 
@@ -366,12 +420,14 @@ export default function WelcomePage() {
               style={{ marginTop: 12 }}
             />
             {errorLine}
-            <button className="pz-btn primary block" type="button" onClick={verify} disabled={busy || otp.length !== 4} style={{ marginTop: 12 }}>
-              {busy ? 'Checking…' : 'Verify'}
-            </button>
-            <div className="pz-row" style={{ justifyContent: 'space-between' }}>
-              <button className="pz-btn small" type="button" onClick={() => go('phone')}>Change number</button>
-              <button className="pz-btn small" type="button" onClick={sendCode} disabled={busy}>Resend code</button>
+            <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button className="pz-btn primary" type="button" onClick={verify} disabled={busy || otp.length !== 4} style={{ width: '100%', minHeight: 46 }}>
+                {busy ? 'Checking…' : 'Verify'}
+              </button>
+              <div className="pz-row" style={{ justifyContent: 'space-between' }}>
+                <button className="pz-btn small" type="button" onClick={() => go('phone')}>Change number</button>
+                <button className="pz-btn small" type="button" onClick={sendCode} disabled={busy}>Resend code</button>
+              </div>
             </div>
           </>
         )}

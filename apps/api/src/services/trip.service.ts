@@ -41,6 +41,7 @@ interface CreateTripData {
   bike_type: string;
   trip_type?: string;
   preferences?: string;
+  status?: string;
 }
 
 function randomCode(length = 8): string {
@@ -60,6 +61,7 @@ export async function createTrip(userId: string, data: CreateTripData) {
     to_place: data.to_place,
     days: Number(data.days) || 1,
     bike_type: data.bike_type || 'motorcycle',
+    status: data.status || 'planning',
   };
   if (data.preferences) row.preferences = data.preferences;
   if (data.from_lat != null) row.from_lat = data.from_lat;
@@ -77,6 +79,7 @@ export async function createTrip(userId: string, data: CreateTripData) {
       to_place: data.to_place,
       days: Number(data.days) || 1,
       bike_type: data.bike_type || 'motorcycle',
+      status: data.status || 'planning',
     };
     const retry = await db.from('trips').insert(baseRow).select().single();
     if (retry.error) throw new Error(retry.error.message);

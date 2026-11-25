@@ -433,6 +433,20 @@ html, body {
     justify-content: center !important;
   }
 
+  /* Responsive Trip Completed Banner */
+  .trip-completed-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .trip-completed-banner .trip-completed-actions {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+  .trip-completed-banner .trip-completed-actions button:first-child {
+    flex: 1 !important;
+  }
+
   /* Responsive Grid */
   .responsive-grid {
     grid-template-columns: 1fr !important;

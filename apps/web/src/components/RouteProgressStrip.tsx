@@ -112,7 +112,13 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
                     {stop.itemType === 'fuel' ? '⛽' : stop.itemType === 'food' ? '🍲' : '⭐'}
                   </div>
                   {isSelected && (
-                    <div style={styles.activeStopCallout}>
+                    <div
+                      style={{
+                        ...styles.activeStopCallout,
+                        left: leftPercent < 20 ? 0 : leftPercent > 80 ? '100%' : '50%',
+                        transform: leftPercent < 20 ? 'translateX(0)' : leftPercent > 80 ? 'translateX(-100%)' : 'translateX(-50%)',
+                      }}
+                    >
                       {stop.place}
                     </div>
                   )}

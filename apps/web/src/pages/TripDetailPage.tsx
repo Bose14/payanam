@@ -188,6 +188,7 @@ export default function TripDetailPage() {
   const [navTarget, setNavTarget] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [showNavModal, setShowNavModal] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
+  const [dismissCompletedBanner, setDismissCompletedBanner] = useState(false);
   const [proposals, setProposals] = useState<ItineraryProposal[]>([]);
   const [showProposeModal, setShowProposeModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
@@ -718,14 +719,15 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Feature 2: Trip Completed Celebration & Milestones Banner (Only when trip is completed) */}
-        {trip?.status === 'completed' && milestoneSummary && (
+        {/* Feature 2: Trip Completed Celebration & Milestones Banner (Only when trip is completed and not dismissed) */}
+        {!dismissCompletedBanner && trip?.status === 'completed' && !activeSession && milestoneSummary && (
           <TripCompletedBanner
             fromPlace={trip.from_place}
             toPlace={trip.to_place}
             days={trip.days}
             distanceKm={milestoneSummary.totalDistanceKm}
             onShareMilestones={() => setShowMilestoneModal(true)}
+            onDismiss={() => setDismissCompletedBanner(true)}
           />
         )}
 
