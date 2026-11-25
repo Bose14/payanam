@@ -633,82 +633,55 @@ export default function TripDetailPage() {
           </div>
         </div>
 
-        {/* Convoy Pass & Sharing Hub */}
+        {/* Convoy Pass: invite only */}
         {inviteCode && (
           <div style={styles.convoyPassCard}>
-            <span style={styles.passTicketBadge}>CONVOY TRAVEL PASS</span>
-            <p style={styles.passHint}>
-              {trip?.isOwner ? 'Riders can join with this code or link.' : 'Share this convoy pass with fellow riders.'}
-            </p>
+            <div style={styles.passHeadRow}>
+              <span style={styles.passTicketBadge}>CONVOY TRAVEL PASS</span>
+              <span style={styles.passHintSmall}>{trip?.isOwner ? 'Join with code or link' : 'Share with riders'}</span>
+            </div>
 
             <button type="button" onClick={handleCopyCode} style={styles.passCodeBox} aria-label="Copy invite code">
-              <span style={{ minWidth: 0, textAlign: 'left' }}>
-                <span style={styles.passCodeLabel}>INVITE CODE</span>
-                <span style={styles.passCodeValue}>{inviteCode}</span>
-              </span>
+              <span style={styles.passCodeValue}>{inviteCode}</span>
               <span style={styles.passCodeCopy}><Icon name="list" /> Copy</span>
             </button>
 
-            <button onClick={handleWhatsAppShare} style={styles.passBtnWhatsApp}>
-              <Icon name="chat" />
-              <span>Invite on WhatsApp</span>
-            </button>
-            <div style={styles.passTwoCol}>
-              <button onClick={handleCopy} style={styles.passBtnAction}>
-                <Icon name="link" />
-                <span>{copied ? 'Link copied' : 'Copy link'}</span>
+            <div style={styles.tileGrid4}>
+              <button onClick={handleWhatsAppShare} style={{ ...styles.tile, ...styles.tileWhatsApp }}>
+                <Icon name="chat" /><span>WhatsApp</span>
               </button>
-              <button onClick={handleNativeShare} style={styles.passBtnAction}>
-                <Icon name="arrowRight" />
-                <span>Share</span>
+              <button onClick={() => setShowQrModal(true)} style={styles.tile}>
+                <Icon name="ticket" /><span>QR pass</span>
+              </button>
+              <button onClick={handleCopy} style={styles.tile}>
+                <Icon name="link" /><span>{copied ? 'Copied' : 'Copy link'}</span>
+              </button>
+              <button onClick={handleNativeShare} style={styles.tile}>
+                <Icon name="arrowRight" /><span>Share</span>
               </button>
             </div>
+          </div>
+        )}
 
-            <div style={styles.passList}>
-              <button onClick={() => setShowQrModal(true)} style={styles.passRow}>
-                <span style={styles.passRowIcon}><Icon name="ticket" /></span>
-                <span style={styles.passRowText}>
-                  <b>QR boarding pass</b>
-                  <small>Let riders scan to join</small>
-                </span>
-                <span style={styles.passChevron}>›</span>
+        {/* Trip tools */}
+        {inviteCode && (
+          <div style={styles.toolsCard}>
+            <div style={styles.toolsTitle}>Trip tools</div>
+            <div style={styles.tileGrid4}>
+              <button onClick={() => setShowNearbyHelp(true)} style={styles.tile}>
+                <Icon name="pin" /><span>Nearby help</span>
               </button>
-              <button onClick={() => setShowNearbyHelp(true)} style={styles.passRow}>
-                <span style={styles.passRowIcon}><Icon name="pin" /></span>
-                <span style={styles.passRowText}>
-                  <b>Nearby help</b>
-                  <small>Fuel, repair, food and rest on the route</small>
-                </span>
-                <span style={styles.passChevron}>›</span>
-              </button>
-              <button onClick={() => setShowMilestoneModal(true)} style={styles.passRow}>
-                <span style={styles.passRowIcon}><Icon name="trophy" /></span>
-                <span style={styles.passRowText}>
-                  <b>Milestones</b>
-                  <small>Share your achievements and photo post</small>
-                </span>
-                <span style={styles.passChevron}>›</span>
+              <button onClick={() => setShowMilestoneModal(true)} style={styles.tile}>
+                <Icon name="trophy" /><span>Milestones</span>
               </button>
               {trip?.isOwner && (
-                <button onClick={() => setShowPublishModal(true)} style={styles.passRow}>
-                  <span style={{ ...styles.passRowIcon, color: isTripPublished(trip.id) ? 'var(--pz-ok)' : undefined }}><Icon name="globe" /></span>
-                  <span style={styles.passRowText}>
-                    <b>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish itinerary'}</b>
-                    <small>{isTripPublished(trip.id) ? 'Tap to manage' : 'Show this trip to other riders'}</small>
-                  </span>
-                  <span style={styles.passChevron}>›</span>
+                <button onClick={() => setShowPublishModal(true)} style={{ ...styles.tile, color: isTripPublished(trip.id) ? 'var(--pz-ok)' : undefined }}>
+                  <Icon name="globe" /><span>{isTripPublished(trip.id) ? 'Public' : 'Publish'}</span>
                 </button>
               )}
               {trip?.isOwner && (
-                <button onClick={handleToggleTripStatus} style={styles.passRow}>
-                  <span style={{ ...styles.passRowIcon, color: trip.status === 'completed' ? 'var(--pz-ok)' : undefined }}>
-                    <Icon name={trip.status === 'completed' ? 'check' : 'flag'} />
-                  </span>
-                  <span style={styles.passRowText}>
-                    <b>{trip.status === 'completed' ? 'Trip completed' : 'Finish trip'}</b>
-                    <small>{trip.status === 'completed' ? 'Tap to reopen for planning' : 'Mark this expedition as done'}</small>
-                  </span>
-                  <span style={styles.passChevron}>›</span>
+                <button onClick={handleToggleTripStatus} style={{ ...styles.tile, color: trip.status === 'completed' ? 'var(--pz-ok)' : undefined }}>
+                  <Icon name={trip.status === 'completed' ? 'check' : 'flag'} /><span>{trip.status === 'completed' ? 'Reopen' : 'Finish'}</span>
                 </button>
               )}
             </div>
@@ -1428,29 +1401,29 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 16,
     boxShadow: 'var(--card-shadow)',
   },
-  passHint: { margin: '8px 0 14px', fontSize: 13, color: 'var(--pz-muted, var(--text-secondary))' },
+  passHeadRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 },
+  passHintSmall: { fontSize: 12, color: 'var(--pz-muted, var(--text-secondary))' },
   passCodeBox: {
     width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-    padding: '12px 14px', marginBottom: 12, cursor: 'pointer', font: 'inherit',
+    padding: '10px 14px', marginBottom: 10, cursor: 'pointer', font: 'inherit',
     background: 'var(--pz-bg, var(--bg-subtle))', border: '1.5px dashed var(--pz-line, var(--border-subtle))', borderRadius: 12,
     color: 'var(--pz-ink, var(--text-primary))',
   },
-  passCodeLabel: { display: 'block', fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: 'var(--pz-muted, var(--text-muted))' },
-  passCodeValue: { display: 'block', fontSize: 24, fontWeight: 900, letterSpacing: 3, color: 'var(--accent-gold)', marginTop: 2, overflowWrap: 'anywhere' },
-  passCodeCopy: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: 'var(--pz-ink, var(--text-primary))', flexShrink: 0 },
-  passTwoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 },
-  passList: { display: 'flex', flexDirection: 'column', borderTop: '1px solid var(--pz-line, var(--border-card))', marginTop: 4 },
-  passRow: {
-    display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 2px', cursor: 'pointer', font: 'inherit',
-    background: 'transparent', border: 'none', borderBottom: '1px solid var(--pz-line, var(--border-card))',
-    color: 'var(--pz-ink, var(--text-primary))', textAlign: 'left',
+  passCodeValue: { fontSize: 22, fontWeight: 900, letterSpacing: 3, color: 'var(--accent-gold)', overflowWrap: 'anywhere' },
+  passCodeCopy: { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, flexShrink: 0 },
+  tileGrid4: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(64px, 1fr))', gap: 8 },
+  tile: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+    padding: '10px 4px', minHeight: 60, cursor: 'pointer', font: 'inherit', fontSize: 12, fontWeight: 700,
+    background: 'var(--pz-bg, var(--bg-subtle))', border: '1px solid var(--pz-line, var(--border-card))', borderRadius: 12,
+    color: 'var(--pz-ink, var(--text-primary))', textAlign: 'center', lineHeight: 1.1,
   },
-  passRowIcon: {
-    width: 38, height: 38, borderRadius: 10, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-    background: 'var(--pz-bg, var(--bg-subtle))', border: '1px solid var(--pz-line, var(--border-card))', color: 'var(--accent-gold)',
+  tileWhatsApp: { background: '#25D366', borderColor: '#25D366', color: '#ffffff', fontWeight: 800 },
+  toolsCard: {
+    background: 'var(--pz-surface, var(--bg-card))', border: '1px solid var(--pz-line, var(--border-card))',
+    borderRadius: 16, padding: '12px 14px', marginBottom: 16, boxShadow: 'var(--card-shadow)',
   },
-  passRowText: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, fontSize: 14 },
-  passChevron: { fontSize: 22, color: 'var(--pz-muted, var(--text-muted))', lineHeight: 1 },
+  toolsTitle: { fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--pz-muted, var(--text-muted))', marginBottom: 8 },
   routeStack: { display: 'flex', flexDirection: 'column', marginTop: 6 },
   routeRow: { display: 'flex', alignItems: 'flex-start', gap: 12 },
   routeDot: { width: 12, height: 12, borderRadius: 999, marginTop: 5, flexShrink: 0, boxShadow: '0 0 0 4px var(--pz-bg, rgba(0,0,0,0.05))' },
