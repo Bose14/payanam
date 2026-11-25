@@ -1,6 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { PinnedStopData } from './PinStopModal';
-import { getPipPreferences, savePipPreferences, isPlatformIos } from '../utils/pipPreferences';
+import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
+
+interface WebkitHTMLVideoElement extends HTMLVideoElement {
+  webkitSupportsPresentationMode?: (mode: string) => boolean;
+  webkitSetPresentationMode?: (mode: string) => void;
+  webkitPresentationMode?: string;
+}
 
 export interface PipRiderData {
   userId: string;
@@ -107,12 +113,13 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     };
   }, [pinnedStop, distToPinnedStop, arrivedCount, totalRiders, riders, currentSpeedKmh, sosActive, activeAnnouncement, tripTitle]);
 
-  // Check if platform supports native video PiP (iOS WebKit blocks canvas captureStream PiP; Android & Desktop support it)
+  // Check if platform supports native video PiP (Desktop, Android Chrome, and modern iOS Safari)
   useEffect(() => {
-    const isIos = isPlatformIos();
     const hasVideoPip = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
     const hasDocPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
-    setNativePipAvailable((hasVideoPip || hasDocPip) && !isIos);
+    const hasWebkitPip = typeof HTMLVideoElement !== 'undefined' &&
+      typeof (HTMLVideoElement.prototype as unknown as WebkitHTMLVideoElement).webkitSetPresentationMode === 'function';
+    setNativePipAvailable(hasVideoPip || hasDocPip || hasWebkitPip);
   }, []);
 
   // 60 FPS Canvas Drawing Engine — Compact Non-Intrusive Ribbon for Mobile Navigation (420 x 155)
@@ -453,25 +460,33 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     onPipStateChange?.(false);
   }, [onPipStateChange]);
 
-  // Open PiP HUD (Native OS PiP on supported Android/Desktop; 60 FPS In-App ribbon on iOS & fallback)
+  // Open PiP HUD (Native OS PiP on supported Android/Desktop & iOS Safari; 60 FPS In-App ribbon as fallback)
   const openPip = useCallback(async () => {
     const prefs = getPipPreferences();
-    const isIos = isPlatformIos();
-    const forceInApp = prefs.preferredMode === 'in_app' || isIos;
+    const forceInApp = prefs.preferredMode === 'in_app';
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
-    // 1. Try Native OS PiP if available (Desktop & Android Chrome) unless in-app is forced or on iOS
+    // 1. Try Native OS PiP if available (Desktop, Android Chrome, and iOS Safari via user tap)
     if (!forceInApp && nativePipAvailable && canvas && video) {
       try {
         if (!streamRef.current && typeof canvas.captureStream === 'function') {
-          const stream = canvas.captureStream(60);
+          const stream = canvas.captureStream(30);
           streamRef.current = stream;
           video.srcObject = stream;
         }
 
         await video.play();
-        await video.requestPictureInPicture();
+
+        const webkitVideo = video as unknown as WebkitHTMLVideoElement;
+        if (typeof video.requestPictureInPicture === 'function') {
+          await video.requestPictureInPicture();
+        } else if (typeof webkitVideo.webkitSetPresentationMode === 'function') {
+          webkitVideo.webkitSetPresentationMode('picture-in-picture');
+        } else {
+          throw new Error('Native PiP not supported on this browser');
+        }
+
         setIsPipActive(true);
         setIsFloatingInApp(false);
         onPipStateChange?.(true);
@@ -515,7 +530,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     }
   }, [openPip]);
 
-  // Handle Native OS PiP event listeners
+  // Handle Native OS PiP event listeners (Standard W3C + Apple WebKit for iOS)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -531,12 +546,27 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       onPipStateChange?.(false);
     };
 
+    const handleWebkitPresentation = () => {
+      const webkitVideo = video as unknown as WebkitHTMLVideoElement;
+      const mode = webkitVideo.webkitPresentationMode;
+      if (mode === 'picture-in-picture') {
+        setIsPipActive(true);
+        setIsFloatingInApp(false);
+        onPipStateChange?.(true);
+      } else if (mode === 'inline') {
+        setIsPipActive(false);
+        onPipStateChange?.(false);
+      }
+    };
+
     video.addEventListener('enterpictureinpicture', onEnter);
     video.addEventListener('leavepictureinpicture', onLeave);
+    video.addEventListener('webkitpresentationmodechanged', handleWebkitPresentation);
 
     return () => {
       video.removeEventListener('enterpictureinpicture', onEnter);
       video.removeEventListener('leavepictureinpicture', onLeave);
+      video.removeEventListener('webkitpresentationmodechanged', handleWebkitPresentation);
     };
   }, [onPipStateChange]);
 
@@ -689,9 +719,9 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           position: 'fixed',
           top: -9999,
           left: -9999,
-          width: 1,
-          height: 1,
-          opacity: 0,
+          width: 10,
+          height: 10,
+          opacity: 0.01,
           pointerEvents: 'none',
         }}
       />
