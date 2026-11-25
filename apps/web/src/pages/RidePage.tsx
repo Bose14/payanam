@@ -2030,14 +2030,14 @@ export default function RidePage() {
         marginTop: sosActive ? 48 : 0,
       }}>
         {/* Left: Clean Minimal Back Arrow + Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
           <button
             onClick={() => navigate(-1)}
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--text-primary)',
-              fontSize: 22,
+              color: 'var(--pz-ink, var(--text-primary))',
+              fontSize: 20,
               cursor: 'pointer',
               padding: '0 4px 0 0',
               fontWeight: 800,
@@ -2050,43 +2050,32 @@ export default function RidePage() {
           </button>
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 className="mobile-header-title" style={{
-              color: 'var(--text-primary)',
-              fontWeight: 900,
-              fontSize: 20,
+              color: 'var(--pz-ink, var(--text-primary))',
+              font: "700 20px/1.1 'Barlow Condensed', sans-serif",
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
               margin: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              letterSpacing: -0.5,
             }}>
-              {tab === 'chat' ? 'Trip chat' : tab === 'plan' ? 'Itinerary & Plan' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Me · Settings' : 'Group ride'}
+              {tab === 'chat' ? 'Trip Chat' : tab === 'plan' ? 'Itinerary' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Settings' : 'Group Ride'}
             </h1>
           </div>
         </div>
 
         {/* Right: Subtitle & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {tab !== 'map' && (
-            <span className="hide-on-mobile" style={{
-              color: '#9D9C9A',
-              fontSize: 12,
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}>
-              {tab === 'chat' ? 'Linked to itinerary' : tab === 'plan' ? 'Itinerary & Help' : tab === 'me' ? 'Ride settings' : ''}
-            </span>
-          )}
-
           {/* Quick Nearby Help */}
           <button
             type="button"
             onClick={() => setShowNearbyHelp(true)}
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              backgroundColor: '#1B1E23',
-              border: '1.5px solid #2A2E35',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              backgroundColor: 'var(--pz-surface, #1B1E23)',
+              border: '1px solid var(--pz-line, #2A2E35)',
               fontSize: 13,
               cursor: 'pointer',
               display: 'flex',
@@ -2094,35 +2083,34 @@ export default function RidePage() {
               justifyContent: 'center',
               flexShrink: 0,
             }}
-            title="Verified Nearby Help (Fuel, Repair, Food, Rest)"
+            title="Nearby Amenities (Fuel, Repair, Food, Rest)"
           >
             🛠️
           </button>
 
-          {/* Feature K: Captain-only announcement control on Ride tab */}
+          {/* Captain-only announcement control on Ride tab */}
           {isLead && (
             <button
               type="button"
               onClick={() => setShowAnnouncementModal(true)}
               style={{
-                padding: '4px 8px',
-                borderRadius: 18,
-                backgroundColor: 'rgba(240, 194, 58, 0.15)',
-                border: '1.5px solid #F0C23A',
-                color: '#F0C23A',
-                fontSize: 11.5,
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                backgroundColor: 'var(--pz-warn-bg, rgba(240, 194, 58, 0.15))',
+                border: '1px solid var(--pz-accent, #F0C23A)',
+                color: 'var(--pz-accent, #F0C23A)',
+                fontSize: 13,
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
-                boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+                justifyContent: 'center',
                 flexShrink: 0,
               }}
-              title="Captain announcement sheet (Feature K)"
+              title="Captain Announcement"
             >
-              <span>👑</span>
-              <span className="hide-on-mobile">Announce</span>
+              👑
             </button>
           )}
 
@@ -2131,15 +2119,20 @@ export default function RidePage() {
             type="button"
             onClick={sendSOS}
             style={{
-              padding: '4px 8px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1.5px solid #EF4444',
-              color: '#EF4444',
-              borderRadius: 14,
-              fontSize: 11,
+              height: 34,
+              padding: '0 10px',
+              backgroundColor: 'var(--pz-bad-bg, rgba(239, 68, 68, 0.15))',
+              border: '1px solid var(--pz-bad, #EF4444)',
+              color: 'var(--pz-bad, #EF4444)',
+              borderRadius: 10,
+              fontSize: 11.5,
               fontWeight: 900,
               cursor: 'pointer',
               flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              letterSpacing: 0.5,
             }}
             title="Emergency SOS"
           >
@@ -2153,13 +2146,13 @@ export default function RidePage() {
               onClick={handleEndRide}
               disabled={endingRide}
               style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
-                color: '#EF4444',
-                fontSize: 12,
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                backgroundColor: 'var(--pz-surface, #1B1E23)',
+                border: '1px solid var(--pz-line, #2A2E35)',
+                color: 'var(--pz-bad, #EF4444)',
+                fontSize: 13,
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
@@ -3568,70 +3561,68 @@ export default function RidePage() {
         />
       )}
 
-      {/* Bottom tab bar — Scandinavian Editorial Pill Navigation */}
-      <div className="ride-bottom-nav" style={{
-        backgroundColor: '#111316',
-        borderTop: '1.5px solid #2A2E35',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        padding: '6px 8px max(10px, env(safe-area-inset-bottom, 10px))',
-        flexShrink: 0,
-        height: 'calc(54px + env(safe-area-inset-bottom, 0px))',
-        boxSizing: 'border-box',
+      {/* Bottom tab bar — Prototype Design System Tab Navigation */}
+      <div className="pz-tabs" role="tablist" style={{
         zIndex: 900,
         position: 'relative',
-        gap: 2,
+        flexShrink: 0,
       }}>
         {/* Tab 1: RIDE */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'map' ? 'page' : undefined}
           onClick={() => setTab('map')}
-          style={tab === 'map' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          RIDE
+          <span style={{ fontSize: 16 }}>🏍️</span>
+          <span>RIDE</span>
         </button>
 
         {/* Tab 2: PLAN */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'plan' ? 'page' : undefined}
           onClick={() => setTab('plan')}
-          style={tab === 'plan' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          PLAN
+          <span style={{ fontSize: 16 }}>📋</span>
+          <span>PLAN</span>
         </button>
 
         {/* Tab 3: DISCOVER */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'discover' ? 'page' : undefined}
           onClick={() => setTab('discover')}
-          style={tab === 'discover' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          DISCOVER
+          <span style={{ fontSize: 16 }}>🧭</span>
+          <span>DISCOVER</span>
         </button>
 
         {/* Tab 4: CHAT */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'chat' ? 'page' : undefined}
           onClick={() => setTab('chat')}
-          style={{
-            ...(tab === 'chat' ? styles.activeNavPill : styles.inactiveNavBtn),
-            position: 'relative',
-          }}
         >
-          CHAT
+          <span style={{ fontSize: 16 }}>💬</span>
+          <span>CHAT</span>
           {newMsgCount > 0 && tab !== 'chat' && (
-            <span style={styles.chatUnreadDot} />
+            <span className="pz-tab-badge">{newMsgCount > 9 ? '9+' : newMsgCount}</span>
           )}
         </button>
 
         {/* Tab 5: ME */}
         <button
           type="button"
+          role="tab"
+          aria-current={tab === 'me' ? 'page' : undefined}
           onClick={() => setTab('me')}
-          style={tab === 'me' ? styles.activeNavPill : styles.inactiveNavBtn}
         >
-          ME
+          <span style={{ fontSize: 16 }}>👤</span>
+          <span>ME</span>
         </button>
       </div>
 
@@ -3785,75 +3776,4 @@ const s: Record<string, React.CSSProperties> = {
   btnWhite: { marginTop: 16, padding: '10px 24px', background: '#fff', color: '#111827', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
 };
 
-const styles: Record<string, React.CSSProperties> = {
-  activeNavPill: {
-    backgroundColor: '#F0C23A',
-    color: '#111316',
-    fontWeight: 900,
-    fontSize: 12,
-    letterSpacing: 0.3,
-    borderRadius: 999,
-    padding: '7px 14px',
-    minHeight: 38,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: 'none',
-    cursor: 'pointer',
-    boxShadow: '0 2px 10px rgba(240, 194, 58, 0.25)',
-    transition: 'all 0.15s ease',
-    flexShrink: 0,
-    touchAction: 'manipulation',
-  },
-  inactiveNavBtn: {
-    backgroundColor: 'transparent',
-    color: '#9D9C9A',
-    fontWeight: 800,
-    fontSize: 12,
-    letterSpacing: 0.3,
-    border: 'none',
-    cursor: 'pointer',
-    padding: '7px 10px',
-    minHeight: 38,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.15s ease',
-    flexShrink: 0,
-    touchAction: 'manipulation',
-  },
-  chatUnreadDot: {
-    position: 'absolute',
-    top: 4,
-    right: 2,
-    width: 7,
-    height: 7,
-    borderRadius: '50%',
-    backgroundColor: '#F0C23A',
-  },
-  chatActionBtn: {
-    padding: '4px 8px',
-    background: '#1B1E23',
-    border: '1px solid #2A2E35',
-    borderRadius: 6,
-    color: '#F0C23A',
-    fontSize: 11,
-    fontWeight: 700,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 4,
-  },
-  chatQuickPill: {
-    padding: '6px 12px',
-    background: '#1B1E23',
-    border: '1px solid #2A2E35',
-    borderRadius: 14,
-    color: '#9D9C9A',
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    flexShrink: 0,
-  },
-};
+

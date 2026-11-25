@@ -166,9 +166,10 @@ body {
   background: var(--pz-surface);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.pz-tabs a {
+.pz-tabs a,
+.pz-tabs button {
   flex: 1;
-  min-height: 60px;
+  min-height: 56px;
   color: var(--pz-muted);
   font: 600 11px Manrope, sans-serif;
   display: flex;
@@ -178,14 +179,21 @@ body {
   gap: 3px;
   text-decoration: none;
   position: relative;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  user-select: none;
 }
-.pz-tabs a[aria-current='page'] { color: var(--pz-ink); }
-.pz-tabs a[aria-current='page']::before {
+.pz-tabs a[aria-current='page'],
+.pz-tabs button[aria-current='page'] { color: var(--pz-ink); }
+.pz-tabs a[aria-current='page']::before,
+.pz-tabs button[aria-current='page']::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 30%;
-  right: 30%;
+  left: 25%;
+  right: 25%;
   height: 3px;
   border-radius: 0 0 3px 3px;
   background: var(--pz-accent);
