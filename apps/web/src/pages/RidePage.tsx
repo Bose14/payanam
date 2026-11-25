@@ -1602,12 +1602,7 @@ export default function RidePage() {
   const itineraryStops = (session?.itinerary ?? []).filter((s) => s.lat && s.lng);
   const allPlanStops = useMemo<ItineraryStop[]>(() => {
     const itin = session?.itinerary ?? [];
-    if (itin.length > 0) return itin;
-    return [
-      { id: 'origin_1', place: 'Start from Hubli', lat: 15.3647, lng: 75.1240, day_number: 2, order_index: 1, item_type: 'stop', description: 'Origin waypoint · 07:30' },
-      { id: 'chat_1', place: 'Sagar Highway Dhaba', lat: 14.1670, lng: 75.0400, day_number: 2, order_index: 2, item_type: 'meal', description: 'From chat: Chai & breakfast stop · 45 km marker' },
-      { id: 'planned_1', place: 'Lunch, Udupi', lat: 13.3409, lng: 74.7421, day_number: 2, order_index: 3, item_type: 'meal', description: 'Coastline regroup · 112 km marker' },
-    ];
+    return itin;
   }, [session?.itinerary]);
   const routeCoords: [number, number][] = itineraryStops.map((s) => [s.lat as number, s.lng as number]);
   const defaultCenter: [number, number] = myLat && myLng ? [myLat, myLng] : (routeCoords[0] ?? [20.5937, 78.9629]);
@@ -3067,17 +3062,20 @@ export default function RidePage() {
             <div style={{ backgroundColor: 'var(--pz-surface)', borderRadius: 18, border: '1.5px solid var(--pz-line)', padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
-                  {session?.trips?.title ?? 'Bengaluru to Kasaragod'}
+                  {session?.trips?.title ?? 'Trip itinerary'}
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--pz-muted)' }}>
-                  3 days · {ridersWithFreshness.length} riders
+                  {session?.trips?.days ? `${session.trips.days} day${session.trips.days === 1 ? '' : 's'} · ` : ''}{ridersWithFreshness.length} rider{ridersWithFreshness.length === 1 ? '' : 's'}
                 </span>
               </div>
               <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
-                DAY 2 · HUBLI TO MANGALURU
+                {session?.trips?.from_place && session?.trips?.to_place ? `${session.trips.from_place} to ${session.trips.to_place}` : 'Route'}
               </div>
 
               {/* Dynamic Route Itinerary with 'FROM CHAT' tags (Feature H2 & Mockup 7) */}
+              {allPlanStops.length === 0 && (
+                <p style={{ margin: '8px 0 12px', fontSize: 13, color: 'var(--pz-muted)' }}>No stops planned yet. Add the first one below.</p>
+              )}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {allPlanStops.map((stop, idx) => (
                   <ItineraryStopItem
