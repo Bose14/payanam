@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } from '../../services/api';
 
-export const NOTIFY_KEY = 'payanam_chat_notify';
 type Filter = 'All' | 'Trips' | 'Groups' | 'Direct';
-type Notify = 'All' | 'Stops and alerts only';
 
 function apiMessage(err: unknown, fallback: string): string {
   const e = err as {
@@ -80,8 +78,8 @@ function Bubble({ m }: { m: ChatMessage }) {
 /* ----------------------------- thread (trip / group / DM) ----------------------------- */
 
 function Thread({
-  conv, onBack, onOpenGroup, notify,
-}: { conv: ChatConversation; onBack: () => void; onOpenGroup: (id: string) => void; notify: Notify }) {
+  conv, onBack, onOpenGroup,
+}: { conv: ChatConversation; onBack: () => void; onOpenGroup: (id: string) => void }) {
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [isLead, setIsLead] = useState(false);
   const [dm, setDm] = useState<{ sentUnreplied: number; blocked: boolean; limit: number } | undefined>();
@@ -178,7 +176,7 @@ function Thread({
         <button className="pz-btn small" type="button" onClick={onBack}>← Chats</button>
         <div className="pz-grow">
           <b>{conv.title}</b>
-          <div className="pz-note">{conv.type === 'trip' ? `Notify me: ${notify.toLowerCase()}` : kind}</div>
+          <div className="pz-note">{kind}</div>
         </div>
         {conv.type === 'group' && (
           <button className="pz-btn small" type="button" onClick={() => onOpenGroup(conv.key.slice(6))}>Group page</button>
@@ -337,8 +335,6 @@ export default function ChatTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('All');
-  const [notify, setNotify] = useState<Notify>(() =>
-    localStorage.getItem(NOTIFY_KEY) === 'Stops and alerts only' ? 'Stops and alerts only' : 'All');
   const [groupName, setGroupName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [notice, setNotice] = useState('');
@@ -367,12 +363,6 @@ export default function ChatTab() {
   useEffect(() => {
     if (legacyTrip) setParams({ c: `trip:${legacyTrip}` }, { replace: true });
   }, [legacyTrip, setParams]);
-
-  const setNotifyPref = (n: Notify) => {
-    setNotify(n);
-    localStorage.setItem(NOTIFY_KEY, n);
-    setNotice(`Trip notifications: ${n.toLowerCase()}`);
-  };
 
   const createGroup = async () => {
     setBusy(true);
@@ -419,7 +409,6 @@ export default function ChatTab() {
     return (
       <Thread
         conv={open}
-        notify={notify}
         onBack={() => { setParams({}); load(); }}
         onOpenGroup={(id) => setParams({ group: id })}
       />
@@ -435,12 +424,6 @@ export default function ChatTab() {
     <>
       <h1 className="pz-h1">Chat</h1>
 
-      <div className="pz-label">Trip notifications</div>
-      <div className="pz-chips">
-        {(['All', 'Stops and alerts only'] as Notify[]).map((n) => (
-          <button key={n} type="button" aria-pressed={notify === n} onClick={() => setNotifyPref(n)}>{n}</button>
-        ))}
-      </div>
       <div className="pz-chips">
         {(['All', 'Trips', 'Groups', 'Direct'] as Filter[]).map((f) => (
           <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>{f}</button>
