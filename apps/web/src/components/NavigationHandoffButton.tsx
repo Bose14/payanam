@@ -1,5 +1,6 @@
 import React from 'react';
 import { launchNavigationHandoff, NavigationTargetCoords } from '../utils/navigationHandoff';
+import Icon from './Icon';
 
 interface NavigationHandoffButtonProps {
   target: NavigationTargetCoords | null | undefined;
@@ -85,7 +86,7 @@ export default function NavigationHandoffButton({
         ...style,
       }}
     >
-      <span>🧭</span>
+      <span><Icon name="compass" /></span>
       <span>{label}</span>
     </button>
   );

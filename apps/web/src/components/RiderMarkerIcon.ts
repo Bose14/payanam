@@ -1,3 +1,4 @@
+import { iconSvg } from './Icon';
 import L from 'leaflet';
 import { FreshnessInfo } from '../utils/lastSeen';
 import { RiderRouteStatus } from '../utils/plannedRouteProgress';
@@ -25,7 +26,7 @@ export function createRiderMarkerIcon(
 ): L.DivIcon {
   const cleanInitial = (initial || '?')[0].toUpperCase();
   const captainCrown = isCaptain
-    ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:12px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));z-index:10;">👑</div>`
+    ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:12px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));z-index:10;color:#F0C23A;">${iconSvg("crown", 12)}</div>`
     : '';
 
   // 1. OFF ROUTE (Feature C & E2 - highest visual priority)
@@ -43,7 +44,7 @@ export function createRiderMarkerIcon(
             ${cleanInitial}
           </div>
           <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#EF4444;border:1.5px solid #EF4444;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:flex;align-items:center;gap:3px;">
-            <span>⚠️</span>
+            <span>${iconSvg("warning", 11)}</span>
             <span>${badgeText}</span>
           </div>
         </div>
@@ -65,7 +66,7 @@ export function createRiderMarkerIcon(
             ${cleanInitial}
           </div>
           <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#9D9C9A;border:1.5px solid #2A2E35;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.4);">
-            ⚠️ ${ageLabel}
+            ${ageLabel}
           </div>
         </div>
       `,
@@ -86,7 +87,7 @@ export function createRiderMarkerIcon(
             ${cleanInitial}
           </div>
           <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#F0C23A;border:1.5px solid #F0C23A;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.4);">
-            ⏳ ${ageLabel}
+            ${ageLabel}
           </div>
         </div>
       `,

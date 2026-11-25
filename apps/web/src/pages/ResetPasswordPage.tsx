@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/api';
 import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
+import Icon from '../components/Icon';
 
 function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -89,7 +90,7 @@ function ResetPasswordPage() {
       {error && (
         <div style={styles.errorBox}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-            <span style={{ fontSize: '16px' }}>⚠️</span>
+            <span style={{ fontSize: '16px' }}><Icon name="warning" /></span>
             <div style={{ flex: 1 }}>
               <div>{error}</div>
               {(error.toLowerCase().includes('expired') || error.toLowerCase().includes('invalid')) && (
@@ -106,7 +107,7 @@ function ResetPasswordPage() {
 
       {success ? (
         <div style={styles.successBox}>
-          <div style={{ fontSize: '36px', marginBottom: '8px' }}>🎉</div>
+          <div style={{ fontSize: '36px', marginBottom: '8px' }}><Icon name="spark" /></div>
           <h3 style={styles.successTitle}>Password Updated!</h3>
           <p style={styles.successMessage}>
             Your password has been reset successfully. You can now sign in with your new credentials.
@@ -129,7 +130,7 @@ function ResetPasswordPage() {
           <div style={styles.field}>
             <label style={styles.label}>New Password</label>
             <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}>🔒</span>
+              <span style={styles.inputIcon}><Icon name="lock" /></span>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -144,7 +145,7 @@ function ResetPasswordPage() {
                 style={styles.eyeBtn}
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? '🙈' : '👁️'}
+                <Icon name={showPassword ? 'eyeOff' : 'eye'} />
               </button>
             </div>
           </div>
@@ -152,7 +153,7 @@ function ResetPasswordPage() {
           <div style={styles.field}>
             <label style={styles.label}>Confirm New Password</label>
             <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}>🔒</span>
+              <span style={styles.inputIcon}><Icon name="lock" /></span>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={confirmPassword}
@@ -167,20 +168,20 @@ function ResetPasswordPage() {
           {/* Checklist */}
           <div style={styles.checklist}>
             <div style={hasLength ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasLength ? '✓' : '•'}</span> At least 8 characters
+              <span><Icon name={hasLength ? 'check' : 'dot'} /></span> At least 8 characters
             </div>
             <div style={hasUpper ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasUpper ? '✓' : '•'}</span> At least 1 uppercase letter (A-Z)
+              <span><Icon name={hasUpper ? 'check' : 'dot'} /></span> At least 1 uppercase letter (A-Z)
             </div>
             <div style={hasLower ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasLower ? '✓' : '•'}</span> At least 1 lowercase letter (a-z)
+              <span><Icon name={hasLower ? 'check' : 'dot'} /></span> At least 1 lowercase letter (a-z)
             </div>
             <div style={hasNumber ? styles.checkItemOk : styles.checkItem}>
-              <span>{hasNumber ? '✓' : '•'}</span> At least 1 number (0-9)
+              <span><Icon name={hasNumber ? 'check' : 'dot'} /></span> At least 1 number (0-9)
             </div>
             {confirmPassword.length > 0 && (
               <div style={passwordsMatch ? styles.checkItemOk : styles.checkItemError}>
-                <span>{passwordsMatch ? '✓' : '✗'}</span> Passwords match
+                <span><Icon name={passwordsMatch ? 'check' : 'close'} /></span> Passwords match
               </div>
             )}
           </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ItineraryProposal } from '../utils/itineraryProposals';
+import Icon from './Icon';
 
 interface ItineraryProposalCardProps {
   proposal: ItineraryProposal;
@@ -94,7 +95,7 @@ export default function ItineraryProposalCard({
               letterSpacing: 0.5,
             }}
           >
-            ✓ ACCEPTED
+            ACCEPTED
           </span>
         )}
         {proposal.status === 'declined' && (
@@ -148,7 +149,7 @@ export default function ItineraryProposalCard({
                   boxShadow: '0 2px 6px rgba(240, 194, 58, 0.25)',
                 }}
               >
-                <span>✓</span> Accept
+                <span><Icon name="check" /></span> Accept
               </button>
               <button
                 type="button"
@@ -171,7 +172,7 @@ export default function ItineraryProposalCard({
                   gap: 5,
                 }}
               >
-                <span>✕</span> Decline
+                <span><Icon name="close" /></span> Decline
               </button>
             </div>
           ) : (
@@ -190,7 +191,7 @@ export default function ItineraryProposalCard({
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span>⏳</span> Awaiting Captain approval
+                <span><Icon name="clock" /></span> Awaiting Captain approval
               </span>
               <span style={{ color: '#F0C23A', fontWeight: 700 }}>Captain decision</span>
             </div>

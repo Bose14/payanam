@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PinnedStopData } from './PinStopModal';
+import Icon from './Icon';
 
 export interface RiderArrivalInfo {
   userId: string;
@@ -65,20 +66,20 @@ export default function StopArrivalTracker({
       <div style={styles.topBar}>
         <div style={styles.stopInfo} onClick={() => setExpanded(!expanded)}>
           <div style={styles.iconBadge}>
-            {pinnedStop.type === 'fuel_stop' ? '⛽' :
-             pinnedStop.type === 'meal' ? '🍽️' :
-             pinnedStop.type === 'rest' ? '☕' :
-             pinnedStop.type === 'attraction' ? '📍' : '📌'}
+            {pinnedStop.type === 'fuel_stop' ? <Icon name="fuel" /> :
+             pinnedStop.type === 'meal' ? <Icon name="food" /> :
+             pinnedStop.type === 'rest' ? <Icon name="coffee" /> :
+             pinnedStop.type === 'attraction' ? <Icon name="pin" /> : <Icon name="pin" />}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.stopTitleRow}>
               <span style={styles.stopName}>{pinnedStop.name}</span>
               <span style={styles.badgeETA}>
                 {myDistanceKm != null && myDistanceKm < 0.2 ? (
-                  '🎯 You are here!'
+                  'You are here!'
                 ) : isMyStale ? (
                   <span style={{ color: '#f59e0b', fontWeight: 700 }}>
-                    ⚠️ Unknown · {myAgeLabel || 'position stale'}
+                    Unknown · {myAgeLabel || 'position stale'}
                   </span>
                 ) : (
                   <>
@@ -93,7 +94,7 @@ export default function StopArrivalTracker({
                 <div style={{ ...styles.progressBarFill, width: `${progressPercent}%` }} />
               </div>
               <span style={styles.progressText}>
-                🏁 {arrivedRiders.length}/{totalRiders} arrived
+                {arrivedRiders.length}/{totalRiders} arrived
               </span>
             </div>
           </div>
@@ -110,7 +111,7 @@ export default function StopArrivalTracker({
               color: '#fff',
             }}
           >
-            {isMeArrived ? '✓ Arrived' : '🏁 Arrived?'}
+            {isMeArrived ? 'Arrived' : 'Arrived?'}
           </button>
           <button
             type="button"
@@ -118,7 +119,7 @@ export default function StopArrivalTracker({
             style={styles.btnNav}
             title="Open in Maps"
           >
-            🧭
+
           </button>
           <button
             type="button"
@@ -169,7 +170,7 @@ export default function StopArrivalTracker({
                     background: isArrived ? 'rgba(16, 185, 129, 0.15)' : '#111827',
                   }}
                 >
-                  <span style={{ fontSize: 13 }}>{isArrived ? '✓' : '⏳'}</span>
+                  <span style={{ fontSize: 13 }}>{isArrived ? <Icon name="check" /> : <Icon name="clock" />}</span>
                   <span style={{ fontWeight: 600, color: '#fff', fontSize: 12 }}>{r.userName}</span>
                   <span style={{ color: isArrived ? '#34d399' : (r.isStale ? '#f59e0b' : '#9ca3af'), fontSize: 11, marginLeft: 'auto' }}>
                     {isArrived

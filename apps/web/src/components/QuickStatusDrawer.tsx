@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 export interface QuickStatusOption {
   value: string;
@@ -11,65 +12,65 @@ export interface QuickStatusOption {
 
 export const ONE_TAP_STATUS_OPTIONS: QuickStatusOption[] = [
   {
-    value: '🟢 Rolling Smooth',
+    value: 'Rolling Smooth',
     label: 'Rolling Smooth',
-    icon: '🟢',
+    icon: 'dot',
     color: '#10b981',
     bg: 'rgba(16, 185, 129, 0.15)',
     description: 'All good, maintaining cruising pace',
   },
   {
-    value: '⛽ Need Fuel',
+    value: 'Need Fuel',
     label: 'Need Fuel',
-    icon: '⛽',
+    icon: 'fuel',
     color: '#f59e0b',
     bg: 'rgba(245, 158, 11, 0.15)',
     description: 'Reserve light on, need next petrol pump',
   },
   {
-    value: '☕ Chai / Snack Break',
+    value: 'Chai / Snack Break',
     label: 'Chai Break',
-    icon: '☕',
+    icon: 'coffee',
     color: '#8b5cf6',
     bg: 'rgba(139, 92, 246, 0.15)',
     description: 'Requesting quick tea / stretch regroup',
   },
   {
-    value: '⚠️ Pulling Over',
+    value: 'Pulling Over',
     label: 'Pulling Over',
-    icon: '⚠️',
+    icon: 'warning',
     color: '#f97316',
     bg: 'rgba(249, 115, 22, 0.15)',
     description: 'Slowing down, stopping at safe shoulder',
   },
   {
-    value: '🛑 Mechanical / Puncture',
+    value: 'Mechanical / Puncture',
     label: 'Bike Issue / Flat',
-    icon: '🛑',
+    icon: 'stop',
     color: '#ef4444',
     bg: 'rgba(239, 68, 68, 0.15)',
     description: 'Mechanical emergency or puncture',
   },
   {
-    value: '🌧️ Rain / Gearing Up',
+    value: 'Rain / Gearing Up',
     label: 'Rain / Gear Up',
-    icon: '🌧️',
+    icon: 'rain',
     color: '#06b6d4',
     bg: 'rgba(6, 182, 212, 0.15)',
     description: 'Stopping under cover to wear rain suit',
   },
   {
-    value: '📸 Scenic Photo Stop',
+    value: 'Scenic Photo Stop',
     label: 'Photo Stop',
-    icon: '📸',
+    icon: 'camera',
     color: '#ec4899',
     bg: 'rgba(236, 72, 153, 0.15)',
     description: 'Pausing 2 mins for viewpoint photos',
   },
   {
-    value: '🚦 Split at Junction',
+    value: 'Split at Junction',
     label: 'Split at Junction',
-    icon: '🚦',
+    icon: 'warning',
     color: '#eab308',
     bg: 'rgba(234, 179, 8, 0.15)',
     description: 'Caught at red light or took wrong turn',
@@ -106,12 +107,12 @@ export default function QuickStatusDrawer({
         <div style={styles.dragHandle} />
 
         <div style={styles.header}>
-          <div style={{ fontSize: 24 }}>⚡</div>
+          <div style={{ fontSize: 24 }}><Icon name="bolt" /></div>
           <div style={{ flex: 1 }}>
             <h3 style={styles.title}>One-Tap Rider Status</h3>
             <p style={styles.subtitle}>Instantly updates your convoy marker & notifies group</p>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}><Icon name="close" /></button>
         </div>
 
         <div style={styles.grid}>
@@ -129,7 +130,7 @@ export default function QuickStatusDrawer({
                   boxShadow: isActive ? `0 0 12px ${opt.bg}` : 'none',
                 }}
               >
-                <div style={{ fontSize: 26, marginBottom: 4 }}>{opt.icon}</div>
+                <div style={{ fontSize: 26, marginBottom: 4 }}><Icon name={opt.icon} size={26} /></div>
                 <div style={{ color: isActive ? opt.color : '#fff', fontWeight: 700, fontSize: 13 }}>
                   {opt.label}
                 </div>
@@ -147,7 +148,7 @@ export default function QuickStatusDrawer({
             onClick={() => handleSelect('')}
             style={styles.btnClear}
           >
-            🏁 Clear Active Status
+            Clear Active Status
           </button>
         )}
       </div>

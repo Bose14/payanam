@@ -127,9 +127,9 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             </span>
           </div>
           <p style={styles.stopMeta}>
-            {pinnedStop.type === 'fuel_stop' ? '⛽ Fuel Stop' :
-             pinnedStop.type === 'meal' ? '🍽️ Food & Meals' :
-             pinnedStop.type === 'rest' ? '☕ Chai Break' : '📍 Convoy Target'}
+            {pinnedStop.type === 'fuel_stop' ? 'Fuel Stop' :
+             pinnedStop.type === 'meal' ? 'Food & Meals' :
+             pinnedStop.type === 'rest' ? 'Chai Break' : 'Convoy Target'}
             {myDistanceKm != null ? ` · ${myDistanceKm.toFixed(1)} km to go` : ''}
           </p>
         </div>
@@ -225,7 +225,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
               color: isMeArrived ? '#FFFFFF' : '#111316',
             }}
           >
-            {isMeArrived ? '✓ I am here' : "I'm here"}
+            {isMeArrived ? 'I am here' : "I'm here"}
           </button>
 
           <button
@@ -233,7 +233,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             onClick={() => onOpenNavigation({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng })}
             style={styles.secondaryBtn}
           >
-            🧭 Open in navigation app
+            Open in navigation app
           </button>
 
           {onChangeStop && (

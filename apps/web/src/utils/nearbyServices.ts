@@ -1,3 +1,4 @@
+import { iconSvg } from '../components/Icon';
 // Payanam Nearby Services Engine (Feature 3 · SERVICES)
 // Route corridor searching, distance sorting, last-verified dates, community verification (confirm open / report closed),
 // adding custom places, and offline caching.
@@ -309,12 +310,12 @@ export function makeServicePinIcon(
   name?: string
 ): L.DivIcon {
   const config = {
-    FUEL: { icon: '⛽', bg: '#D97706', border: '#F0C23A' },
-    REPAIR: { icon: '🔧', bg: '#2563EB', border: '#60A5FA' },
-    FOOD: { icon: '🍽️', bg: '#EA580C', border: '#FB923C' },
-    REST: { icon: '☕', bg: '#7C3AED', border: '#A78BFA' },
-    STAY: { icon: '🏨', bg: '#059669', border: '#34D399' },
-  }[category] || { icon: '📍', bg: '#4B5563', border: '#9CA3AF' };
+    FUEL: { icon: 'fuel', bg: '#D97706', border: '#F0C23A' },
+    REPAIR: { icon: 'wrench', bg: '#2563EB', border: '#60A5FA' },
+    FOOD: { icon: 'food', bg: '#EA580C', border: '#FB923C' },
+    REST: { icon: 'coffee', bg: '#7C3AED', border: '#A78BFA' },
+    STAY: { icon: 'bed', bg: '#059669', border: '#34D399' },
+  }[category] || { icon: 'pin', bg: '#4B5563', border: '#9CA3AF' };
 
   const statusBadge = !isOpen
     ? `<div style="position:absolute;top:-4px;right:-4px;width:12px;height:12px;border-radius:6px;background:#EF4444;border:1.5px solid #111316;" title="Reported Closed"></div>`
@@ -332,8 +333,8 @@ export function makeServicePinIcon(
     iconSize: [30, 30],
     html: `
       <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-        <div style="width:28px;height:28px;background:${config.bg};border:2px solid ${config.border};border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.65);font-size:13px;opacity:${isOpen ? 1 : 0.65};">
-          ${config.icon}
+        <div style="width:28px;height:28px;background:${config.bg};border:2px solid ${config.border};border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.65);font-size:13px;color:#fff;opacity:${isOpen ? 1 : 0.65};">
+          ${iconSvg(config.icon, 16)}
           ${statusBadge}
         </div>
         ${labelHtml}

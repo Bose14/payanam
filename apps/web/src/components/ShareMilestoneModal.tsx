@@ -7,6 +7,7 @@ import {
   formatMilestoneShareText,
 } from '../utils/tripMilestones';
 import TripMilestoneCard from './TripMilestoneCard';
+import Icon from './Icon';
 
 interface ShareMilestoneModalProps {
   isOpen: boolean;
@@ -47,7 +48,7 @@ export default function ShareMilestoneModal({
           text: shareText,
           url: summary.publicLink,
         });
-        showToast('✓ Shared successfully!');
+        showToast('Shared successfully!');
       } catch (err: unknown) {
         if ((err as Error)?.name !== 'AbortError') {
           handleCopy();
@@ -69,7 +70,7 @@ export default function ShareMilestoneModal({
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareText).then(() => {
         setCopied(true);
-        showToast('✓ Milestone summary copied to clipboard!');
+        showToast('Milestone summary copied to clipboard!');
         setTimeout(() => setCopied(false), 2500);
       });
     }
@@ -81,7 +82,7 @@ export default function ShareMilestoneModal({
         {/* Modal Header */}
         <div style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>🏆</span>
+            <span style={{ fontSize: 24 }}><Icon name="trophy" /></span>
             <div>
               <h3 style={styles.title}>Share Trip Milestones</h3>
               <p style={styles.subtitle}>
@@ -89,7 +90,7 @@ export default function ShareMilestoneModal({
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}><Icon name="close" /></button>
         </div>
 
         {/* Toast Alert */}
@@ -119,7 +120,7 @@ export default function ShareMilestoneModal({
 
           {/* Privacy Guarantee Note (Step 2 requirement) */}
           <div style={styles.privacyShieldCard}>
-            <span style={{ fontSize: 18 }}>🛡️</span>
+            <span style={{ fontSize: 18 }}><Icon name="shield" /></span>
             <div style={{ fontSize: 12, color: '#10B981', lineHeight: 1.4 }}>
               <strong>Privacy rule enforced:</strong> Hidden stops and residential home starting addresses are strictly excluded from the milestone card.
             </div>
@@ -141,7 +142,7 @@ export default function ShareMilestoneModal({
                       backgroundColor: isSelected ? 'rgba(255,255,255,0.06)' : '#111316',
                     }}
                   >
-                    <span style={{ fontSize: 18 }}>{p.icon}</span>
+                    <span style={{ fontSize: 18 }}><Icon name={p.icon} /></span>
                     <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)' }}>{p.name}</span>
                   </button>
                 );
@@ -220,7 +221,7 @@ export default function ShareMilestoneModal({
           {/* Step 4: Link leads back explanation */}
           <div style={styles.step4NoticeBox}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#F0C23A', fontWeight: 800, fontSize: 12 }}>
-              <span>🔗</span>
+              <span><Icon name="link" /></span>
               <span>GROWTH & DISCOVER INTEGRATION</span>
             </div>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9D9C9A', lineHeight: 1.45 }}>
@@ -239,7 +240,7 @@ export default function ShareMilestoneModal({
                     }}
                     style={styles.linkButton}
                   >
-                    publish it to Discover first ➔
+                    publish it to Discover first →
                   </button>
                 </>
               )}
@@ -253,7 +254,7 @@ export default function ShareMilestoneModal({
             onClick={handleWhatsAppShare}
             style={styles.btnWhatsApp}
           >
-            <span>💬</span>
+            <span><Icon name="chat" /></span>
             <span>WhatsApp</span>
           </button>
 
@@ -261,7 +262,7 @@ export default function ShareMilestoneModal({
             onClick={handleNativeShare}
             style={styles.btnNative}
           >
-            <span>↗️</span>
+            <span><Icon name="arrowRight" /></span>
             <span>Share to Apps</span>
           </button>
 
@@ -269,7 +270,7 @@ export default function ShareMilestoneModal({
             onClick={handleCopy}
             style={styles.btnCopy}
           >
-            <span>{copied ? '✓' : '📋'}</span>
+            <span><Icon name={copied ? 'check' : 'list'} /></span>
             <span>{copied ? 'Copied' : 'Copy Text'}</span>
           </button>
         </div>

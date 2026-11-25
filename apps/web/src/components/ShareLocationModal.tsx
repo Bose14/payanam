@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 
 interface ShareLocationModalProps {
   isOpen: boolean;
@@ -135,7 +136,7 @@ export default function ShareLocationModal({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>📍</span>
+            <span style={{ fontSize: 20 }}><Icon name="pin" /></span>
             <div>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--text-primary)' }}>
                 Share Location in Trip Chat
@@ -157,7 +158,7 @@ export default function ShareLocationModal({
               padding: 4,
             }}
           >
-            ✕
+
           </button>
         </div>
 
@@ -182,7 +183,7 @@ export default function ShareLocationModal({
               gap: 6,
             }}
           >
-            <span>🎯</span> Current GPS
+            <span><Icon name="target" /></span> Current GPS
           </button>
           <button
             type="button"
@@ -203,7 +204,7 @@ export default function ShareLocationModal({
               gap: 6,
             }}
           >
-            <span>📌</span> Dropped Pin / Search
+            <span><Icon name="pin" /></span> Dropped Pin / Search
           </button>
         </div>
 
@@ -234,7 +235,7 @@ export default function ShareLocationModal({
                   fontSize: 14,
                 }}
               >
-                {currentGps ? '🛰️' : '⚠️'}
+                <Icon name={currentGps ? 'signal' : 'warning'} />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
@@ -396,7 +397,7 @@ export default function ShareLocationModal({
               boxShadow: '0 4px 12px rgba(240, 194, 58, 0.25)',
             }}
           >
-            <span>📍</span>
+            <span><Icon name="pin" /></span>
             <span>{sharing ? 'Posting to Chat...' : 'Share Location with Convoy'}</span>
           </button>
         </form>

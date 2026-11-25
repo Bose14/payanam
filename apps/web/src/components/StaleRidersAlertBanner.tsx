@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 interface StaleRidersAlertBannerProps {
   staleCount: number;
@@ -25,7 +26,7 @@ export const StaleRidersAlertBanner: React.FC<StaleRidersAlertBannerProps> = ({
       title="Click to view rider positions"
     >
       <div style={styles.iconWrap}>
-        <span style={{ fontSize: 16 }}>⚠️</span>
+        <span style={{ fontSize: 16 }}><Icon name="warning" /></span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={styles.text}>

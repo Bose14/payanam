@@ -1,5 +1,6 @@
 import React from 'react';
 import { PublishedTrip } from '../utils/publicItinerary';
+import Icon from './Icon';
 
 interface DiscoverTripCardProps {
   trip: PublishedTrip;
@@ -26,13 +27,13 @@ export default function DiscoverTripCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <h4 style={styles.title}>{trip.title}</h4>
             {trip.sourceCredit && (
-              <span style={styles.forkedBadge}>🍴 FORK</span>
+              <span style={styles.forkedBadge}>FORK</span>
             )}
           </div>
           <div style={styles.authorLine}>
             by <strong style={{ color: 'var(--text-primary)' }}>{trip.authorName}</strong> ·{' '}
-            <span style={{ color: '#F0C23A', fontWeight: 800 }}>{trip.copiesCount} copies</span> ·{' '}
-            <span>{trip.rating.toFixed(1)} ★ from {trip.finishersCount} riders</span>
+            <span style={{ color: 'var(--pz-warn)', fontWeight: 800 }}>{trip.copiesCount} copies</span> ·{' '}
+            <span>{trip.rating.toFixed(1)} from {trip.finishersCount} riders</span>
           </div>
         </div>
 
@@ -50,11 +51,11 @@ export default function DiscoverTripCard({
       {/* Stops breakdown matching Mockup Screen 8 */}
       <div style={styles.stopsBreakdownRow}>
         <span style={styles.stopsSummaryLabel}>Stops:</span>
-        {fuel > 0 && <span style={styles.stopPill}>⛽ fuel {fuel}</span>}
-        {food > 0 && <span style={styles.stopPill}>🍽️ food {food}</span>}
-        {rest > 0 && <span style={styles.stopPill}>☕ rest {rest}</span>}
-        {scenic > 0 && <span style={styles.stopPill}>📸 scenic {scenic}</span>}
-        <span style={{ fontSize: 11, color: '#9D9C9A', marginLeft: 'auto' }}>
+        {fuel > 0 && <span style={styles.stopPill} title="fuel"><Icon name="fuel" /> {fuel}</span>}
+        {food > 0 && <span style={styles.stopPill} title="food"><Icon name="food" /> {food}</span>}
+        {rest > 0 && <span style={styles.stopPill} title="rest"><Icon name="coffee" /> {rest}</span>}
+        {scenic > 0 && <span style={styles.stopPill} title="scenic"><Icon name="camera" /> {scenic}</span>}
+        <span style={{ fontSize: 11, color: 'var(--pz-muted)', marginLeft: 'auto' }}>
           {trip.stops?.length ?? 0} total waypoints
         </span>
       </div>
@@ -77,12 +78,12 @@ export default function DiscoverTripCard({
           onClick={() => onCopy(trip)}
           style={{
             ...styles.btnCopy,
-            backgroundColor: isCopied ? '#10B981' : '#F0C23A',
-            color: '#111316',
+            backgroundColor: isCopied ? 'var(--pz-ok)' : 'var(--pz-accent)',
+            color: 'var(--pz-on-accent)',
           }}
           title="Create a copy of this itinerary in your trips, crediting the author"
         >
-          <span>{isCopied ? '✓' : '📋'}</span>
+          <span><Icon name={isCopied ? 'check' : 'list'} /></span>
           <span>{isCopied ? 'Copied to Trips' : 'Copy to my trips'}</span>
         </button>
 
@@ -92,7 +93,7 @@ export default function DiscoverTripCard({
           style={styles.btnSecondary}
           title="Preview stops and notes"
         >
-          <span>👁️</span>
+          <span><Icon name="eye" /></span>
           <span>View Stops</span>
         </button>
 
@@ -103,7 +104,7 @@ export default function DiscoverTripCard({
             style={styles.btnSecondary}
             title="Message group"
           >
-            <span>💬</span>
+            <span><Icon name="chat" /></span>
             <span>Message</span>
           </button>
         )}
@@ -114,8 +115,8 @@ export default function DiscoverTripCard({
 
 const styles: Record<string, React.CSSProperties> = {
   card: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 18,
     padding: '16px 18px',
     display: 'flex',
@@ -133,22 +134,22 @@ const styles: Record<string, React.CSSProperties> = {
   forkedBadge: {
     fontSize: 10,
     fontWeight: 900,
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    border: '1px solid #F0C23A',
-    color: '#F0C23A',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1px solid var(--pz-accent)',
+    color: 'var(--pz-warn)',
     padding: '1px 6px',
     borderRadius: 4,
   },
   authorLine: {
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 4,
   },
   primaryTag: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#10B981',
-    border: '1.5px solid #10B981',
+    color: 'var(--pz-ok)',
+    border: '1.5px solid var(--pz-ok)',
     padding: '3px 8px',
     borderRadius: 6,
     letterSpacing: 0.5,
@@ -156,7 +157,7 @@ const styles: Record<string, React.CSSProperties> = {
   descText: {
     margin: '2px 0 0',
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     lineHeight: 1.45,
   },
   stopsBreakdownRow: {
@@ -165,7 +166,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     flexWrap: 'wrap',
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 2,
   },
   stopsSummaryLabel: {
@@ -175,8 +176,8 @@ const styles: Record<string, React.CSSProperties> = {
   stopPill: {
     fontSize: 11,
     color: 'var(--text-primary)',
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     padding: '2px 8px',
     borderRadius: 6,
   },
@@ -188,8 +189,8 @@ const styles: Record<string, React.CSSProperties> = {
   subTag: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#9D9C9A',
-    border: '1px solid #2A2E35',
+    color: 'var(--pz-muted)',
+    border: '1px solid var(--pz-line)',
     padding: '2px 8px',
     borderRadius: 6,
   },
@@ -213,9 +214,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnSecondary: {
     padding: '9px 14px',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     color: 'var(--text-primary)',
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     fontWeight: 800,
     fontSize: 13,

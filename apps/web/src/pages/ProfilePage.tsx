@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { profileService, RiderProfile } from '../services/api';
 import Navbar from '../components/Navbar';
+import Icon from '../components/Icon';
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const RIDING_STYLES = [
@@ -114,10 +115,10 @@ export default function ProfilePage() {
         setCity(res.profile.city || city);
         setBio(res.profile.bio || bio);
       }
-      showNotification('✅ Rider Profile & SOS info saved!');
+      showNotification('Rider Profile & SOS info saved!');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to update profile. Please try again.';
-      showNotification(`❌ ${message}`);
+      showNotification(`${message}`);
     } finally {
       setSaving(false);
     }
@@ -125,11 +126,11 @@ export default function ProfilePage() {
 
   const handleShareSosWhatsApp = () => {
     if (!emergencyPhone) {
-      showNotification('⚠️ Please add an emergency contact number first.');
+      showNotification('Please add an emergency contact number first.');
       return;
     }
     const cleanPhone = emergencyPhone.replace(/\D/g, '');
-    const msg = `🚨 *PAYANAM RIDER SOS CARD*\n\n*Rider:* ${fullName || 'Rider'}\n*Blood Group:* ${bloodGroup || 'Not specified'}\n*Motorcycle:* ${bikeModel || 'N/A'} (${bikeRegNo || 'No Plate'})\n*Emergency Contact:* ${emergencyName} (${emergencyRelation}) - ${emergencyPhone}\n*Allergies:* ${allergies || 'None'}\n*Medical Notes:* ${medicalNotes || 'None'}\n\n_Generated via Payanam Touring_`;
+    const msg = `*PAYANAM RIDER SOS CARD*\n\n*Rider:* ${fullName || 'Rider'}\n*Blood Group:* ${bloodGroup || 'Not specified'}\n*Motorcycle:* ${bikeModel || 'N/A'} (${bikeRegNo || 'No Plate'})\n*Emergency Contact:* ${emergencyName} (${emergencyRelation}) - ${emergencyPhone}\n*Allergies:* ${allergies || 'None'}\n*Medical Notes:* ${medicalNotes || 'None'}\n\n_Generated via Payanam Touring_`;
     const url = `https://wa.me/${cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone}?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
@@ -162,15 +163,15 @@ export default function ProfilePage() {
                 <h1 style={styles.heroTitle}>{fullName || 'Rider Profile'}</h1>
                 {bloodGroup && (
                   <span style={styles.bloodBadge}>
-                    🩸 {bloodGroup}
+                    {bloodGroup}
                   </span>
                 )}
                 <span style={styles.styleBadge}>
-                  🏍️ {ridingStyle}
+                  {ridingStyle}
                 </span>
               </div>
               <p style={styles.heroSubtitle}>
-                {user?.email} {city ? `• 📍 ${city}` : ''}
+                {user?.email} {city ? `• ${city}` : ''}
               </p>
             </div>
           </div>
@@ -181,7 +182,7 @@ export default function ProfilePage() {
               onClick={() => setShowSosModal(true)}
               style={styles.btnSosCard}
             >
-              <span>🚨</span>
+              <span><Icon name="alert" /></span>
               <span>View SOS Rider Card</span>
             </button>
           </div>
@@ -190,7 +191,7 @@ export default function ProfilePage() {
         {/* Form Container */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
+            <div style={{ fontSize: 36, marginBottom: 12 }}><Icon name="clock" /></div>
             <p style={{ fontWeight: 600 }}>Loading your rider passport...</p>
           </div>
         ) : (
@@ -198,7 +199,7 @@ export default function ProfilePage() {
             {/* Section 1: Emergency & Medical Safety */}
             <div className="responsive-card" style={styles.sectionCard}>
               <div style={styles.sectionHeader}>
-                <div style={styles.sectionIconAmber}>🚨</div>
+                <div style={styles.sectionIconAmber}><Icon name="alert" /></div>
                 <div>
                   <h2 style={styles.sectionTitle}>Emergency & Medical Safety</h2>
                   <p style={styles.sectionDesc}>
@@ -210,7 +211,7 @@ export default function ProfilePage() {
               {/* Blood Group Picker */}
               <div style={{ marginBottom: 20 }}>
                 <label style={styles.label}>
-                  🩸 Blood Group <span style={{ color: '#ef4444' }}>*</span>
+                  Blood Group <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {BLOOD_GROUPS.map((bg) => {
@@ -239,7 +240,7 @@ export default function ProfilePage() {
               <div style={styles.rowTwoCols}>
                 <div>
                   <label style={styles.label}>
-                    🚨 Emergency Contact Name <span style={{ color: '#ef4444' }}>*</span>
+                    Emergency Contact Name <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -252,7 +253,7 @@ export default function ProfilePage() {
 
                 <div>
                   <label style={styles.label}>
-                    📞 Emergency Phone Number <span style={{ color: '#ef4444' }}>*</span>
+                    Emergency Phone Number <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input
@@ -268,7 +269,7 @@ export default function ProfilePage() {
                         style={styles.btnDial}
                         title="Test Call"
                       >
-                        📞 Call
+                        Call
                       </a>
                     )}
                   </div>
@@ -293,7 +294,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label style={styles.label}>⚠️ Known Allergies</label>
+                  <label style={styles.label}>Known Allergies</label>
                   <input
                     type="text"
                     value={allergies}
@@ -306,7 +307,7 @@ export default function ProfilePage() {
 
               {/* Medical Notes */}
               <div style={{ marginTop: 16 }}>
-                <label style={styles.label}>📋 Medical Notes / Conditions</label>
+                <label style={styles.label}>Medical Notes / Conditions</label>
                 <textarea
                   value={medicalNotes}
                   onChange={(e) => setMedicalNotes(e.target.value)}
@@ -320,7 +321,7 @@ export default function ProfilePage() {
             {/* Section 2: Motorcycle & Gear Specifications */}
             <div className="responsive-card" style={styles.sectionCard}>
               <div style={styles.sectionHeader}>
-                <div style={styles.sectionIconBlue}>🏍️</div>
+                <div style={styles.sectionIconBlue}><Icon name="bike" /></div>
                 <div>
                   <h2 style={styles.sectionTitle}>Motorcycle & License Details</h2>
                   <p style={styles.sectionDesc}>
@@ -385,7 +386,7 @@ export default function ProfilePage() {
             {/* Section 3: Rider Profile & Home Base */}
             <div className="responsive-card" style={styles.sectionCard}>
               <div style={styles.sectionHeader}>
-                <div style={styles.sectionIconGold}>👤</div>
+                <div style={styles.sectionIconGold}><Icon name="user" /></div>
                 <div>
                   <h2 style={styles.sectionTitle}>Personal & Contact Details</h2>
                   <p style={styles.sectionDesc}>
@@ -453,7 +454,7 @@ export default function ProfilePage() {
                 disabled={saving}
                 style={styles.btnPrimary}
               >
-                {saving ? 'Saving...' : '💾 Save Rider Profile'}
+                {saving ? 'Saving...' : 'Save Rider Profile'}
               </button>
             </div>
           </form>
@@ -463,7 +464,7 @@ export default function ProfilePage() {
         <div style={{ ...styles.sectionCard, marginTop: 24, borderColor: 'rgba(239, 68, 68, 0.3)' }}>
           <div style={styles.sectionHeader}>
             <div style={{ ...styles.sectionIconAmber, background: 'rgba(239, 68, 68, 0.15)' }}>
-              🚪
+
             </div>
             <div style={{ flex: 1 }}>
               <h2 style={styles.sectionTitle}>Account & Session</h2>
@@ -480,7 +481,7 @@ export default function ProfilePage() {
               className="btn-mobile-full"
               style={styles.btnLogoutFull}
             >
-              🚪 Sign Out of Account
+              Sign Out of Account
             </button>
           </div>
         </div>
@@ -495,7 +496,7 @@ export default function ProfilePage() {
           >
             <div style={styles.sosCardHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 26 }}>🚨</span>
+                <span style={{ fontSize: 26 }}><Icon name="alert" /></span>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 'clamp(15px, 4vw, 18px)', fontWeight: 900, color: '#ffffff' }}>
                     EMERGENCY RIDER CARD
@@ -510,7 +511,7 @@ export default function ProfilePage() {
                 style={styles.modalCloseBtn}
                 title="Close"
               >
-                ✕
+
               </button>
             </div>
 
@@ -522,14 +523,14 @@ export default function ProfilePage() {
                   <div style={{ fontSize: 'clamp(17px, 4vw, 20px)', fontWeight: 900, color: 'var(--text-primary)', wordBreak: 'break-word' }}>{fullName || 'Rider'}</div>
                 </div>
                 <div style={{ ...styles.bloodBadgeLarge, flexShrink: 0 }}>
-                  🩸 {bloodGroup || 'UNKNOWN'}
+                  {bloodGroup || 'UNKNOWN'}
                 </div>
               </div>
 
               {/* Emergency Contact Row */}
               <div style={styles.sosDataBox}>
                 <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 800, marginBottom: 4, letterSpacing: 0.5 }}>
-                  🚨 PRIMARY EMERGENCY CONTACT
+                  PRIMARY EMERGENCY CONTACT
                 </div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', wordBreak: 'break-word' }}>
                   {emergencyName || 'Not Set'} ({emergencyRelation || 'Contact'})
@@ -543,14 +544,14 @@ export default function ProfilePage() {
                       href={`tel:${emergencyPhone}`}
                       style={styles.btnSosCall}
                     >
-                      📞 One-Tap Dial
+                      One-Tap Dial
                     </a>
                     <button
                       type="button"
                       onClick={handleShareSosWhatsApp}
                       style={styles.btnSosWa}
                     >
-                      💬 Alert on WhatsApp
+                      Alert on WhatsApp
                     </button>
                   </div>
                 )}

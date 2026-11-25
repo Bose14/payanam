@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -44,7 +45,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
 
           <div style={styles.logoRow}>
             <div style={styles.logoIconWrapper}>
-              <span style={{ fontSize: '26px' }}>🏍️</span>
+              <span style={{ fontSize: '26px' }}><Icon name="bike" /></span>
             </div>
             <div>
               <h1 style={styles.brandTitle}>PAYANAM</h1>
@@ -65,7 +66,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
           {/* Feature Highlights Grid */}
           <div className="auth-showcase-features" style={styles.featureList}>
             <div style={styles.featureItem}>
-              <div style={styles.featureIcon}>🗺️</div>
+              <div style={styles.featureIcon}><Icon name="map" /></div>
               <div>
                 <h4 style={styles.featureTitle}>AI Route Planner</h4>
                 <p style={styles.featureDesc}>Tailored for twists, scenic detours, and fuel-range stops.</p>
@@ -73,7 +74,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
             </div>
 
             <div style={styles.featureItem}>
-              <div style={styles.featureIcon}>📡</div>
+              <div style={styles.featureIcon}><Icon name="signal" /></div>
               <div>
                 <h4 style={styles.featureTitle}>Live Convoy Telemetry</h4>
                 <p style={styles.featureDesc}>Real-time GPS tracking, heading arrows, convoy chat & emergency SOS.</p>
@@ -81,7 +82,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
             </div>
 
             <div style={styles.featureItem}>
-              <div style={styles.featureIcon}>💳</div>
+              <div style={styles.featureIcon}><Icon name="card" /></div>
               <div>
                 <h4 style={styles.featureTitle}>Smart Expense Split</h4>
                 <p style={styles.featureDesc}>Equal or custom splits with automatic debt simplification.</p>
@@ -129,7 +130,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
 
           {/* Footer note */}
           <div style={styles.footerNote}>
-            <span>🔒 Secure 256-bit encrypted authentication</span>
+            <span>Secure 256-bit encrypted authentication</span>
           </div>
         </div>
       </div>

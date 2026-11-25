@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 export interface ArrivalOfferBannerProps {
   stopName: string;
@@ -16,7 +17,7 @@ export const ArrivalOfferBanner: React.FC<ArrivalOfferBannerProps> = ({
   return (
     <div style={styles.container}>
       <div style={styles.contentLeft}>
-        <div style={styles.iconDisc}>🎯</div>
+        <div style={styles.iconDisc}><Icon name="target" /></div>
         <div>
           <div style={styles.badgeRow}>
             <span style={styles.badge}>ARRIVAL DETECTED</span>
@@ -33,7 +34,7 @@ export const ArrivalOfferBanner: React.FC<ArrivalOfferBannerProps> = ({
           onClick={onConfirmArrival}
           style={styles.confirmBtn}
         >
-          ✓ Mark arrived
+          Mark arrived
         </button>
         <button
           type="button"
@@ -41,7 +42,7 @@ export const ArrivalOfferBanner: React.FC<ArrivalOfferBannerProps> = ({
           style={styles.dismissBtn}
           title="Not stopping here"
         >
-          ✕
+
         </button>
       </div>
     </div>

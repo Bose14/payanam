@@ -1,5 +1,6 @@
 import React from 'react';
 import { PublishedTrip } from '../utils/publicItinerary';
+import Icon from './Icon';
 
 interface DiscoverTripDetailModalProps {
   isOpen: boolean;
@@ -27,18 +28,18 @@ export default function DiscoverTripDetailModal({
         <div style={styles.header}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={styles.publicBadge}>🌐 DISCOVER ITINERARY</span>
-              <span style={{ fontSize: 12, color: '#F0C23A', fontWeight: 800 }}>
-                {trip.rating.toFixed(1)} ★ ({trip.finishersCount} finishers)
+              <span style={styles.publicBadge}>DISCOVER ITINERARY</span>
+              <span style={{ fontSize: 12, color: 'var(--pz-warn)', fontWeight: 800 }}>
+                {trip.rating.toFixed(1)} ({trip.finishersCount} finishers)
               </span>
             </div>
             <h3 style={styles.title}>{trip.title}</h3>
             <div style={styles.authorLine}>
               Curated by <strong style={{ color: 'var(--text-primary)' }}>{trip.authorName}</strong> ·{' '}
-              <span style={{ color: '#F0C23A' }}>{trip.copiesCount} riders copied</span>
+              <span style={{ color: 'var(--pz-warn)' }}>{trip.copiesCount} riders copied</span>
             </div>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}><Icon name="close" /></button>
         </div>
 
         {/* Tags bar */}
@@ -47,7 +48,7 @@ export default function DiscoverTripDetailModal({
             <span key={t} style={styles.tagChip}>{t}</span>
           ))}
           <span style={styles.routePill}>
-            {trip.fromPlace} ➔ {trip.toPlace} ({trip.days} Days)
+            {trip.fromPlace} to {trip.toPlace} ({trip.days} Days)
           </span>
         </div>
 
@@ -55,7 +56,7 @@ export default function DiscoverTripDetailModal({
         <div style={styles.body}>
           {trip.description && (
             <div style={styles.descBox}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
                 Rider Overview
               </div>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
@@ -66,7 +67,7 @@ export default function DiscoverTripDetailModal({
 
           {/* Privacy Note */}
           <div style={styles.privacyNote}>
-            <span>🛡️</span>
+            <span><Icon name="shield" /></span>
             <span>
               <strong>Privacy protected:</strong> Exact home departure coordinate & private stays are sanitized.
             </span>
@@ -74,20 +75,20 @@ export default function DiscoverTripDetailModal({
 
           {/* Amenities Summary */}
           <div style={styles.amenitiesCard}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
               Waypoint Amenities Breakdown
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <div style={styles.amenityItem}><span>⛽ Fuel</span> <strong>{fuel}</strong></div>
-              <div style={styles.amenityItem}><span>🍽️ Food</span> <strong>{food}</strong></div>
-              <div style={styles.amenityItem}><span>☕ Rest</span> <strong>{rest}</strong></div>
-              <div style={styles.amenityItem}><span>📸 Scenic</span> <strong>{scenic}</strong></div>
+              <div style={styles.amenityItem}><span>Fuel</span> <strong>{fuel}</strong></div>
+              <div style={styles.amenityItem}><span>Food</span> <strong>{food}</strong></div>
+              <div style={styles.amenityItem}><span>Rest</span> <strong>{rest}</strong></div>
+              <div style={styles.amenityItem}><span>Scenic</span> <strong>{scenic}</strong></div>
             </div>
           </div>
 
           {/* Stops List */}
           <div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', marginBottom: 10 }}>
               Curated Stops & Waypoints ({trip.stops?.length ?? 0})
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -103,14 +104,14 @@ export default function DiscoverTripDetailModal({
                     </div>
 
                     {stop.description && (
-                      <div style={{ fontSize: 12, color: '#9D9C9A', marginTop: 3 }}>
+                      <div style={{ fontSize: 12, color: 'var(--pz-muted)', marginTop: 3 }}>
                         {stop.description}
                       </div>
                     )}
 
                     {stop.tips && (
                       <div style={styles.stopTipsBox}>
-                        <span>💡 Tip:</span> {stop.tips}
+                        <span>Tip:</span> {stop.tips}
                       </div>
                     )}
                   </div>
@@ -121,10 +122,10 @@ export default function DiscoverTripDetailModal({
 
           {/* Source Attribution Notice */}
           <div style={styles.sourceCreditBox}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#F0C23A', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🍴</span> Source Attribution Guarantee
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--pz-warn)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span><Icon name="food" /></span> Source Attribution Guarantee
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9D9C9A', lineHeight: 1.4 }}>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--pz-muted)', lineHeight: 1.4 }}>
               When you copy this itinerary, a draft trip is created under your account with full credit to{' '}
               <strong>@{trip.authorName}</strong>. You can freely customize stops, timing, and add co-riders.
             </p>
@@ -140,10 +141,10 @@ export default function DiscoverTripDetailModal({
             onClick={() => onCopy(trip)}
             style={{
               ...styles.btnCopyPrimary,
-              backgroundColor: isCopied ? '#10B981' : '#F0C23A',
+              backgroundColor: isCopied ? 'var(--pz-ok)' : 'var(--pz-accent)',
             }}
           >
-            <span>{isCopied ? '✓' : '📋'}</span>
+            <span><Icon name={isCopied ? 'check' : 'list'} /></span>
             <span>{isCopied ? 'Copied to My Trips' : 'Copy to my trips'}</span>
           </button>
         </div>
@@ -168,8 +169,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
   },
   modal: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 20,
     width: '100%',
     maxWidth: 600,
@@ -184,7 +185,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: '20px 22px 14px',
-    borderBottom: '1px solid #2A2E35',
+    borderBottom: '1px solid var(--pz-line)',
   },
   publicBadge: {
     fontSize: 10,
@@ -192,9 +193,9 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
     padding: '2px 8px',
     borderRadius: 6,
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    color: '#F0C23A',
-    border: '1px solid #F0C23A',
+    backgroundColor: 'var(--pz-warn-bg)',
+    color: 'var(--pz-warn)',
+    border: '1px solid var(--pz-accent)',
   },
   title: {
     margin: '6px 0 2px',
@@ -204,12 +205,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   authorLine: {
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 18,
     cursor: 'pointer',
     padding: 4,
@@ -219,8 +220,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     alignItems: 'center',
     padding: '10px 22px',
-    backgroundColor: '#111316',
-    borderBottom: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    borderBottom: '1px solid var(--pz-line)',
     flexWrap: 'wrap',
   },
   tagChip: {
@@ -228,14 +229,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
     padding: '2px 8px',
     borderRadius: 6,
-    backgroundColor: '#1B1E23',
-    border: '1px solid #2A2E35',
-    color: '#10B981',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
+    color: 'var(--pz-ok)',
   },
   routePill: {
     fontSize: 11,
     fontWeight: 700,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginLeft: 'auto',
   },
   body: {
@@ -247,8 +248,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 16,
   },
   descBox: {
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 12,
     padding: '12px 14px',
   },
@@ -257,25 +258,25 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 8,
     fontSize: 11,
-    color: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    border: '1px solid rgba(16, 185, 129, 0.3)',
+    color: 'var(--pz-ok)',
+    backgroundColor: 'var(--pz-ok-bg)',
+    border: '1px solid var(--pz-ok)',
     borderRadius: 10,
     padding: '8px 12px',
   },
   amenitiesCard: {
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 12,
     padding: '12px 14px',
   },
   amenityItem: {
     fontSize: 12,
     color: 'var(--text-primary)',
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     padding: '4px 10px',
     borderRadius: 8,
-    border: '1px solid #2A2E35',
+    border: '1px solid var(--pz-line)',
     display: 'flex',
     alignItems: 'center',
     gap: 6,
@@ -283,8 +284,8 @@ const styles: Record<string, React.CSSProperties> = {
   stopCard: {
     display: 'flex',
     gap: 12,
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 12,
     padding: '10px 14px',
   },
@@ -292,8 +293,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#2A2E35',
-    color: '#F0C23A',
+    backgroundColor: 'var(--pz-line)',
+    color: 'var(--pz-warn)',
     fontSize: 11,
     fontWeight: 900,
     display: 'flex',
@@ -303,24 +304,24 @@ const styles: Record<string, React.CSSProperties> = {
   stopTypePill: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#9D9C9A',
-    backgroundColor: '#1B1E23',
-    border: '1px solid #2A2E35',
+    color: 'var(--pz-muted)',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
     padding: '2px 6px',
     borderRadius: 4,
     textTransform: 'uppercase',
   },
   stopTipsBox: {
     fontSize: 11,
-    color: '#F0C23A',
-    backgroundColor: 'rgba(240, 194, 58, 0.08)',
+    color: 'var(--pz-warn)',
+    backgroundColor: 'var(--pz-warn-bg)',
     padding: '4px 8px',
     borderRadius: 6,
     marginTop: 6,
   },
   sourceCreditBox: {
-    backgroundColor: '#111316',
-    border: '1px dashed #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px dashed var(--pz-line)',
     borderRadius: 12,
     padding: '12px 14px',
   },
@@ -329,13 +330,13 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'flex-end',
     gap: 10,
     padding: '14px 22px',
-    borderTop: '1px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    borderTop: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
   },
   btnSecondary: {
     padding: '9px 16px',
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     color: 'var(--text-primary)',
     fontSize: 13,
@@ -344,7 +345,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnCopyPrimary: {
     padding: '9px 20px',
-    color: '#111316',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 10,
     fontSize: 13,
