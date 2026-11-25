@@ -151,7 +151,6 @@ export default function CreateTripPage() {
         <div className="responsive-card" style={styles.card}>
           <div style={styles.header}>
             <div style={styles.badge}>
-              <span></span>
               <span>Trip Planner</span>
             </div>
             <h1 style={styles.title}>Plan Your Expedition</h1>
