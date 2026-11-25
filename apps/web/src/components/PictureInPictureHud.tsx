@@ -756,7 +756,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           title={isPipActive ? 'Close Picture-in-Picture HUD' : 'Open 60 FPS Picture-in-Picture Convoy HUD'}
         >
           <span>📺</span>
-          <span>{isPipActive ? 'PiP Active' : 'PiP HUD'}</span>
+          <span>{isPipActive ? 'Floating view on' : 'Floating view'}</span>
         </button>
       )}
     </>

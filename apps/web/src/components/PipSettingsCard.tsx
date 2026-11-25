@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Icon from './Icon';
 import {
   getPipPreferences,
   savePipPreferences,
@@ -12,472 +13,238 @@ export interface PipSettingsCardProps {
   style?: React.CSSProperties;
 }
 
+type Platform = 'android' | 'ios' | 'desktop';
+
+const PLATFORMS: { key: Platform; label: string; icon: string }[] = [
+  { key: 'android', label: 'Android', icon: 'phone' },
+  { key: 'ios', label: 'iPhone', icon: 'phone' },
+  { key: 'desktop', label: 'Computer', icon: 'globe' },
+];
+
+const MODES: { key: PipModePreference; title: string; hint: string }[] = [
+  { key: 'auto', title: 'Automatic', hint: 'Best option for your device' },
+  { key: 'in_app', title: 'Inside Payanam', hint: 'Works on every phone' },
+  { key: 'native', title: 'Over other apps', hint: 'Android and computers' },
+];
+
+const STEPS: Record<Platform, { meta: string; steps: React.ReactNode[] }> = {
+  android: {
+    meta: 'Android 8.0 or newer',
+    steps: [
+      <>Open phone <b>Settings</b>, then <b>Apps</b>, then your browser, then <b>Picture-in-picture</b>, and allow it.</>,
+      <>Start a ride, then open Google Maps or Waze. The ride view floats above your navigation.</>,
+      <>It shows your speed, riders ahead and behind with distances, and the next stop.</>,
+    ],
+  },
+  ios: {
+    meta: 'iOS 14 or newer',
+    steps: [
+      <>Open <b>Settings</b>, then <b>General</b>, then <b>Picture in Picture</b>, and turn on <b>Start PiP Automatically</b>.</>,
+      <>In Payanam, tap the floating view button at the top of the ride screen.</>,
+      <>Swipe up to go to another app. The view keeps floating. If your iPhone does not allow it, Payanam shows the same view inside the app instead.</>,
+    ],
+  },
+  desktop: {
+    meta: 'Chrome or Edge',
+    steps: [
+      <>Open a ride and click the floating view button.</>,
+      <>A small always-on-top window appears and stays visible while you work in other tabs.</>,
+    ],
+  },
+};
+
 export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, style }) => {
   const [prefs, setPrefs] = useState(() => getPipPreferences());
-  const [platformTab, setPlatformTab] = useState<'android' | 'ios' | 'desktop'>(() => getPlatformType());
+  const [platform, setPlatform] = useState<Platform>(() => getPlatformType() as Platform);
   const [testActive, setTestActive] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
 
   const nativeSupported = isNativePipSupported();
 
-  const handleToggleAutoOpen = (checked: boolean) => {
-    const updated = savePipPreferences({ autoOpenOnRide: checked });
-    setPrefs(updated);
-  };
+  const toggleAutoOpen = () => setPrefs(savePipPreferences({ autoOpenOnRide: !prefs.autoOpenOnRide }));
+  const changeMode = (mode: PipModePreference) => setPrefs(savePipPreferences({ preferredMode: mode }));
 
-  const handleModeChange = (mode: PipModePreference) => {
-    const updated = savePipPreferences({ preferredMode: mode });
-    setPrefs(updated);
-  };
-
-  const handleRunTest = async () => {
+  const runTest = () => {
     setTestActive(true);
     setTestResult(null);
-
     if (onTestPip) {
       onTestPip();
-      setTestResult('PiP HUD triggered. Look for the floating window or ribbon!');
-      setTimeout(() => setTestActive(false), 2500);
-      return;
+      setTestResult('Floating view opened. Look for the small window on screen.');
+    } else if (platform === 'ios') {
+      setTestResult('Ready. On iPhone the floating view works inside Payanam.');
+    } else if (typeof document !== 'undefined' && document.pictureInPictureEnabled) {
+      setTestResult('Your browser supports floating over other apps. Make sure Picture-in-picture is allowed in phone settings.');
+    } else {
+      setTestResult('Your browser does not allow floating over other apps, so Payanam will show it inside the app.');
     }
-
-    // Direct browser test
-    try {
-      if (platformTab === 'ios') {
-        setTestResult('iOS Mode: In-App Floating Cockpit is fully supported and ready!');
-      } else if (document.pictureInPictureEnabled) {
-        setTestResult('System PiP is supported on your browser! Ensure phone Settings > Chrome > PiP is Allowed.');
-      } else {
-        setTestResult('System PiP restricted by browser — will automatically use 60 FPS In-App Floating Ribbon.');
-      }
-    } catch {
-      setTestResult('Ready. 60 FPS Floating In-App HUD will be used.');
-    } finally {
-      setTimeout(() => setTestActive(false), 3000);
-    }
+    setTimeout(() => setTestActive(false), 2500);
   };
+
+  const guide = STEPS[platform];
 
   return (
     <div style={{ ...styles.card, ...style }}>
-      {/* Top Setting Row: Auto-open PiP HUD */}
       <div style={styles.headerRow}>
+        <div style={styles.iconBox}><Icon name="map" size={20} /></div>
         <div style={styles.textWrap}>
-          <div style={styles.titleRow}>
-            <span style={styles.icon}>📺</span>
-            <span style={styles.title}>Picture-in-Picture (PiP HUD)</span>
-            <span style={styles.badgeGreen}>Allowed by default</span>
-          </div>
+          <div style={styles.title}>Floating ride view</div>
           <p style={styles.subtitle}>
-            Allowed by default for all users. 60 FPS floating cockpit telemetry showing live speed, ahead/behind fellow rider spacing, and next stop.
+            A small window with your speed, riders ahead and behind, and the next stop. It stays on top of other apps.
           </p>
         </div>
+      </div>
 
-        {/* Auto Open Switch */}
+      <div style={styles.toggleRow}>
+        <div style={{ minWidth: 0 }}>
+          <div style={styles.rowTitle}>Open automatically</div>
+          <div style={styles.rowHint}>
+            {prefs.autoOpenOnRide ? 'Opens when you start or join a ride.' : 'Off. Open it from the ride screen when you need it.'}
+          </div>
+        </div>
         <button
           type="button"
           role="switch"
           aria-checked={prefs.autoOpenOnRide}
-          onClick={() => handleToggleAutoOpen(!prefs.autoOpenOnRide)}
-          style={{
-            ...styles.switchTrack,
-            backgroundColor: prefs.autoOpenOnRide ? '#10B981' : '#2A2E35',
-          }}
-          title="Auto-open PiP HUD when entering a ride"
+          aria-label="Open the floating ride view automatically"
+          onClick={toggleAutoOpen}
+          style={{ ...styles.switchTrack, backgroundColor: prefs.autoOpenOnRide ? 'var(--pz-ok)' : 'var(--pz-line)' }}
         >
-          <div
-            style={{
-              ...styles.switchThumb,
-              transform: prefs.autoOpenOnRide ? 'translateX(22px)' : 'translateX(2px)',
-            }}
-          />
+          <span style={{ ...styles.switchThumb, transform: prefs.autoOpenOnRide ? 'translateX(22px)' : 'translateX(2px)' }} />
         </button>
       </div>
 
-      <div style={styles.autoOpenNote}>
-        <span style={{ color: prefs.autoOpenOnRide ? '#10B981' : '#9D9C9A', fontWeight: 700, fontSize: 11.5 }}>
-          {prefs.autoOpenOnRide
-            ? '✓ Allowed & Active by default: 60 FPS PiP HUD opens automatically when you start or join a ride.'
-            : 'Off: PiP HUD will only launch when you tap the [📺 PiP HUD] button in the Ride top bar.'}
-        </span>
-      </div>
-
-      {/* Platform Instructions Selector */}
-      <div style={styles.platformSelectorWrap}>
-        <div style={styles.platformLabel}>
-          <span>PLATFORM PERMISSION & GUIDANCE</span>
+      <div style={styles.section}>
+        <div style={styles.sectionLabel}>How it works on your device</div>
+        <div role="tablist" style={styles.segTabs}>
+          {PLATFORMS.map((p) => {
+            const on = platform === p.key;
+            return (
+              <button
+                key={p.key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setPlatform(p.key)}
+                style={{
+                  ...styles.segTabBtn,
+                  backgroundColor: on ? 'var(--pz-surface)' : 'transparent',
+                  color: on ? 'var(--pz-ink)' : 'var(--pz-muted)',
+                  fontWeight: on ? 800 : 600,
+                  boxShadow: on ? '0 1px 3px rgba(0,0,0,0.15)' : 'none',
+                }}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={styles.segTabs}>
-          <button
-            type="button"
-            onClick={() => setPlatformTab('android')}
-            style={{
-              ...styles.segTabBtn,
-              backgroundColor: platformTab === 'android' ? '#2A2E35' : 'transparent',
-              color: platformTab === 'android' ? '#10B981' : '#9D9C9A',
-              fontWeight: platformTab === 'android' ? 800 : 600,
-            }}
-          >
-            🤖 Android
-          </button>
-          <button
-            type="button"
-            onClick={() => setPlatformTab('ios')}
-            style={{
-              ...styles.segTabBtn,
-              backgroundColor: platformTab === 'ios' ? '#2A2E35' : 'transparent',
-              color: platformTab === 'ios' ? '#F0C23A' : '#9D9C9A',
-              fontWeight: platformTab === 'ios' ? 800 : 600,
-            }}
-          >
-            🍎 iPhone / iOS
-          </button>
-          <button
-            type="button"
-            onClick={() => setPlatformTab('desktop')}
-            style={{
-              ...styles.segTabBtn,
-              backgroundColor: platformTab === 'desktop' ? '#2A2E35' : 'transparent',
-              color: platformTab === 'desktop' ? '#FFFFFF' : '#9D9C9A',
-              fontWeight: platformTab === 'desktop' ? 800 : 600,
-            }}
-          >
-            💻 Desktop
-          </button>
-        </div>
-
-        {/* Content for Android */}
-        {platformTab === 'android' && (
-          <div style={styles.guideBox}>
-            <div style={styles.guideHeader}>
-              <span style={styles.badgeGreen}>
-                {nativeSupported ? '● System PiP Supported' : '● In-App HUD Ready'}
-              </span>
-              <span style={{ fontSize: 11, color: '#9D9C9A', fontWeight: 600 }}>Android 8.0+</span>
-            </div>
-
-            <ol style={styles.stepList}>
-              <li>
-                <b>Allow Chrome/Browser PiP:</b> Open phone <i>Settings</i> ➔ <i>Apps</i> ➔ <i>Chrome</i> (or your browser) ➔ <i>Picture-in-picture</i> ➔ select <b>Allowed</b>.
-              </li>
-              <li>
-                <b>Over-Maps Navigation:</b> When riding with Google Maps or Waze, Payanam PiP pops out and hovers over your navigation map.
-              </li>
-              <li>
-                <b>60 FPS Telemetry:</b> Shows live speed, in-front / behind fellow riders with exact distances in meters, and next fuel/food stop.
-              </li>
-            </ol>
+        <div style={styles.guideBox}>
+          <div style={styles.guideMeta}>
+            {platform === 'android' && (nativeSupported ? 'Works over other apps on this device' : 'Shown inside Payanam on this device')}
+            {platform !== 'android' && guide.meta}
+            {platform === 'android' && <span style={{ float: 'right' }}>{guide.meta}</span>}
           </div>
-        )}
-
-        {/* Content for iOS */}
-        {platformTab === 'ios' && (
-          <div style={styles.guideBox}>
-            <div style={styles.guideHeader}>
-              <span style={styles.badgeGold}>
-                ● iOS Picture-in-Picture & Cockpit
-              </span>
-              <span style={{ fontSize: 11, color: '#9D9C9A', fontWeight: 600 }}>iOS 14+</span>
-            </div>
-
-            <p style={{ margin: '0 0 8px', fontSize: 12, color: '#E5E7EB', lineHeight: 1.45 }}>
-              To use Picture-in-Picture on iPhone while minimizing Safari or using Google Maps:
-            </p>
-
-            <ol style={styles.stepList}>
-              <li>
-                <b>Enable iOS System Setting:</b> Open iPhone <i>Settings</i> ➔ <i>General</i> ➔ <i>Picture in Picture</i> ➔ Turn <b>ON "Start PiP Automatically"</b>.
-              </li>
-              <li>
-                <b>Tap the PiP HUD button:</b> In Payanam, tap the <b>[📺 PiP HUD]</b> button directly.
-              </li>
-              <li>
-                <b>Swipe Up to Minimize:</b> Swipe up from the bottom of your iPhone to go to the Home screen or switch to Google Maps. The PiP window continues floating over your other apps!
-              </li>
-              <li>
-                <b>In-App Cockpit Fallback:</b> On iOS versions where Apple restricts canvas streams to OS-level PiP, Payanam automatically switches to the <b>60 FPS In-App Floating Ribbon</b> with <b>Dock Top</b> and <b>Dock Bottom</b> controls.
-              </li>
-            </ol>
-          </div>
-        )}
-
-        {/* Content for Desktop */}
-        {platformTab === 'desktop' && (
-          <div style={styles.guideBox}>
-            <div style={styles.guideHeader}>
-              <span style={styles.badgeGreen}>● Always-on-Top Window</span>
-              <span style={{ fontSize: 11, color: '#9D9C9A', fontWeight: 600 }}>Chrome / Edge</span>
-            </div>
-            <p style={{ margin: 0, fontSize: 12, color: '#E5E7EB', lineHeight: 1.45 }}>
-              On desktop, clicking <b>PiP HUD</b> pops out an always-on-top hardware-accelerated floating widget that stays visible while working in other tabs.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Mode Preference Selector */}
-      <div style={styles.modeSection}>
-        <div style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, marginBottom: 8 }}>
-          HUD DISPLAY MODE
-        </div>
-        <div style={styles.modeGrid}>
-          <button
-            type="button"
-            onClick={() => handleModeChange('auto')}
-            style={{
-              ...styles.modeBtn,
-              borderColor: prefs.preferredMode === 'auto' ? '#F0C23A' : '#2A2E35',
-              backgroundColor: prefs.preferredMode === 'auto' ? 'rgba(240, 194, 58, 0.12)' : '#16191D',
-            }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 12, color: prefs.preferredMode === 'auto' ? '#F0C23A' : '#FFFFFF' }}>
-              Auto-Detect
-            </div>
-            <div style={{ fontSize: 10, color: '#9D9C9A', marginTop: 2 }}>
-              Best for device
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleModeChange('in_app')}
-            style={{
-              ...styles.modeBtn,
-              borderColor: prefs.preferredMode === 'in_app' ? '#F0C23A' : '#2A2E35',
-              backgroundColor: prefs.preferredMode === 'in_app' ? 'rgba(240, 194, 58, 0.12)' : '#16191D',
-            }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 12, color: prefs.preferredMode === 'in_app' ? '#F0C23A' : '#FFFFFF' }}>
-              In-App Ribbon
-            </div>
-            <div style={{ fontSize: 10, color: '#9D9C9A', marginTop: 2 }}>
-              iOS / Reliable
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleModeChange('native')}
-            style={{
-              ...styles.modeBtn,
-              borderColor: prefs.preferredMode === 'native' ? '#F0C23A' : '#2A2E35',
-              backgroundColor: prefs.preferredMode === 'native' ? 'rgba(240, 194, 58, 0.12)' : '#16191D',
-            }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 12, color: prefs.preferredMode === 'native' ? '#F0C23A' : '#FFFFFF' }}>
-              System Window
-            </div>
-            <div style={{ fontSize: 10, color: '#9D9C9A', marginTop: 2 }}>
-              Android / PC
-            </div>
-          </button>
+          <ol style={styles.stepList}>
+            {guide.steps.map((st, i) => <li key={i}>{st}</li>)}
+          </ol>
         </div>
       </div>
 
-      {/* Action / Test Button */}
-      <div style={{ marginTop: 14 }}>
-        <button
-          type="button"
-          onClick={handleRunTest}
-          disabled={testActive}
-          style={styles.testBtn}
-        >
-          <span>{testActive ? '⏳' : '⚡'}</span>
-          <span>{testActive ? 'Testing PiP...' : 'Test PiP HUD Permission'}</span>
-        </button>
-
-        {testResult && (
-          <div style={styles.testResultBox}>
-            <span style={{ color: '#10B981', fontWeight: 800 }}>✓</span>
-            <span>{testResult}</span>
-          </div>
-        )}
+      <div style={styles.section}>
+        <div style={styles.sectionLabel}>Where to show it</div>
+        <div role="radiogroup" aria-label="Where to show the floating ride view" style={styles.modeGrid}>
+          {MODES.map((m) => {
+            const on = prefs.preferredMode === m.key;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => changeMode(m.key)}
+                style={{
+                  ...styles.modeBtn,
+                  borderColor: on ? 'var(--pz-accent)' : 'var(--pz-line)',
+                  backgroundColor: on ? 'var(--pz-warn-bg)' : 'var(--pz-bg)',
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: 12.5, color: 'var(--pz-ink)' }}>{m.title}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--pz-muted)', marginTop: 2 }}>{m.hint}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <button type="button" onClick={runTest} disabled={testActive} style={styles.testBtn}>
+        <Icon name={testActive ? 'clock' : 'check'} />
+        <span>{testActive ? 'Checking...' : 'Check on this device'}</span>
+      </button>
+
+      {testResult && (
+        <div style={styles.testResultBox} role="status">
+          <Icon name="info" />
+          <span>{testResult}</span>
+        </div>
+      )}
     </div>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
   card: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 18,
-    padding: '16px',
+    padding: 16,
     marginBottom: 12,
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
   },
-  headerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 14,
+  headerRow: { display: 'flex', alignItems: 'flex-start', gap: 12 },
+  iconBox: {
+    width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'var(--pz-warn-bg)', color: 'var(--pz-warn)',
   },
-  textWrap: {
-    minWidth: 0,
-    flex: 1,
+  textWrap: { minWidth: 0, flex: 1 },
+  title: { fontSize: 16, fontWeight: 800, color: 'var(--pz-ink)', letterSpacing: '-0.01em' },
+  subtitle: { margin: '3px 0 0', fontSize: 12.5, color: 'var(--pz-muted)', lineHeight: 1.45 },
+  toggleRow: {
+    marginTop: 14, padding: '12px 14px', borderRadius: 12,
+    backgroundColor: 'var(--pz-bg)', border: '1px solid var(--pz-line)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
   },
-  titleRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  icon: {
-    fontSize: 16,
-  },
-  title: {
-    fontSize: 14.5,
-    fontWeight: 800,
-    color: 'var(--text-primary)',
-    letterSpacing: '-0.01em',
-  },
-  subtitle: {
-    margin: 0,
-    fontSize: 11.5,
-    color: '#9D9C9A',
-    lineHeight: 1.4,
-  },
+  rowTitle: { fontSize: 14, fontWeight: 700, color: 'var(--pz-ink)' },
+  rowHint: { fontSize: 12, color: 'var(--pz-muted)', marginTop: 2, lineHeight: 1.4 },
   switchTrack: {
-    width: 48,
-    height: 28,
-    borderRadius: 14,
-    border: 'none',
-    cursor: 'pointer',
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    padding: 0,
-    flexShrink: 0,
-    touchAction: 'manipulation',
+    width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', position: 'relative',
+    display: 'flex', alignItems: 'center', padding: 0, flexShrink: 0, touchAction: 'manipulation',
     transition: 'background-color 0.2s',
   },
   switchThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-    transition: 'transform 0.2s',
+    width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.3)', transition: 'transform 0.2s', display: 'block',
   },
-  autoOpenNote: {
-    marginTop: 10,
-    padding: '8px 10px',
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    border: '1px solid rgba(255, 255, 255, 0.06)',
-  },
-  platformSelectorWrap: {
-    marginTop: 14,
-    borderTop: '1px solid #2A2E35',
-    paddingTop: 12,
-  },
-  platformLabel: {
-    fontSize: 10.5,
-    fontWeight: 900,
-    color: '#9D9C9A',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  segTabs: {
-    display: 'flex',
-    gap: 4,
-    backgroundColor: '#14161A',
-    padding: 3,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  segTabBtn: {
-    flex: 1,
-    padding: '6px 4px',
-    border: 'none',
-    borderRadius: 8,
-    fontSize: 11.5,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  guideBox: {
-    backgroundColor: '#14161A',
-    border: '1px solid #23272F',
-    borderRadius: 12,
-    padding: '12px',
-  },
-  guideHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  badgeGreen: {
-    fontSize: 10.5,
-    fontWeight: 800,
-    color: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    padding: '2px 8px',
-    borderRadius: 6,
-    border: '1px solid rgba(16, 185, 129, 0.3)',
-  },
-  badgeGold: {
-    fontSize: 10.5,
-    fontWeight: 800,
-    color: '#F0C23A',
-    backgroundColor: 'rgba(240, 194, 58, 0.12)',
-    padding: '2px 8px',
-    borderRadius: 6,
-    border: '1px solid rgba(240, 194, 58, 0.3)',
-  },
-  stepList: {
-    margin: 0,
-    paddingLeft: 16,
-    fontSize: 11.5,
-    color: '#D1D5DB',
-    lineHeight: 1.5,
-  },
-  modeSection: {
-    marginTop: 14,
-    borderTop: '1px solid #2A2E35',
-    paddingTop: 12,
-  },
-  modeGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 8,
-  },
+  section: { marginTop: 16 },
+  sectionLabel: { fontSize: 12, fontWeight: 800, color: 'var(--pz-muted)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8 },
+  segTabs: { display: 'flex', gap: 4, backgroundColor: 'var(--pz-line)', padding: 3, borderRadius: 11, marginBottom: 10 },
+  segTabBtn: { flex: 1, padding: '8px 4px', border: 'none', borderRadius: 9, fontSize: 13, cursor: 'pointer' },
+  guideBox: { backgroundColor: 'var(--pz-bg)', border: '1px solid var(--pz-line)', borderRadius: 12, padding: 12 },
+  guideMeta: { fontSize: 12, fontWeight: 700, color: 'var(--pz-ok)', marginBottom: 8 },
+  stepList: { margin: 0, paddingLeft: 18, fontSize: 13, color: 'var(--pz-ink)', lineHeight: 1.55, display: 'grid', gap: 6 },
+  modeGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 },
   modeBtn: {
-    padding: '8px 6px',
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderStyle: 'solid',
-    cursor: 'pointer',
-    textAlign: 'center',
-    touchAction: 'manipulation',
+    padding: '10px 6px', borderRadius: 12, borderWidth: 1.5, borderStyle: 'solid',
+    cursor: 'pointer', textAlign: 'center', touchAction: 'manipulation',
   },
   testBtn: {
-    width: '100%',
-    padding: '10px 14px',
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    border: '1.5px solid #F0C23A',
-    color: '#F0C23A',
-    borderRadius: 12,
-    fontSize: 12.5,
-    fontWeight: 800,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    touchAction: 'manipulation',
+    marginTop: 16, width: '100%', padding: '12px 14px', backgroundColor: 'var(--pz-accent)', border: 'none',
+    color: 'var(--pz-on-accent)', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, touchAction: 'manipulation',
   },
   testResultBox: {
-    marginTop: 8,
-    padding: '8px 12px',
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    border: '1px solid #10B981',
-    borderRadius: 10,
-    fontSize: 11.5,
-    color: '#D1FAE5',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
+    marginTop: 10, padding: '10px 12px', backgroundColor: 'var(--pz-ok-bg)', border: '1px solid var(--pz-ok)',
+    borderRadius: 12, fontSize: 12.5, color: 'var(--pz-ink)', display: 'flex', alignItems: 'flex-start', gap: 8, lineHeight: 1.45,
   },
 };
 
