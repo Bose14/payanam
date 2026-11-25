@@ -49,8 +49,8 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '4px 12px 6px',
     padding: '8px 12px',
     borderRadius: 14,
-    background: '#1B1E23',
-    border: '1.5px solid #F0C23A',
+    background: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-accent)',
     display: 'flex',
     alignItems: 'center',
     gap: 10,
@@ -65,7 +65,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 28,
     height: 28,
     borderRadius: '50%',
-    background: 'rgba(240, 194, 58, 0.15)',
+    background: 'var(--pz-warn-bg)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -74,7 +74,7 @@ const styles: Record<string, React.CSSProperties> = {
   text: {
     margin: 0,
     fontSize: 13,
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     lineHeight: 1.3,
   },
   names: {
@@ -85,12 +85,12 @@ const styles: Record<string, React.CSSProperties> = {
   subtext: {
     display: 'block',
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 2,
   },
   chevron: {
     fontSize: 18,
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     fontWeight: 800,
     paddingLeft: 2,
     flexShrink: 0,

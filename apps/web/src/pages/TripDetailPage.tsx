@@ -626,8 +626,8 @@ export default function TripDetailPage() {
                 onClick={() => setShowPublishModal(true)}
                 style={{
                   ...styles.btnShare,
-                  borderColor: isTripPublished(trip.id) ? '#10B981' : 'var(--accent-gold)',
-                  color: isTripPublished(trip.id) ? '#10B981' : 'var(--accent-gold)',
+                  borderColor: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--accent-gold)',
+                  color: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--accent-gold)',
                 }}
                 title="Feature 1B: Publish itinerary publicly to Discover"
               >
@@ -681,8 +681,8 @@ export default function TripDetailPage() {
                   onClick={() => setShowPublishModal(true)}
                   style={{
                     ...styles.passBtnAction,
-                    borderColor: isTripPublished(trip.id) ? '#10B981' : 'var(--border-subtle)',
-                    color: isTripPublished(trip.id) ? '#10B981' : 'var(--text-primary)',
+                    borderColor: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--border-subtle)',
+                    color: isTripPublished(trip.id) ? 'var(--pz-ok)' : 'var(--text-primary)',
                   }}
                   title="Feature 1B: Publish itinerary publicly to Discover"
                 >
@@ -707,8 +707,8 @@ export default function TripDetailPage() {
                   onClick={handleToggleTripStatus}
                   style={{
                     ...styles.passBtnAction,
-                    borderColor: trip.status === 'completed' ? '#10B981' : 'var(--border-subtle)',
-                    color: trip.status === 'completed' ? '#10B981' : 'var(--text-primary)',
+                    borderColor: trip.status === 'completed' ? 'var(--pz-ok)' : 'var(--border-subtle)',
+                    color: trip.status === 'completed' ? 'var(--pz-ok)' : 'var(--text-primary)',
                   }}
                   title={trip.status === 'completed' ? 'Reopen expedition for planning' : 'Mark expedition as completed'}
                 >
@@ -955,7 +955,7 @@ export default function TripDetailPage() {
           )}
 
           {trip?.isOwner && Object.values(groupedByDay).every(d => !d || d.length === 0) && (
-            <div style={{ padding: '14px 16px', marginBottom: 12, borderRadius: 12, border: '1px dashed var(--border-color, #3A3F47)', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
+            <div style={{ padding: '14px 16px', marginBottom: 12, borderRadius: 12, border: '1px dashed var(--border-color, var(--pz-line))', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
               Your plan is empty. Open a day below and use Add Waypoint to search for places and add them one by one.
             </div>
           )}
@@ -1057,7 +1057,7 @@ export default function TripDetailPage() {
                                         style={styles.btnRemoveStop}
                                         title="Remove stop"
                                       >
-
+                                        <Icon name="close" />
                                       </button>
                                     )}
                                   </div>
@@ -1390,7 +1390,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 800,
     cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)',
+    boxShadow: '0 4px 15px var(--pz-ok-bg)',
   },
   btnStartRide: {
     display: 'inline-flex',
@@ -1404,7 +1404,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 800,
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+    boxShadow: '0 2px 8px var(--pz-warn-bg)',
   },
   btnShare: {
     display: 'inline-flex',
@@ -1576,8 +1576,8 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
   },
   btnRemoveRider: {
-    background: 'rgba(239, 68, 68, 0.12)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    background: 'var(--pz-bad-bg)',
+    border: '1px solid var(--pz-bad-bg)',
     color: '#ef4444',
     fontSize: 11,
     padding: '3px 8px',
@@ -1600,8 +1600,8 @@ const styles: Record<string, React.CSSProperties> = {
   bloodBadge: {
     fontSize: 11,
     fontWeight: 800,
-    background: 'rgba(239, 68, 68, 0.15)',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    background: 'var(--pz-bad-bg)',
+    border: '1px solid var(--pz-bad-bg)',
     color: '#ef4444',
     padding: '2px 8px',
     borderRadius: 999,
@@ -1788,9 +1788,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnDecline: {
     padding: '6px 14px',
-    background: 'rgba(239, 68, 68, 0.15)',
+    background: 'var(--pz-bad-bg)',
     color: '#ef4444',
-    border: '1px solid rgba(239, 68, 68, 0.3)',
+    border: '1px solid var(--pz-bad-bg)',
     borderRadius: 6,
     fontSize: 12,
     fontWeight: 800,
@@ -1905,7 +1905,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
   },
   btnRemoveStop: {
-    background: 'rgba(239, 68, 68, 0.15)',
+    background: 'var(--pz-bad-bg)',
     border: 'none',
     color: '#ef4444',
     fontSize: 12,

@@ -116,8 +116,8 @@ export default function ShareLocationModal({
         style={{
           width: '100%',
           maxWidth: 440,
-          backgroundColor: '#111316',
-          border: '1.5px solid #2A2E35',
+          backgroundColor: 'var(--pz-bg)',
+          border: '1.5px solid var(--pz-line)',
           borderRadius: 20,
           overflow: 'hidden',
           display: 'flex',
@@ -129,7 +129,7 @@ export default function ShareLocationModal({
         <div
           style={{
             padding: '16px 18px',
-            borderBottom: '1.5px solid #2A2E35',
+            borderBottom: '1.5px solid var(--pz-line)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -141,7 +141,7 @@ export default function ShareLocationModal({
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--text-primary)' }}>
                 Share Location in Trip Chat
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9D9C9A' }}>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--pz-muted)' }}>
                 Convoy can view on map & Captain can confirm as stop
               </p>
             </div>
@@ -152,13 +152,13 @@ export default function ShareLocationModal({
             style={{
               background: 'none',
               border: 'none',
-              color: '#9D9C9A',
+              color: 'var(--pz-muted)',
               fontSize: 18,
               cursor: 'pointer',
               padding: 4,
             }}
           >
-
+            <Icon name="close" />
           </button>
         </div>
 
@@ -175,8 +175,8 @@ export default function ShareLocationModal({
               fontWeight: 800,
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: mode === 'current' ? '#F0C23A' : '#1B1E23',
-              color: mode === 'current' ? '#111316' : '#9D9C9A',
+              backgroundColor: mode === 'current' ? 'var(--pz-accent)' : 'var(--pz-surface)',
+              color: mode === 'current' ? 'var(--pz-bg)' : 'var(--pz-muted)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -196,8 +196,8 @@ export default function ShareLocationModal({
               fontWeight: 800,
               border: 'none',
               cursor: 'pointer',
-              backgroundColor: mode === 'pin' ? '#F0C23A' : '#1B1E23',
-              color: mode === 'pin' ? '#111316' : '#9D9C9A',
+              backgroundColor: mode === 'pin' ? 'var(--pz-accent)' : 'var(--pz-surface)',
+              color: mode === 'pin' ? 'var(--pz-bg)' : 'var(--pz-muted)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -214,8 +214,8 @@ export default function ShareLocationModal({
             <div
               style={{
                 padding: '12px 14px',
-                backgroundColor: '#1B1E23',
-                border: '1px solid #2A2E35',
+                backgroundColor: 'var(--pz-surface)',
+                border: '1px solid var(--pz-line)',
                 borderRadius: 12,
                 display: 'flex',
                 alignItems: 'center',
@@ -227,8 +227,8 @@ export default function ShareLocationModal({
                   width: 32,
                   height: 32,
                   borderRadius: '50%',
-                  backgroundColor: currentGps ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                  border: currentGps ? '1px solid #10B981' : '1px solid #EF4444',
+                  backgroundColor: currentGps ? 'var(--pz-ok-bg)' : 'var(--pz-bad-bg)',
+                  border: currentGps ? '1px solid var(--pz-ok)' : '1px solid var(--pz-bad)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -241,7 +241,7 @@ export default function ShareLocationModal({
                 <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                   {currentGps ? 'Live GPS Position Locked' : 'Acquiring GPS...'}
                 </div>
-                <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: 'var(--pz-muted)', marginTop: 2 }}>
                   {currentGps
                     ? `${currentGps.lat.toFixed(6)}, ${currentGps.lng.toFixed(6)}`
                     : 'Please wait or switch to dropped pin'}
@@ -259,8 +259,8 @@ export default function ShareLocationModal({
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchPlace())}
                   style={{
                     flex: 1,
-                    backgroundColor: '#1B1E23',
-                    border: '1.5px solid #2A2E35',
+                    backgroundColor: 'var(--pz-surface)',
+                    border: '1.5px solid var(--pz-line)',
                     borderRadius: 10,
                     padding: '9px 12px',
                     color: 'var(--text-primary)',
@@ -274,7 +274,7 @@ export default function ShareLocationModal({
                   disabled={searching || !searchQuery.trim()}
                   style={{
                     padding: '9px 14px',
-                    backgroundColor: '#2A2E35',
+                    backgroundColor: 'var(--pz-line)',
                     color: 'var(--text-primary)',
                     border: 'none',
                     borderRadius: 10,
@@ -296,8 +296,8 @@ export default function ShareLocationModal({
                   onChange={(e) => setPinLat(e.target.value)}
                   style={{
                     flex: 1,
-                    backgroundColor: '#1B1E23',
-                    border: '1px solid #2A2E35',
+                    backgroundColor: 'var(--pz-surface)',
+                    border: '1px solid var(--pz-line)',
                     borderRadius: 8,
                     padding: '8px 10px',
                     color: 'var(--text-primary)',
@@ -313,8 +313,8 @@ export default function ShareLocationModal({
                   onChange={(e) => setPinLng(e.target.value)}
                   style={{
                     flex: 1,
-                    backgroundColor: '#1B1E23',
-                    border: '1px solid #2A2E35',
+                    backgroundColor: 'var(--pz-surface)',
+                    border: '1px solid var(--pz-line)',
                     borderRadius: 8,
                     padding: '8px 10px',
                     color: 'var(--text-primary)',
@@ -328,7 +328,7 @@ export default function ShareLocationModal({
 
           {/* Place Name Input */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
               Place Name / Landmark
             </label>
             <input
@@ -338,8 +338,8 @@ export default function ShareLocationModal({
               onChange={(e) => setPlaceName(e.target.value)}
               style={{
                 width: '100%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
+                backgroundColor: 'var(--pz-surface)',
+                border: '1.5px solid var(--pz-line)',
                 borderRadius: 10,
                 padding: '9px 12px',
                 color: 'var(--text-primary)',
@@ -352,7 +352,7 @@ export default function ShareLocationModal({
 
           {/* Note Input */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
               Note for Group (Optional)
             </label>
             <input
@@ -362,8 +362,8 @@ export default function ShareLocationModal({
               onChange={(e) => setNote(e.target.value)}
               style={{
                 width: '100%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
+                backgroundColor: 'var(--pz-surface)',
+                border: '1.5px solid var(--pz-line)',
                 borderRadius: 10,
                 padding: '9px 12px',
                 color: 'var(--text-primary)',
@@ -382,8 +382,8 @@ export default function ShareLocationModal({
               width: '100%',
               marginTop: 6,
               padding: '12px',
-              backgroundColor: '#F0C23A',
-              color: '#111316',
+              backgroundColor: 'var(--pz-accent)',
+              color: 'var(--pz-on-accent)',
               border: 'none',
               borderRadius: 12,
               fontWeight: 900,
@@ -394,7 +394,7 @@ export default function ShareLocationModal({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: '0 4px 12px rgba(240, 194, 58, 0.25)',
+              boxShadow: '0 4px 12px var(--pz-warn-bg)',
             }}
           >
             <span><Icon name="pin" /></span>

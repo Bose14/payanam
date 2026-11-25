@@ -40,9 +40,9 @@ export default function ItineraryProposalCard({
   return (
     <div
       style={{
-        backgroundColor: '#1B1E23',
+        backgroundColor: 'var(--pz-surface)',
         borderRadius: 18,
-        border: proposal.status === 'accepted' ? '1.5px solid #10B981' : '1.5px solid #2A2E35',
+        border: proposal.status === 'accepted' ? '1.5px solid var(--pz-ok)' : '1.5px solid var(--pz-line)',
         padding: '14px 16px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
         display: 'flex',
@@ -59,13 +59,13 @@ export default function ItineraryProposalCard({
               height: 34,
               borderRadius: '50%',
               backgroundColor: '#22262D',
-              color: '#F0C23A',
+              color: 'var(--pz-warn)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 900,
               fontSize: 12,
-              border: '1.5px solid #3A3F47',
+              border: '1.5px solid var(--pz-line)',
               flexShrink: 0,
             }}
           >
@@ -75,7 +75,7 @@ export default function ItineraryProposalCard({
             <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
               {proposal.proposerName} proposed
             </div>
-            <div style={{ fontSize: 13, fontWeight: 900, color: '#F0C23A', marginTop: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--pz-warn)', marginTop: 1 }}>
               {proposal.title}
             </div>
           </div>
@@ -87,9 +87,9 @@ export default function ItineraryProposalCard({
             style={{
               fontSize: 10,
               fontWeight: 900,
-              color: '#10B981',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid #10B981',
+              color: 'var(--pz-ok)',
+              backgroundColor: 'var(--pz-ok-bg)',
+              border: '1px solid var(--pz-ok)',
               padding: '2px 8px',
               borderRadius: 6,
               letterSpacing: 0.5,
@@ -103,9 +103,9 @@ export default function ItineraryProposalCard({
             style={{
               fontSize: 10,
               fontWeight: 900,
-              color: '#9D9C9A',
+              color: 'var(--pz-muted)',
               backgroundColor: 'rgba(157, 156, 154, 0.12)',
-              border: '1px solid #2A2E35',
+              border: '1px solid var(--pz-line)',
               padding: '2px 8px',
               borderRadius: 6,
               letterSpacing: 0.5,
@@ -117,7 +117,7 @@ export default function ItineraryProposalCard({
       </div>
 
       {proposal.description && (
-        <p style={{ fontSize: 12, color: '#9D9C9A', margin: 0, lineHeight: 1.35 }}>
+        <p style={{ fontSize: 12, color: 'var(--pz-muted)', margin: 0, lineHeight: 1.35 }}>
           {proposal.description}
         </p>
       )}
@@ -134,8 +134,8 @@ export default function ItineraryProposalCard({
                 style={{
                   flex: 1,
                   padding: '10px 14px',
-                  backgroundColor: '#F0C23A',
-                  color: '#111316',
+                  backgroundColor: 'var(--pz-accent)',
+                  color: 'var(--pz-on-accent)',
                   border: 'none',
                   borderRadius: 10,
                   fontWeight: 900,
@@ -146,7 +146,7 @@ export default function ItineraryProposalCard({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 5,
-                  boxShadow: '0 2px 6px rgba(240, 194, 58, 0.25)',
+                  boxShadow: '0 2px 6px var(--pz-warn-bg)',
                 }}
               >
                 <span><Icon name="check" /></span> Accept
@@ -158,9 +158,9 @@ export default function ItineraryProposalCard({
                 style={{
                   flex: 1,
                   padding: '10px 14px',
-                  backgroundColor: '#1B1E23',
+                  backgroundColor: 'var(--pz-surface)',
                   color: 'var(--text-primary)',
-                  border: '1.5px solid #2A2E35',
+                  border: '1.5px solid var(--pz-line)',
                   borderRadius: 10,
                   fontWeight: 800,
                   fontSize: 13,
@@ -180,11 +180,11 @@ export default function ItineraryProposalCard({
               style={{
                 marginTop: 2,
                 padding: '6px 10px',
-                backgroundColor: '#111316',
-                border: '1px solid #2A2E35',
+                backgroundColor: 'var(--pz-bg)',
+                border: '1px solid var(--pz-line)',
                 borderRadius: 8,
                 fontSize: 11,
-                color: '#9D9C9A',
+                color: 'var(--pz-muted)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -193,7 +193,7 @@ export default function ItineraryProposalCard({
               <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span><Icon name="clock" /></span> Awaiting Captain approval
               </span>
-              <span style={{ color: '#F0C23A', fontWeight: 700 }}>Captain decision</span>
+              <span style={{ color: 'var(--pz-warn)', fontWeight: 700 }}>Captain decision</span>
             </div>
           )}
         </>

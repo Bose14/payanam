@@ -140,14 +140,14 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           <div
             style={{
               ...styles.statCard,
-              borderColor: staleRider ? '#F0C23A' : '#2A2E35',
-              background: staleRider ? 'rgba(240, 194, 58, 0.08)' : '#111316',
+              borderColor: staleRider ? 'var(--pz-accent)' : 'var(--pz-line)',
+              background: staleRider ? 'var(--pz-warn-bg)' : 'var(--pz-bg)',
             }}
           >
             <span
               style={{
                 ...styles.statVal,
-                color: staleRider ? '#F0C23A' : 'var(--text-primary)',
+                color: staleRider ? 'var(--pz-accent)' : 'var(--text-primary)',
               }}
             >
               {leftCardDisplay}
@@ -160,7 +160,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             <span
               style={{
                 ...styles.statVal,
-                color: myEtaDisplay === 'Unknown' ? '#9D9C9A' : isMeArrived ? '#10B981' : 'var(--text-primary)',
+                color: myEtaDisplay === 'Unknown' ? 'var(--pz-muted)' : isMeArrived ? 'var(--pz-ok)' : 'var(--text-primary)',
               }}
             >
               {myEtaDisplay}
@@ -197,7 +197,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           {passedRiders.length > 0 && (
             <div style={styles.arrivalRow}>
               <span style={styles.badgePassed}>PASSED</span>
-              <span style={{ ...styles.arrivalNames, color: '#EF4444' }}>
+              <span style={{ ...styles.arrivalNames, color: 'var(--pz-bad)' }}>
                 {passedRiders.join(', ')} (passed stop)
               </span>
             </div>
@@ -206,7 +206,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
           {/* Row 4: UNKNOWN (Stale riders) */}
           <div style={{ ...styles.arrivalRow, borderBottom: 'none' }}>
             <span style={styles.badgeUnknown}>UNKNOWN</span>
-            <span style={{ ...styles.arrivalNames, color: '#9D9C9A' }}>
+            <span style={{ ...styles.arrivalNames, color: 'var(--pz-muted)' }}>
               {unknownRiders.length > 0
                 ? unknownRiders.join(', ')
                 : 'All positions live'}
@@ -221,8 +221,8 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             onClick={() => onToggleMyArrival(!isMeArrived)}
             style={{
               ...styles.primaryBtn,
-              background: isMeArrived ? '#10B981' : '#F0C23A',
-              color: isMeArrived ? '#FFFFFF' : '#111316',
+              background: isMeArrived ? 'var(--pz-ok)' : 'var(--pz-accent)',
+              color: isMeArrived ? '#FFFFFF' : 'var(--pz-bg)',
             }}
           >
             {isMeArrived ? 'I am here' : "I'm here"}
@@ -266,10 +266,10 @@ const styles: Record<string, React.CSSProperties> = {
   sheet: {
     width: '100%',
     maxWidth: 540,
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    borderTop: '1.5px solid #2A2E35',
+    borderTop: '1.5px solid var(--pz-line)',
     padding: '12px 20px 28px',
     boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.5)',
     animation: 'slideUp 0.25s ease-out',
@@ -286,7 +286,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 5,
     borderRadius: 999,
-    backgroundColor: '#3A3F47',
+    backgroundColor: 'var(--pz-line)',
   },
   header: {
     marginBottom: 16,
@@ -294,7 +294,7 @@ const styles: Record<string, React.CSSProperties> = {
   pretitle: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
@@ -317,14 +317,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 999,
     fontSize: 11,
     fontWeight: 800,
-    border: '1.5px solid #10B981',
-    color: '#10B981',
-    background: 'rgba(16, 185, 129, 0.15)',
+    border: '1.5px solid var(--pz-ok)',
+    color: 'var(--pz-ok)',
+    background: 'var(--pz-ok-bg)',
     letterSpacing: 0.5,
   },
   stopMeta: {
     fontSize: 13,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     margin: '6px 0 0',
   },
   statCardsGrid: {
@@ -336,8 +336,8 @@ const styles: Record<string, React.CSSProperties> = {
   statCard: {
     padding: '16px 14px',
     borderRadius: 16,
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#111316',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-bg)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -353,14 +353,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   statSub: {
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 600,
     marginTop: 6,
     lineHeight: 1.2,
   },
   arrivalsSection: {
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 18,
     padding: '14px 16px',
     marginBottom: 20,
@@ -368,7 +368,7 @@ const styles: Record<string, React.CSSProperties> = {
   sectionHeader: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     letterSpacing: 1,
     margin: '0 0 12px',
     textTransform: 'uppercase',
@@ -378,14 +378,14 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 12,
     padding: '8px 0',
-    borderBottom: '1px solid #2A2E35',
+    borderBottom: '1px solid var(--pz-line)',
   },
   badgeHere: {
     padding: '3px 8px',
     borderRadius: 999,
-    background: 'rgba(16, 185, 129, 0.15)',
-    color: '#10B981',
-    border: '1.5px solid #10B981',
+    background: 'var(--pz-ok-bg)',
+    color: 'var(--pz-ok)',
+    border: '1.5px solid var(--pz-ok)',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -395,9 +395,9 @@ const styles: Record<string, React.CSSProperties> = {
   badgeETA: {
     padding: '3px 8px',
     borderRadius: 999,
-    background: 'rgba(240, 194, 58, 0.15)',
-    color: '#F0C23A',
-    border: '1.5px solid #F0C23A',
+    background: 'var(--pz-warn-bg)',
+    color: 'var(--pz-warn)',
+    border: '1.5px solid var(--pz-accent)',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -408,8 +408,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '3px 8px',
     borderRadius: 999,
     background: 'rgba(157, 156, 154, 0.15)',
-    color: '#9D9C9A',
-    border: '1.5px solid #9D9C9A',
+    color: 'var(--pz-muted)',
+    border: '1.5px solid var(--pz-muted)',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -419,9 +419,9 @@ const styles: Record<string, React.CSSProperties> = {
   badgePassed: {
     padding: '3px 8px',
     borderRadius: 999,
-    background: 'rgba(239, 68, 68, 0.15)',
-    color: '#EF4444',
-    border: '1.5px solid #EF4444',
+    background: 'var(--pz-bad-bg)',
+    color: 'var(--pz-bad)',
+    border: '1.5px solid var(--pz-bad)',
     fontWeight: 900,
     fontSize: 10,
     letterSpacing: 0.5,
@@ -447,9 +447,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 900,
     fontSize: 16,
     cursor: 'pointer',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
-    boxShadow: '0 4px 14px rgba(240, 194, 58, 0.25)',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
+    boxShadow: '0 4px 14px var(--pz-warn-bg)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -458,8 +458,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '13px 20px',
     borderRadius: 14,
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
     color: 'var(--text-primary)',
     fontWeight: 800,
     fontSize: 14,
@@ -472,7 +472,7 @@ const styles: Record<string, React.CSSProperties> = {
   changeBtn: {
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',

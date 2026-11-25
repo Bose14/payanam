@@ -51,7 +51,7 @@ export default function ItineraryStopItem({
     >
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, marginRight: 2 }}>{getStopTypeIcon(stop.item_type)}</span>
+          <span style={{ fontSize: 13, marginRight: 2 }}><Icon name={getStopTypeIcon(stop.item_type)} /></span>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             {stop.place}
           </span>
@@ -62,9 +62,9 @@ export default function ItineraryStopItem({
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: '#10B981',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid #10B981',
+                color: 'var(--pz-ok)',
+                backgroundColor: 'var(--pz-ok-bg)',
+                border: '1px solid var(--pz-ok)',
                 padding: '1px 6px',
                 borderRadius: 4,
                 letterSpacing: 0.6,
@@ -79,8 +79,8 @@ export default function ItineraryStopItem({
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                color: '#10B981',
-                border: '1px solid #10B981',
+                color: 'var(--pz-ok)',
+                border: '1px solid var(--pz-ok)',
                 padding: '1px 6px',
                 borderRadius: 4,
               }}
@@ -90,7 +90,7 @@ export default function ItineraryStopItem({
           )}
         </div>
 
-        <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 11, color: 'var(--pz-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span>
             {stop.description || `Stop ${index + 1} · Day ${stop.day_number ?? 1}`}
           </span>
@@ -100,10 +100,10 @@ export default function ItineraryStopItem({
               onClick={() => onOpenNavigation(stop)}
               style={{
                 padding: '2px 8px',
-                backgroundColor: '#111316',
-                border: '1px solid #2A2E35',
+                backgroundColor: 'var(--pz-bg)',
+                border: '1px solid var(--pz-line)',
                 borderRadius: 6,
-                color: '#F0C23A',
+                color: 'var(--pz-warn)',
                 fontSize: 10,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -124,14 +124,14 @@ export default function ItineraryStopItem({
             style={{
               fontSize: 10,
               fontWeight: 900,
-              color: '#111316',
-              backgroundColor: '#F0C23A',
+              color: 'var(--pz-on-accent)',
+              backgroundColor: 'var(--pz-accent)',
               padding: '4px 8px',
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              boxShadow: '0 2px 4px rgba(240, 194, 58, 0.3)',
+              boxShadow: '0 2px 4px var(--pz-warn-bg)',
             }}
           >
             <span><Icon name="pin" /></span> PINNED TARGET
@@ -143,9 +143,9 @@ export default function ItineraryStopItem({
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: '#F0C23A',
-              backgroundColor: 'rgba(240, 194, 58, 0.12)',
-              border: '1px solid #F0C23A',
+              color: 'var(--pz-warn)',
+              backgroundColor: 'var(--pz-warn-bg)',
+              border: '1px solid var(--pz-accent)',
               padding: '5px 10px',
               borderRadius: 8,
               cursor: 'pointer',

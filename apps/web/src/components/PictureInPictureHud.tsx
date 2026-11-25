@@ -126,7 +126,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
     // Sleek Border: Flashing red on SOS, otherwise subtle gold border
     ctx.lineWidth = 2;
-    ctx.strokeStyle = sos ? '#EF4444' : 'rgba(240, 194, 58, 0.65)';
+    ctx.strokeStyle = sos ? 'var(--pz-bad)' : 'var(--pz-warn-bg)';
     ctx.strokeRect(1, 1, width - 2, height - 2);
 
     // =========================================================================
@@ -136,7 +136,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const liveRiders = riderList.filter((r) => r.isLive !== false).length;
 
     // Live Dot
-    ctx.fillStyle = '#10B981';
+    ctx.fillStyle = 'var(--pz-ok)';
     ctx.beginPath();
     ctx.arc(16, 20, 3.5 + pulse * 1.5, 0, Math.PI * 2);
     ctx.fill();
@@ -149,11 +149,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     ctx.fillText(`${roundedSpeed}`, 28, 27);
 
     ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#F0C23A';
+    ctx.fillStyle = 'var(--pz-accent)';
     ctx.fillText('KM/H', 62, 26);
 
     ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#10B981';
+    ctx.fillStyle = 'var(--pz-ok)';
     ctx.fillText(`● ${liveRiders}/${total} LIVE`, 104, 25);
 
     // Next Stop Compact Pill (Center-Right)
@@ -164,7 +164,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'right';
       ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#F0C23A';
+      ctx.fillStyle = 'var(--pz-accent)';
       ctx.fillText(`${stopIcon} ${stopShort} ${distStr} (${arrived}/${Math.max(total, 1)})`, width - 64, 25);
     }
 
@@ -173,7 +173,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     ctx.textAlign = 'right';
     ctx.font = '600 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#9D9C9A';
+    ctx.fillStyle = 'var(--pz-muted)';
     ctx.fillText(timeStr, width - 12, 25);
 
     // Divider
@@ -191,7 +191,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       // 🚨 Full Emergency Override Mode
       const sosPulse = (Math.sin(time / 120) + 1) / 2;
       ctx.fillStyle = `rgba(239, 68, 68, ${0.2 + sosPulse * 0.3})`;
-      ctx.strokeStyle = '#EF4444';
+      ctx.strokeStyle = 'var(--pz-bad)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
@@ -200,7 +200,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'center';
       ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#EF4444';
+      ctx.fillStyle = 'var(--pz-bad)';
       ctx.fillText('🚨 SOS: FELLOW RIDER NEEDS HELP!', width / 2, 70);
 
       ctx.font = 'bold 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -208,8 +208,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.fillText('Emergency reported on road · Check group coordinates', width / 2, 92);
     } else if (announcement) {
       // 📢 Captain Announcement Override
-      ctx.fillStyle = 'rgba(240, 194, 58, 0.15)';
-      ctx.strokeStyle = '#F0C23A';
+      ctx.fillStyle = 'var(--pz-warn-bg)';
+      ctx.strokeStyle = 'var(--pz-accent)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
@@ -218,7 +218,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'left';
       ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#F0C23A';
+      ctx.fillStyle = 'var(--pz-accent)';
       ctx.fillText('📢 CAPTAIN CALL:', 20, 64);
 
       ctx.font = 'bold 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -251,15 +251,15 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'left';
       ctx.font = '900 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#10B981';
+      ctx.fillStyle = 'var(--pz-ok)';
       ctx.fillText(`▲ IN FRONT (${ridersAhead.length})`, leftColX + 8, 54);
 
       if (ridersAhead.length === 0) {
         ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#F0C23A';
+        ctx.fillStyle = 'var(--pz-accent)';
         ctx.fillText('👑 You lead convoy', leftColX + 8, 76);
         ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#9D9C9A';
+        ctx.fillStyle = 'var(--pz-muted)';
         ctx.fillText('No riders ahead', leftColX + 8, 94);
       } else {
         // Up to 2 riders stacked
@@ -275,7 +275,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
         ctx.textAlign = 'right';
         ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#10B981';
+        ctx.fillStyle = 'var(--pz-ok)';
         ctx.fillText(`${formatDist(r1.relativeDistanceMeters)} ▲`, leftColX + colWidth - 8, 73);
 
         // Rider 2 (or speed subtitle if only 1 rider)
@@ -289,12 +289,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
           ctx.textAlign = 'right';
           ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#10B981';
+          ctx.fillStyle = 'var(--pz-ok)';
           ctx.fillText(`${formatDist(r2.relativeDistanceMeters)} ▲`, leftColX + colWidth - 8, 97);
         } else if (r1.speedKmh != null && r1.speedKmh > 0) {
           ctx.textAlign = 'left';
           ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#9D9C9A';
+          ctx.fillStyle = 'var(--pz-muted)';
           ctx.fillText(`Riding at ${Math.round(r1.speedKmh)} km/h`, leftColX + 8, 94);
         }
       }
@@ -315,10 +315,10 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       if (ridersBehind.length === 0) {
         ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#9D9C9A';
+        ctx.fillStyle = 'var(--pz-muted)';
         ctx.fillText('🏁 You are at tail', rightColX + 8, 76);
         ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#9D9C9A';
+        ctx.fillStyle = 'var(--pz-muted)';
         ctx.fillText('Sweep position', rightColX + 8, 94);
       } else {
         const r1 = ridersBehind[0];
@@ -334,7 +334,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
         ctx.textAlign = 'right';
         ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = isLag1 ? '#EF4444' : '#F59E0B';
+        ctx.fillStyle = isLag1 ? 'var(--pz-bad)' : '#F59E0B';
         ctx.fillText(`${formatDist(r1.relativeDistanceMeters)} ▼`, rightColX + colWidth - 8, 73);
 
         // Rider 2
@@ -349,12 +349,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
           ctx.textAlign = 'right';
           ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = isLag2 ? '#EF4444' : '#F59E0B';
+          ctx.fillStyle = isLag2 ? 'var(--pz-bad)' : '#F59E0B';
           ctx.fillText(`${formatDist(r2.relativeDistanceMeters)} ▼`, rightColX + colWidth - 8, 97);
         } else if (r1.speedKmh != null && r1.speedKmh > 0) {
           ctx.textAlign = 'left';
           ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#9D9C9A';
+          ctx.fillStyle = 'var(--pz-muted)';
           ctx.fillText(`Riding at ${Math.round(r1.speedKmh)} km/h`, rightColX + 8, 94);
         }
       }
@@ -384,12 +384,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       if (r.isMe) {
         // Pulsing glow for YOU
-        ctx.fillStyle = 'rgba(240, 194, 58, 0.35)';
+        ctx.fillStyle = 'var(--pz-warn-bg)';
         ctx.beginPath();
         ctx.arc(pipX, railY, 7 + pulse * 2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = '#F0C23A';
+        ctx.fillStyle = 'var(--pz-accent)';
         ctx.beginPath();
         ctx.arc(pipX, railY, 4.5, 0, Math.PI * 2);
         ctx.fill();
@@ -397,10 +397,10 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         // "YOU" Label
         ctx.textAlign = 'center';
         ctx.font = '900 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#F0C23A';
+        ctx.fillStyle = 'var(--pz-accent)';
         ctx.fillText('YOU', pipX, railY - 8);
       } else {
-        ctx.fillStyle = r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? '#10B981' : '#3B82F6';
+        ctx.fillStyle = r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? 'var(--pz-ok)' : '#3B82F6';
         ctx.beginPath();
         ctx.arc(pipX, railY, 3.5, 0, Math.PI * 2);
         ctx.fill();
@@ -527,10 +527,10 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           onClick={togglePip}
           disabled={!isSupported}
           style={{
-            backgroundColor: isPipActive ? 'rgba(240, 194, 58, 0.25)' : 'rgba(27, 30, 35, 0.88)',
+            backgroundColor: isPipActive ? 'var(--pz-warn-bg)' : 'rgba(27, 30, 35, 0.88)',
             backdropFilter: 'blur(10px)',
-            border: isPipActive ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid var(--pz-line, #2A2E35)',
-            color: isPipActive ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-ink, #FFFFFF)',
+            border: isPipActive ? '1.5px solid var(--pz-accent, var(--pz-accent))' : '1px solid var(--pz-line, var(--pz-line))',
+            color: isPipActive ? 'var(--pz-accent, var(--pz-accent))' : 'var(--pz-ink, #FFFFFF)',
             borderRadius: 20,
             padding: '5px 12px',
             fontSize: 11,

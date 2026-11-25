@@ -39,9 +39,9 @@ export const PresetCard: React.FC<PresetCardProps> = ({
 
   const presetIcon = preset?.icon || 'chat';
   const presetLabel = preset?.label || messageText;
-  const accentColor = preset?.color || '#F0C23A';
-  const bgColor = preset?.bgColor || 'rgba(240, 194, 58, 0.12)';
-  const borderColor = preset?.borderColor || '#F0C23A';
+  const accentColor = preset?.color || 'var(--pz-accent)';
+  const bgColor = preset?.bgColor || 'var(--pz-warn-bg)';
+  const borderColor = preset?.borderColor || 'var(--pz-accent)';
 
   return (
     <div style={{
@@ -52,8 +52,8 @@ export const PresetCard: React.FC<PresetCardProps> = ({
     }}>
       <div style={{
         ...styles.card,
-        borderColor: isMe ? '#F0C23A' : '#2A2E35',
-        backgroundColor: '#1B1E23',
+        borderColor: isMe ? 'var(--pz-accent)' : 'var(--pz-line)',
+        backgroundColor: 'var(--pz-surface)',
       }}>
         {/* Header Row: Sender + Tag + Timestamp */}
         <div style={styles.headerRow}>
@@ -92,7 +92,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
             <div style={styles.deliverySummaryWrap}>
               <span style={{
                 ...styles.doubleCheck,
-                color: delivery.isAllDelivered ? '#10B981' : '#F0C23A',
+                color: delivery.isAllDelivered ? 'var(--pz-ok)' : 'var(--pz-accent)',
               }}>
                 {delivery.isAllDelivered ? <Icon name="check" /> : <Icon name="check" />}
               </span>
@@ -112,9 +112,9 @@ export const PresetCard: React.FC<PresetCardProps> = ({
                     key={rider.userId}
                     style={{
                       ...styles.riderDeliveryPill,
-                      borderColor: hasReceived ? '#10B981' : '#3A3F47',
-                      backgroundColor: hasReceived ? 'rgba(16, 185, 129, 0.12)' : '#111316',
-                      color: hasReceived ? '#10B981' : '#9D9C9A',
+                      borderColor: hasReceived ? 'var(--pz-ok)' : 'var(--pz-line)',
+                      backgroundColor: hasReceived ? 'var(--pz-ok-bg)' : 'var(--pz-bg)',
+                      color: hasReceived ? 'var(--pz-ok)' : 'var(--pz-muted)',
                     }}
                     title={hasReceived ? `Delivered to ${rider.userName}` : `Waiting for ${rider.userName}`}
                   >
@@ -140,7 +140,7 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     padding: '12px 14px',
     borderRadius: 18,
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)',
     display: 'flex',
     flexDirection: 'column',
@@ -165,8 +165,8 @@ const styles: Record<string, React.CSSProperties> = {
   captainBadge: {
     fontSize: 8.5,
     fontWeight: 900,
-    color: '#F0C23A',
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
+    color: 'var(--pz-warn)',
+    backgroundColor: 'var(--pz-warn-bg)',
     padding: '1px 6px',
     borderRadius: 6,
     letterSpacing: 0.5,
@@ -174,13 +174,13 @@ const styles: Record<string, React.CSSProperties> = {
   presetTag: {
     fontSize: 8,
     fontWeight: 900,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   timeText: {
     fontSize: 10.5,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 600,
   },
   presetBanner: {
@@ -210,7 +210,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   presetDesc: {
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 600,
   },
   deliverySection: {
@@ -238,7 +238,7 @@ const styles: Record<string, React.CSSProperties> = {
   deliverySummaryText: {
     fontSize: 10,
     fontWeight: 700,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   ridersIndicatorList: {
     display: 'flex',

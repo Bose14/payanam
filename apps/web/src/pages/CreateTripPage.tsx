@@ -189,7 +189,7 @@ export default function CreateTripPage() {
                         borderRadius: 12,
                         cursor: 'pointer',
                         background: on ? 'var(--pz-accent-soft, rgba(240,194,58,0.12))' : 'var(--bg-card, transparent)',
-                        border: on ? '2px solid var(--pz-accent, #F0C23A)' : '1px solid var(--border-color, #3A3F47)',
+                        border: on ? '2px solid var(--pz-accent, var(--pz-accent))' : '1px solid var(--border-color, var(--pz-line))',
                         color: 'var(--text-primary)',
                       }}
                     >
@@ -459,8 +459,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    background: 'rgba(239, 68, 68, 0.12)',
-    border: '1px solid rgba(239, 68, 68, 0.35)',
+    background: 'var(--pz-bad-bg)',
+    border: '1px solid var(--pz-bad-bg)',
     color: '#ef4444',
     padding: '12px 16px',
     borderRadius: 10,
@@ -640,7 +640,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 16,
     fontWeight: 800,
     cursor: 'pointer',
-    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+    boxShadow: '0 2px 8px var(--pz-warn-bg)',
     marginTop: 8,
     display: 'flex',
     alignItems: 'center',

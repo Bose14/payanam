@@ -19,8 +19,8 @@ export default function TripChatWhatsAppBanner({
   return (
     <div
       style={{
-        backgroundColor: '#1B1E23',
-        border: '1.5px solid #2A2E35',
+        backgroundColor: 'var(--pz-surface)',
+        border: '1.5px solid var(--pz-line)',
         borderRadius: 14,
         padding: '10px 14px',
         margin: '0 0 10px 0',
@@ -37,8 +37,8 @@ export default function TripChatWhatsAppBanner({
             width: 32,
             height: 32,
             borderRadius: 8,
-            backgroundColor: 'rgba(240, 194, 58, 0.12)',
-            border: '1px solid #F0C23A',
+            backgroundColor: 'var(--pz-warn-bg)',
+            border: '1px solid var(--pz-accent)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -46,7 +46,7 @@ export default function TripChatWhatsAppBanner({
             flexShrink: 0,
           }}
         >
-
+          <Icon name="bike" />
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -54,14 +54,14 @@ export default function TripChatWhatsAppBanner({
               style={{
                 fontSize: 10,
                 fontWeight: 900,
-                color: '#F0C23A',
+                color: 'var(--pz-warn)',
                 letterSpacing: 0.6,
                 textTransform: 'uppercase',
               }}
             >
               Trip-Only Chat
             </span>
-            <span style={{ fontSize: 11, color: '#9D9C9A', fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: 'var(--pz-muted)', fontWeight: 600 }}>
               Linked to itinerary
             </span>
           </div>
@@ -112,7 +112,7 @@ export default function TripChatWhatsAppBanner({
           style={{
             background: 'none',
             border: 'none',
-            color: '#9D9C9A',
+            color: 'var(--pz-muted)',
             fontSize: 14,
             cursor: 'pointer',
             padding: '4px 6px',
@@ -120,7 +120,7 @@ export default function TripChatWhatsAppBanner({
           }}
           title="Dismiss note"
         >
-
+          <Icon name="close" />
         </button>
       </div>
     </div>

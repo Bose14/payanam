@@ -11,9 +11,9 @@ import { RiderRouteStatus } from '../utils/plannedRouteProgress';
  * 
  * Visual Language:
  * - AHEAD: Forward chevron/diamond shape with sky-blue badge (#38BDF8)
- * - ON PLAN: Solid circle shape with emerald green badge (#10B981)
+ * - ON PLAN: Solid circle shape with emerald green badge (var(--pz-ok))
  * - BEHIND: Rounded square shape with amber badge (#F59E0B)
- * - OFF ROUTE: Octagonal warning shape with crimson alert badge (#EF4444)
+ * - OFF ROUTE: Octagonal warning shape with crimson alert badge (var(--pz-bad))
  * - STALE / UNKNOWN: Retains Feature A hollow dashed marker with elapsed age badge
  */
 export function createRiderMarkerIcon(
@@ -26,7 +26,7 @@ export function createRiderMarkerIcon(
 ): L.DivIcon {
   const cleanInitial = (initial || '?')[0].toUpperCase();
   const captainCrown = isCaptain
-    ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:12px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));z-index:10;color:#F0C23A;">${iconSvg("crown", 12)}</div>`
+    ? `<div style="position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:12px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.7));z-index:10;color:var(--pz-accent);">${iconSvg("crown", 12)}</div>`
     : '';
 
   // 1. OFF ROUTE (Feature C & E2 - highest visual priority)
@@ -39,11 +39,11 @@ export function createRiderMarkerIcon(
       html: `
         <div style="position:relative;width:40px;height:40px;">
           ${captainCrown}
-          <div style="position:absolute;inset:-4px;border-radius:10px;background:#EF4444;opacity:0.3;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
-          <div style="width:40px;height:40px;background:#1B1E23;border:3px solid #EF4444;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#EF4444;font-weight:900;font-size:15px;box-shadow:0 3px 14px rgba(239,68,68,0.5);">
+          <div style="position:absolute;inset:-4px;border-radius:10px;background:var(--pz-bad);opacity:0.3;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+          <div style="width:40px;height:40px;background:var(--pz-surface);border:3px solid var(--pz-bad);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--pz-bad);font-weight:900;font-size:15px;box-shadow:0 3px 14px rgba(239,68,68,0.5);">
             ${cleanInitial}
           </div>
-          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#EF4444;border:1.5px solid #EF4444;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:flex;align-items:center;gap:3px;">
+          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:var(--pz-bad);border:1.5px solid var(--pz-bad);font-size:9px;padding:2px 7px;border-radius:999px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,0.6);display:flex;align-items:center;gap:3px;">
             <span>${iconSvg("warning", 11)}</span>
             <span>${badgeText}</span>
           </div>
@@ -62,10 +62,10 @@ export function createRiderMarkerIcon(
       html: `
         <div style="position:relative;width:38px;height:38px;opacity:0.85;">
           ${captainCrown}
-          <div style="width:38px;height:38px;background:#1B1E23;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#9D9C9A;font-weight:900;font-size:14px;border:2.5px dashed #3A3F47;box-shadow:0 3px 10px rgba(0,0,0,0.3);">
+          <div style="width:38px;height:38px;background:var(--pz-surface);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--pz-muted);font-weight:900;font-size:14px;border:2.5px dashed var(--pz-line);box-shadow:0 3px 10px rgba(0,0,0,0.3);">
             ${cleanInitial}
           </div>
-          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#9D9C9A;border:1.5px solid #2A2E35;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.4);">
+          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:var(--pz-muted);border:1.5px solid var(--pz-line);font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.4);">
             ${ageLabel}
           </div>
         </div>
@@ -83,10 +83,10 @@ export function createRiderMarkerIcon(
       html: `
         <div style="position:relative;width:38px;height:38px;">
           ${captainCrown}
-          <div style="width:38px;height:38px;background:#1B1E23;border-radius:50%;display:flex;align-items:center;justify-content:center;color:${color};font-weight:900;font-size:14px;border:3px dashed ${color};box-shadow:0 3px 10px rgba(0,0,0,0.4);">
+          <div style="width:38px;height:38px;background:var(--pz-surface);border-radius:50%;display:flex;align-items:center;justify-content:center;color:${color};font-weight:900;font-size:14px;border:3px dashed ${color};box-shadow:0 3px 10px rgba(0,0,0,0.4);">
             ${cleanInitial}
           </div>
-          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#F0C23A;border:1.5px solid #F0C23A;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.4);">
+          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:var(--pz-accent);border:1.5px solid var(--pz-accent);font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.4);">
             ${ageLabel}
           </div>
         </div>
@@ -108,10 +108,10 @@ export function createRiderMarkerIcon(
         <div style="position:relative;width:38px;height:38px;">
           ${captainCrown}
           <div style="position:absolute;inset:-3px;border-radius:6px 14px 6px 14px;background:#38BDF8;opacity:0.3;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
-          <div style="width:38px;height:38px;background:#38BDF8;border-radius:6px 14px 6px 14px;display:flex;align-items:center;justify-content:center;color:#111316;font-weight:900;font-size:15px;border:2.5px solid #111316;box-shadow:0 3px 12px rgba(56,189,248,0.4);">
+          <div style="width:38px;height:38px;background:#38BDF8;border-radius:6px 14px 6px 14px;display:flex;align-items:center;justify-content:center;color:var(--pz-bg);font-weight:900;font-size:15px;border:2.5px solid var(--pz-bg);box-shadow:0 3px 12px rgba(56,189,248,0.4);">
             ${cleanInitial}
           </div>
-          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#38BDF8;border:1.5px solid #38BDF8;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;gap:3px;">
+          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:#38BDF8;border:1.5px solid #38BDF8;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;gap:3px;">
             <span>▲</span>
             <span>AHEAD ${badgeText !== 'AHEAD' ? `(${badgeText})` : ''}</span>
           </div>
@@ -131,10 +131,10 @@ export function createRiderMarkerIcon(
         <div style="position:relative;width:38px;height:38px;">
           ${captainCrown}
           <div style="position:absolute;inset:-3px;border-radius:8px;background:#F59E0B;opacity:0.25;animation:pulse 2s infinite;"></div>
-          <div style="width:38px;height:38px;background:#F59E0B;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#111316;font-weight:900;font-size:15px;border:2.5px solid #111316;box-shadow:0 3px 12px rgba(245,158,11,0.4);">
+          <div style="width:38px;height:38px;background:#F59E0B;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--pz-bg);font-weight:900;font-size:15px;border:2.5px solid var(--pz-bg);box-shadow:0 3px 12px rgba(245,158,11,0.4);">
             ${cleanInitial}
           </div>
-          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#F59E0B;border:1.5px solid #F59E0B;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;gap:3px;">
+          <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:#F59E0B;border:1.5px solid #F59E0B;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;gap:3px;">
             <span>▼</span>
             <span>BEHIND ${badgeText !== 'BEHIND' ? `(${badgeText})` : ''}</span>
           </div>
@@ -143,7 +143,7 @@ export function createRiderMarkerIcon(
     });
   }
 
-  // 4C. ON PLAN: Solid Circle shape (Emerald #10B981)
+  // 4C. ON PLAN: Solid Circle shape (Emerald var(--pz-ok))
   const statusSuffix = quickStatus ? ` · ${quickStatus}` : '';
   return L.divIcon({
     className: 'rider-marker-wrap rider-marker-onplan',
@@ -152,12 +152,12 @@ export function createRiderMarkerIcon(
     html: `
       <div style="position:relative;width:38px;height:38px;">
         ${captainCrown}
-        <div style="position:absolute;inset:-3px;border-radius:50%;background:#10B981;opacity:0.35;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
-        <div style="width:38px;height:38px;background:#10B981;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ffffff;font-weight:900;font-size:15px;border:2.5px solid #111316;box-shadow:0 3px 12px rgba(16,185,129,0.4);">
+        <div style="position:absolute;inset:-3px;border-radius:50%;background:var(--pz-ok);opacity:0.35;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+        <div style="width:38px;height:38px;background:var(--pz-ok);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#ffffff;font-weight:900;font-size:15px;border:2.5px solid var(--pz-bg);box-shadow:0 3px 12px rgba(16,185,129,0.4);">
           ${cleanInitial}
         </div>
-        <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#10B981;border:1.5px solid #10B981;font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;gap:3px;">
-          <span style="width:5px;height:5px;background:#10B981;border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span>
+        <div style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:var(--pz-ok);border:1.5px solid var(--pz-ok);font-size:9px;padding:2px 7px;border-radius:999px;font-weight:800;box-shadow:0 3px 10px rgba(0,0,0,0.5);display:flex;align-items:center;gap:3px;">
+          <span style="width:5px;height:5px;background:var(--pz-ok);border-radius:50%;display:inline-block;animation:pulse 1.5s infinite;"></span>
           <span>ON PLAN${statusSuffix}</span>
         </div>
       </div>

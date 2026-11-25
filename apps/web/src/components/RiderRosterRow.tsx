@@ -68,13 +68,13 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
 
   if (rider.routeStatus?.status === 'off_route') {
     badgeLabel = 'OFF ROUTE';
-    badgeColor = '#EF4444';
-    badgeBorder = '#EF4444';
-    badgeBg = 'rgba(239, 68, 68, 0.15)';
+    badgeColor = 'var(--pz-bad)';
+    badgeBorder = 'var(--pz-bad)';
+    badgeBg = 'var(--pz-bad-bg)';
   } else if (freshness.isUnknown || rider.routeStatus?.status === 'unknown') {
     badgeLabel = 'UNKNOWN';
-    badgeColor = '#9D9C9A';
-    badgeBorder = '#9D9C9A';
+    badgeColor = 'var(--pz-muted)';
+    badgeBorder = 'var(--pz-muted)';
     badgeBg = 'rgba(157, 156, 154, 0.12)';
   } else if (rider.routeStatus?.status === 'ahead') {
     badgeLabel = 'AHEAD';
@@ -88,14 +88,14 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
     badgeBg = 'rgba(245, 158, 11, 0.14)';
   } else if (freshness.isStale) {
     badgeLabel = 'STALE';
-    badgeColor = '#F0C23A';
-    badgeBorder = '#F0C23A';
-    badgeBg = 'rgba(240, 194, 58, 0.12)';
+    badgeColor = 'var(--pz-accent)';
+    badgeBorder = 'var(--pz-accent)';
+    badgeBg = 'var(--pz-warn-bg)';
   } else {
     badgeLabel = 'LIVE';
-    badgeColor = '#10B981';
-    badgeBorder = '#10B981';
-    badgeBg = 'rgba(16, 185, 129, 0.12)';
+    badgeColor = 'var(--pz-ok)';
+    badgeBorder = 'var(--pz-ok)';
+    badgeBg = 'var(--pz-ok-bg)';
   }
 
   return (
@@ -103,8 +103,8 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
       onClick={() => onClick && onClick(rider)}
       style={{
         ...styles.rowCard,
-        borderColor: isMe ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-line, #2A2E35)',
-        backgroundColor: 'var(--pz-surface, #1B1E23)',
+        borderColor: isMe ? 'var(--pz-accent, var(--pz-accent))' : 'var(--pz-line, var(--pz-line))',
+        backgroundColor: 'var(--pz-surface, var(--pz-surface))',
         opacity: freshness.isUnknown ? 0.8 : 1,
       }}
     >
@@ -113,19 +113,19 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
         style={{
           ...styles.avatar,
           background: isCaptain
-            ? 'var(--pz-accent, #F0C23A)'
+            ? 'var(--pz-accent, var(--pz-accent))'
             : freshness.isLive
             ? 'var(--pz-sys-bg, #22262D)'
-            : 'var(--pz-bg, #111316)',
+            : 'var(--pz-bg, var(--pz-bg))',
           color: isCaptain
-            ? 'var(--pz-on-accent, #111316)'
+            ? 'var(--pz-on-accent, var(--pz-bg))'
             : freshness.isLive
             ? 'var(--pz-sys, #38BDF8)'
             : color,
           border: isCaptain
             ? 'none'
             : freshness.isLive
-            ? '1.5px solid var(--pz-line, #3A3F47)'
+            ? '1.5px solid var(--pz-line, var(--pz-line))'
             : `2px ${freshness.isStale ? 'dashed' : 'solid'} ${color}`,
         }}
       >
@@ -163,13 +163,13 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
         {!isMe && (
           <div style={styles.distanceText}>
             {freshness.isUnknown ? (
-              <span style={{ color: 'var(--pz-muted, #9D9C9A)', fontSize: 11, fontWeight: 500 }}>Position stale</span>
+              <span style={{ color: 'var(--pz-muted, var(--pz-muted))', fontSize: 11, fontWeight: 500 }}>Position stale</span>
             ) : distanceKm != null ? (
-              <span style={{ color: freshness.isLive ? 'var(--pz-ok, #10B981)' : 'var(--pz-warn, #F0C23A)', fontWeight: 700 }}>
+              <span style={{ color: freshness.isLive ? 'var(--pz-ok, var(--pz-ok))' : 'var(--pz-warn, var(--pz-accent))', fontWeight: 700 }}>
                 {distanceKm.toFixed(1)} km
               </span>
             ) : (
-              <span style={{ color: 'var(--pz-muted, #9D9C9A)' }}>--</span>
+              <span style={{ color: 'var(--pz-muted, var(--pz-muted))' }}>--</span>
             )}
           </div>
         )}
@@ -184,10 +184,10 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 12,
     padding: '10px 14px',
-    backgroundColor: 'var(--pz-surface, #1B1E23)',
+    backgroundColor: 'var(--pz-surface, var(--pz-surface))',
     borderRadius: 14,
     marginBottom: 6,
-    border: '1px solid var(--pz-line, #2A2E35)',
+    border: '1px solid var(--pz-line, var(--pz-line))',
     cursor: 'pointer',
     transition: 'transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease',
     boxShadow: 'var(--card-shadow, 0 1px 3px rgba(0, 0, 0, 0.2))',
@@ -221,7 +221,7 @@ const styles: Record<string, React.CSSProperties> = {
   youTag: {
     fontSize: 12,
     fontWeight: 600,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   crownTag: {
     fontSize: 14,
@@ -229,7 +229,7 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     margin: '2px 0 0',
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 500,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
