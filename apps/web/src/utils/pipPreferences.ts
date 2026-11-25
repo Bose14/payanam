@@ -50,7 +50,10 @@ export function savePipPreferences(prefs: Partial<PipPreferences>): PipPreferenc
 
 export function isPlatformIos(): boolean {
   if (typeof navigator === 'undefined') return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent || '');
+  const ua = navigator.userAgent || '';
+  const isIosDevice = /iPad|iPhone|iPod/.test(ua);
+  const isIpadOs = navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1;
+  return isIosDevice || isIpadOs;
 }
 
 export function isPlatformAndroid(): boolean {
