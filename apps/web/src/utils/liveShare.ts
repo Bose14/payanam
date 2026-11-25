@@ -5,7 +5,7 @@ import { chatService } from '../services/api';
  * running while the rider moves between tabs. It stops when the time is up, when the rider
  * stops it, or when the app is closed.
  */
-interface Share { key: string; messageId: string; until: number }
+export interface Share { key: string; messageId: string; until: number }
 
 const STORE = 'payanam_live_shares';
 const SEND_EVERY_MS = 15000;
@@ -23,6 +23,10 @@ function persist() {
 export function onLiveSharesChange(fn: () => void): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
+}
+
+export function activeShares(key: string): Share[] {
+  return shares.filter((s) => s.key === key && s.until > Date.now());
 }
 
 export function isSharingLive(messageId: string): boolean {

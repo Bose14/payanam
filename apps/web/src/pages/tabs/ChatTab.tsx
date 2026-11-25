@@ -5,7 +5,7 @@ import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } fr
 import { apiMessage } from '../../utils/apiMessage';
 import Icon from '../../components/Icon';
 import LocationBubble from '../../components/LocationBubble';
-import { startLiveShare, stopLiveShare, isSharingLive, onLiveSharesChange } from '../../utils/liveShare';
+import { startLiveShare, stopLiveShare, isSharingLive, activeShares, onLiveSharesChange } from '../../utils/liveShare';
 
 type Filter = 'All' | 'Trips' | 'Groups' | 'Direct';
 
@@ -168,7 +168,11 @@ function Thread({
         lng: pos.coords.longitude,
         ...(live ? { liveMinutes } : {}),
       });
-      if (live && sent.meta?.live) startLiveShare(conv.key, sent.id, new Date(sent.meta.live.until).getTime());
+      if (live && sent.meta?.live) {
+        startLiveShare(conv.key, sent.id, new Date(sent.meta.live.until).getTime());
+      } else if (live) {
+        setError('Your location was posted once. Live sharing needs the latest server update, so it did not start.');
+      }
       setMode(null);
       setPlaceName('');
       await load();
@@ -253,6 +257,15 @@ function Thread({
         )}
         <div ref={bottom} />
       </div>
+
+      {conv.type === 'trip' && activeShares(conv.key).map((sh) => (
+        <div key={sh.messageId} role="status" className="pz-banner ok" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="pz-grow">
+            Sharing your live location until {new Date(sh.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          <button className="pz-btn small" type="button" onClick={() => stopLive(sh.messageId)}>Stop sharing</button>
+        </div>
+      ))}
 
       {error && <div className="pz-banner bad" role="alert">{error}</div>}
 
