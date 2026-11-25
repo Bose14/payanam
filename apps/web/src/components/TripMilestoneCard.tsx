@@ -12,263 +12,153 @@ interface TripMilestoneCardProps {
   onLinkClick?: () => void;
 }
 
-export default function TripMilestoneCard({
-  summary,
-  customization,
-  onLinkClick,
-}: TripMilestoneCardProps) {
-  const currentBackdrop = BACKDROP_PRESETS.find(
-    (b) => b.id === customization.backdropPreset
-  ) || BACKDROP_PRESETS[0];
+/**
+ * The badge is a picture people share, so it keeps its own colours (light text on a rich
+ * backdrop) in both day and night mode instead of following the app theme.
+ */
+const INK = '#FFFFFF';
+const INK_SOFT = 'rgba(255, 255, 255, 0.72)';
+const PANEL = 'rgba(255, 255, 255, 0.10)';
+const PANEL_LINE = 'rgba(255, 255, 255, 0.16)';
+
+export default function TripMilestoneCard({ summary, customization, onLinkClick }: TripMilestoneCardProps) {
+  const backdrop = BACKDROP_PRESETS.find((b) => b.id === customization.backdropPreset) || BACKDROP_PRESETS[0];
+  const accent = backdrop.accent;
+  const showSubtitle = summary.title && !summary.title.toLowerCase().startsWith(summary.fromPlace.toLowerCase());
+
+  const stats: Array<{ value: string | number; label: string; accent?: boolean }> = [];
+  if (customization.showDistance) stats.push({ value: summary.totalDistanceKm, label: 'KM', accent: true });
+  if (customization.showDays) stats.push({ value: summary.daysCount, label: summary.daysCount === 1 ? 'DAY' : 'DAYS' });
+  if (customization.showStops) stats.push({ value: summary.stopsClearedCount, label: 'STOPS' });
+  if (customization.showRiders && summary.coRidersCount > 1) stats.push({ value: summary.coRidersCount, label: 'RIDERS' });
+
+  const chips: string[] = [];
+  if (summary.fuelStopsCount > 0) chips.push(`${summary.fuelStopsCount} fuel`);
+  if (summary.mealStopsCount > 0) chips.push(`${summary.mealStopsCount} ${summary.mealStopsCount === 1 ? 'meal' : 'meals'}`);
+  if (summary.scenicPointsCount > 0) chips.push(`${summary.scenicPointsCount} scenic`);
+  const bike = customization.showBikeModel && summary.bikeModel ? summary.bikeModel : '';
 
   return (
     <div
       style={{
-        ...styles.cardWrapper,
+        ...styles.card,
         background: customization.customPhotoUrl
-          ? `linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.85)), url(${customization.customPhotoUrl}) center/cover`
-          : currentBackdrop.gradient,
-        borderColor: currentBackdrop.accent,
+          ? `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.85)), url(${customization.customPhotoUrl}) center/cover`
+          : backdrop.gradient,
+        borderColor: accent,
       }}
     >
-      {/* Top Banner Ribbon */}
       <div style={styles.topRow}>
-        <div style={styles.badgePill}>
-          <span style={{ fontSize: 13 }}><Icon name="trophy" /></span>
-          <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: 'var(--pz-warn)' }}>
-            EXPEDITION COMPLETED
-          </span>
-        </div>
-        <span style={styles.dateStamp}>{summary.completedAt}</span>
+        <span style={{ ...styles.badge, color: accent, borderColor: accent }}>
+          <Icon name="trophy" />
+          <span>EXPEDITION COMPLETED</span>
+        </span>
+        <span style={styles.date}>{summary.completedAt}</span>
       </div>
 
-      {/* Main Route Title */}
-      <div style={{ margin: '8px 0 12px' }}>
-        <h2 style={styles.routeTitle}>
-          {summary.fromPlace} <span style={{ color: currentBackdrop.accent }}>→</span> {summary.toPlace}
+      <div style={{ margin: '18px 0 16px' }}>
+        <h2 style={styles.route}>
+          <span>{summary.fromPlace}</span>
+          <span style={{ color: accent, margin: '0 8px' }}>→</span>
+          <span>{summary.toPlace}</span>
         </h2>
-        <div style={styles.subtitleText}>{summary.title}</div>
+        {showSubtitle && <div style={styles.subtitle}>{summary.title}</div>}
       </div>
 
-      {/* Stats Ribbon (Step 1) */}
-      <div style={styles.statsGrid}>
-        {customization.showDistance && (
-          <div style={styles.statBox}>
-            <div style={{ ...styles.statNumber, color: currentBackdrop.accent }}>
-              {summary.totalDistanceKm}
+      {stats.length > 0 && (
+        <div style={{ ...styles.stats, gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+          {stats.map((st) => (
+            <div key={st.label} style={styles.statBox}>
+              <div style={{ ...styles.statValue, color: st.accent ? accent : INK }}>{st.value}</div>
+              <div style={styles.statLabel}>{st.label}</div>
             </div>
-            <div style={styles.statLabel}>KILOMETERS</div>
-          </div>
-        )}
-
-        {customization.showDays && (
-          <div style={styles.statBox}>
-            <div style={styles.statNumber}>{summary.daysCount}</div>
-            <div style={styles.statLabel}>DAYS TOURING</div>
-          </div>
-        )}
-
-        {customization.showStops && (
-          <div style={styles.statBox}>
-            <div style={styles.statNumber}>{summary.stopsClearedCount}</div>
-            <div style={styles.statLabel}>WAYPOINTS</div>
-          </div>
-        )}
-
-        {customization.showRiders && summary.coRidersCount > 1 && (
-          <div style={styles.statBox}>
-            <div style={styles.statNumber}>{summary.coRidersCount}</div>
-            <div style={styles.statLabel}>CONVOY RIDERS</div>
-          </div>
-        )}
-      </div>
-
-      {/* Waypoint Amenities Breakdown */}
-      <div style={styles.amenitiesStrip}>
-        {summary.fuelStopsCount > 0 && <span>{summary.fuelStopsCount} Fuel</span>}
-        {summary.mealStopsCount > 0 && <span>{summary.mealStopsCount} Meals</span>}
-        {summary.scenicPointsCount > 0 && <span>{summary.scenicPointsCount} Scenic Passes</span>}
-        {customization.showBikeModel && summary.bikeModel && (
-          <span style={{ marginLeft: 'auto', color: 'var(--pz-warn)', fontWeight: 800 }}>
-            {summary.bikeModel}
-          </span>
-        )}
-      </div>
-
-      {/* Custom Note Quote */}
-      {customization.customNote && (
-        <div style={styles.quoteBox}>
-          <span><Icon name="chat" /></span>
-          <span style={{ fontStyle: 'italic', color: 'var(--text-primary)', fontSize: 12 }}>
-            "{customization.customNote}"
-          </span>
+          ))}
         </div>
       )}
 
-      {/* Bottom Link & Discover Integration (Step 4: Link leads back) */}
-      <div style={styles.footerRow}>
-        {summary.isPublished ? (
-          <div
-            onClick={onLinkClick}
-            style={styles.discoverPill}
-            title="Click to view public itinerary in Discover"
-          >
-            <span><Icon name="globe" /></span>
-            <span style={{ fontWeight: 800 }}>Verified on Payanam Discover · Open Itinerary</span>
-            <span>↗</span>
-          </div>
-        ) : (
-          <div style={styles.privacySealPill}>
-            <span><Icon name="shield" /></span>
-            <span>Residential & home coordinates omitted for safety</span>
-          </div>
-        )}
-
-        <div style={styles.brandWatermark}>
-          <span><Icon name="bike" /></span>
-          <span>PAYANAM</span>
+      {(chips.length > 0 || bike) && (
+        <div style={styles.chipRow}>
+          {chips.map((c) => <span key={c} style={styles.chip}>{c}</span>)}
+          {bike && <span style={{ ...styles.chip, color: accent, borderColor: accent, marginLeft: 'auto' }}>{bike}</span>}
         </div>
+      )}
+
+      {customization.customNote && (
+        <div style={{ ...styles.quote, borderLeftColor: accent }}>
+          “{customization.customNote}”
+        </div>
+      )}
+
+      <div style={styles.footer}>
+        {summary.isPublished ? (
+          <button type="button" onClick={onLinkClick} style={{ ...styles.footerPill, cursor: 'pointer', font: 'inherit' }}
+            title="Open the public itinerary in Discover">
+            <Icon name="globe" />
+            <span>Verified on Payanam Discover</span>
+          </button>
+        ) : (
+          <span style={styles.footerPill}>
+            <Icon name="shield" />
+            <span>Private stops hidden</span>
+          </span>
+        )}
+        <span style={styles.brand}>
+          <Icon name="bike" />
+          <span>PAYANAM</span>
+        </span>
       </div>
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  cardWrapper: {
+  card: {
     borderRadius: 20,
-    border: '2px solid var(--pz-accent)',
-    padding: '20px 22px',
-    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65)',
+    border: '2px solid',
+    padding: '18px 18px 16px',
+    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.30)',
     display: 'flex',
     flexDirection: 'column',
-    position: 'relative',
+    color: INK,
     overflow: 'hidden',
-    transition: 'all 0.3s ease',
+    boxSizing: 'border-box',
   },
-  topRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
+  topRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  badge: {
+    display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+    fontSize: 10.5, fontWeight: 900, letterSpacing: 1,
+    padding: '6px 10px', borderRadius: 999, border: '1px solid', background: 'rgba(0,0,0,0.28)',
   },
-  badgePill: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'var(--pz-warn-bg)',
-    border: '1px solid var(--pz-warn-bg)',
-    borderRadius: 999,
-    padding: '4px 12px',
+  date: { fontSize: 11.5, fontWeight: 700, color: INK_SOFT, whiteSpace: 'nowrap' },
+  route: {
+    margin: 0, fontSize: 24, lineHeight: 1.2, fontWeight: 900, color: INK, letterSpacing: 0.2,
+    display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', rowGap: 2,
+    wordBreak: 'break-word',
   },
-  dateStamp: {
-    fontSize: 11,
-    color: 'var(--pz-muted)',
-    fontWeight: 700,
-    letterSpacing: 0.5,
-  },
-  routeTitle: {
-    margin: 0,
-    fontSize: 22,
-    fontWeight: 900,
-    color: 'var(--text-primary)',
-    letterSpacing: 0.5,
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-  },
-  subtitleText: {
-    fontSize: 12,
-    color: 'var(--pz-muted)',
-    marginTop: 2,
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(70px, 1fr))',
-    gap: 8,
-    margin: '12px 0',
-  },
+  subtitle: { fontSize: 12.5, color: INK_SOFT, marginTop: 6 },
+  stats: { display: 'grid', gap: 8, marginBottom: 12 },
   statBox: {
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    padding: '8px 10px',
-    textAlign: 'center',
+    background: PANEL, border: `1px solid ${PANEL_LINE}`, borderRadius: 14,
+    padding: '12px 6px', textAlign: 'center', minWidth: 0,
   },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 900,
-    color: 'var(--text-primary)',
-    lineHeight: 1.1,
+  statValue: { fontSize: 26, fontWeight: 900, lineHeight: 1.05 },
+  statLabel: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1, color: INK_SOFT, marginTop: 6 },
+  chipRow: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 12 },
+  chip: {
+    fontSize: 11.5, fontWeight: 700, color: INK, background: PANEL,
+    border: `1px solid ${PANEL_LINE}`, borderRadius: 999, padding: '4px 10px', whiteSpace: 'nowrap',
   },
-  statLabel: {
-    fontSize: 9,
-    fontWeight: 900,
-    letterSpacing: 1,
-    color: 'var(--pz-muted)',
-    marginTop: 4,
-    textTransform: 'uppercase',
+  quote: {
+    fontSize: 13, fontStyle: 'italic', color: INK, lineHeight: 1.45,
+    background: 'rgba(0,0,0,0.25)', borderLeft: '3px solid', borderRadius: 8, padding: '10px 12px', marginBottom: 12,
   },
-  amenitiesStrip: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    flexWrap: 'wrap',
-    fontSize: 11,
-    color: 'var(--text-primary)',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 8,
-    padding: '6px 10px',
-    margin: '4px 0 10px',
+  footer: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
+    borderTop: `1px solid ${PANEL_LINE}`, paddingTop: 12, marginTop: 2,
   },
-  quoteBox: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    borderLeft: '3px solid var(--pz-accent)',
-    borderRadius: 8,
-    padding: '8px 12px',
-    marginBottom: 12,
+  footerPill: {
+    display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: INK_SOFT,
+    background: PANEL, border: `1px solid ${PANEL_LINE}`, borderRadius: 999, padding: '5px 10px',
   },
-  footerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 10,
-    borderTop: '1px solid rgba(255, 255, 255, 0.12)',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  discoverPill: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontSize: 11,
-    color: 'var(--pz-ok)',
-    backgroundColor: 'var(--pz-ok-bg)',
-    border: '1px solid var(--pz-ok)',
-    borderRadius: 8,
-    padding: '4px 10px',
-    cursor: 'pointer',
-    transition: 'background-color 0.15s ease',
-  },
-  privacySealPill: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontSize: 10,
-    color: 'var(--pz-muted)',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 6,
-    padding: '3px 8px',
-  },
-  brandWatermark: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    fontSize: 10,
-    fontWeight: 900,
-    letterSpacing: 1.5,
-    color: 'var(--pz-muted)',
-    marginLeft: 'auto',
-  },
+  brand: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 900, letterSpacing: 1.6, color: INK_SOFT },
 };
-

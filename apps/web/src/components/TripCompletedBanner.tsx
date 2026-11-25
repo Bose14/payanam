@@ -69,8 +69,8 @@ export default function TripCompletedBanner({
 
 const styles: Record<string, React.CSSProperties> = {
   banner: {
-    backgroundColor: 'var(--accent-gold-bg, var(--pz-warn-bg))',
-    border: '1.5px solid var(--accent-gold, var(--pz-warn-bg))',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1.5px solid var(--pz-warn)',
     borderRadius: 16,
     padding: '14px 16px',
     display: 'flex',
@@ -85,8 +85,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'var(--accent-gold-bg, var(--pz-warn-bg))',
-    border: '1px solid var(--accent-gold, var(--pz-warn-bg))',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1px solid var(--pz-warn)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -98,7 +98,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 0.8,
     padding: '3px 8px',
     borderRadius: 6,
-    backgroundColor: 'var(--accent-gold, var(--pz-accent))',
+    backgroundColor: 'var(--pz-accent)',
     color: 'var(--pz-on-accent, var(--pz-bg))',
     display: 'inline-block',
   },
@@ -106,7 +106,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '4px 0 0',
     fontSize: 15,
     fontWeight: 900,
-    color: 'var(--pz-ink, var(--text-primary))',
+    color: 'var(--pz-ink)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -119,7 +119,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnShare: {
     padding: '10px 16px',
-    backgroundColor: 'var(--accent-gold, var(--pz-accent))',
+    backgroundColor: 'var(--pz-accent)',
     color: 'var(--pz-on-accent, var(--pz-bg))',
     border: 'none',
     borderRadius: 10,

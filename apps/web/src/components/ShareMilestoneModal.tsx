@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   TripMilestoneSummary,
   MilestoneCardCustomization,
@@ -76,7 +77,7 @@ export default function ShareMilestoneModal({
     }
   };
 
-  return (
+  return createPortal(
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
@@ -86,7 +87,7 @@ export default function ShareMilestoneModal({
             <div>
               <h3 style={styles.title}>Share Trip Milestones</h3>
               <p style={styles.subtitle}>
-                Feature 2 · Celebrate completion and share verified route stats
+                Celebrate your finished ride and share the route
               </p>
             </div>
           </div>
@@ -105,7 +106,7 @@ export default function ShareMilestoneModal({
           {/* Card Preview (Live render) */}
           <div style={{ marginBottom: 18 }}>
             <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: 'var(--pz-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
-              COMMEMORATIVE COMPLETION BADGE
+              YOUR BADGE
             </div>
             <TripMilestoneCard
               summary={summary}
@@ -128,7 +129,7 @@ export default function ShareMilestoneModal({
 
           {/* Step 2: Rider picks a photo / backdrop preset */}
           <div style={{ marginTop: 16 }}>
-            <div style={styles.sectionHeading}>1. SELECT SCENIC BACKDROP THEME</div>
+            <div style={styles.sectionHeading}>BACKDROP</div>
             <div style={styles.presetsGrid}>
               {BACKDROP_PRESETS.map((p) => {
                 const isSelected = customization.backdropPreset === p.id;
@@ -139,11 +140,11 @@ export default function ShareMilestoneModal({
                     style={{
                       ...styles.presetBtn,
                       border: isSelected ? `2px solid ${p.accent}` : '1.5px solid var(--pz-line)',
-                      backgroundColor: isSelected ? 'rgba(255,255,255,0.06)' : 'var(--pz-bg)',
+                      backgroundColor: isSelected ? 'var(--pz-warn-bg)' : 'var(--pz-bg)',
                     }}
                   >
                     <span style={{ fontSize: 18 }}><Icon name={p.icon} /></span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)' }}>{p.name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-ink)' }}>{p.name}</span>
                   </button>
                 );
               })}
@@ -152,7 +153,7 @@ export default function ShareMilestoneModal({
 
           {/* Step 2: Choose what shows */}
           <div style={{ marginTop: 16 }}>
-            <div style={styles.sectionHeading}>2. CHOOSE WHAT SHOWS ON THE BADGE</div>
+            <div style={styles.sectionHeading}>SHOW ON THE BADGE</div>
             <div style={styles.togglesGrid}>
               <label style={styles.toggleRow}>
                 <input
@@ -161,7 +162,7 @@ export default function ShareMilestoneModal({
                   onChange={(e) => setCustomization({ ...customization, showDistance: e.target.checked })}
                   style={styles.checkbox}
                 />
-                <span style={styles.toggleLabel}>Total Distance ({summary.totalDistanceKm} km)</span>
+                <span style={styles.toggleLabel}>Distance ({summary.totalDistanceKm} km)</span>
               </label>
 
               <label style={styles.toggleRow}>
@@ -171,7 +172,7 @@ export default function ShareMilestoneModal({
                   onChange={(e) => setCustomization({ ...customization, showDays: e.target.checked })}
                   style={styles.checkbox}
                 />
-                <span style={styles.toggleLabel}>Days Touring ({summary.daysCount} Days)</span>
+                <span style={styles.toggleLabel}>Days ({summary.daysCount})</span>
               </label>
 
               <label style={styles.toggleRow}>
@@ -181,7 +182,7 @@ export default function ShareMilestoneModal({
                   onChange={(e) => setCustomization({ ...customization, showStops: e.target.checked })}
                   style={styles.checkbox}
                 />
-                <span style={styles.toggleLabel}>Waypoints Cleared ({summary.stopsClearedCount} Stops)</span>
+                <span style={styles.toggleLabel}>Waypoints ({summary.stopsClearedCount})</span>
               </label>
 
               <label style={styles.toggleRow}>
@@ -191,7 +192,7 @@ export default function ShareMilestoneModal({
                   onChange={(e) => setCustomization({ ...customization, showRiders: e.target.checked })}
                   style={styles.checkbox}
                 />
-                <span style={styles.toggleLabel}>Convoy Co-Riders ({summary.coRidersCount} Riders)</span>
+                <span style={styles.toggleLabel}>Co-riders ({summary.coRidersCount})</span>
               </label>
 
               <label style={styles.toggleRow}>
@@ -201,14 +202,14 @@ export default function ShareMilestoneModal({
                   onChange={(e) => setCustomization({ ...customization, showBikeModel: e.target.checked })}
                   style={styles.checkbox}
                 />
-                <span style={styles.toggleLabel}>Motorcycle Model ({summary.bikeModel})</span>
+                <span style={styles.toggleLabel}>Bike ({summary.bikeModel})</span>
               </label>
             </div>
           </div>
 
           {/* Optional Rider Reflection Quote */}
           <div style={{ marginTop: 16 }}>
-            <div style={styles.sectionHeading}>3. OPTIONAL RIDER NOTE / REFLECTION</div>
+            <div style={styles.sectionHeading}>ADD A NOTE (OPTIONAL)</div>
             <input
               type="text"
               value={customization.customNote || ''}
@@ -222,7 +223,7 @@ export default function ShareMilestoneModal({
           <div style={styles.step4NoticeBox}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--pz-warn)', fontWeight: 800, fontSize: 12 }}>
               <span><Icon name="link" /></span>
-              <span>GROWTH & DISCOVER INTEGRATION</span>
+              <span>SHARE LINK</span>
             </div>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--pz-muted)', lineHeight: 1.45 }}>
               {summary.isPublished ? (
@@ -263,7 +264,7 @@ export default function ShareMilestoneModal({
             style={styles.btnNative}
           >
             <span><Icon name="arrowRight" /></span>
-            <span>Share to Apps</span>
+            <span>Share</span>
           </button>
 
           <button
@@ -271,11 +272,12 @@ export default function ShareMilestoneModal({
             style={styles.btnCopy}
           >
             <span><Icon name={copied ? 'check' : 'list'} /></span>
-            <span>{copied ? 'Copied' : 'Copy Text'}</span>
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -286,24 +288,23 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.82)',
-    backdropFilter: 'blur(8px)',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center',
-    zIndex: 9999,
-    padding: 16,
+    zIndex: 100000,
+    padding: 0,
   },
   modal: {
     backgroundColor: 'var(--pz-surface)',
     border: '1.5px solid var(--pz-line)',
-    borderRadius: 20,
+    borderRadius: '20px 20px 0 0',
     width: '100%',
     maxWidth: 620,
-    maxHeight: '92vh',
+    maxHeight: '92dvh',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.7)',
+    boxShadow: '0 -12px 40px rgba(0, 0, 0, 0.25)',
     overflow: 'hidden',
   },
   header: {
@@ -317,7 +318,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 18,
     fontWeight: 900,
-    color: 'var(--text-primary)',
+    color: 'var(--pz-ink)',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
   subtitle: {
@@ -365,7 +366,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   presetsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
     gap: 8,
   },
   presetBtn: {
@@ -402,7 +403,7 @@ const styles: Record<string, React.CSSProperties> = {
   toggleLabel: {
     fontSize: 12,
     fontWeight: 700,
-    color: 'var(--text-primary)',
+    color: 'var(--pz-ink)',
   },
   textInput: {
     width: '100%',
@@ -410,7 +411,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: '1.5px solid var(--pz-line)',
     backgroundColor: 'var(--pz-bg)',
-    color: 'var(--text-primary)',
+    color: 'var(--pz-ink)',
     fontSize: 13,
     outline: 'none',
   },
@@ -437,11 +438,10 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '12px 16px max(14px, env(safe-area-inset-bottom, 14px))',
     borderTop: '1px solid var(--pz-line)',
     backgroundColor: 'var(--pz-surface)',
-    flexWrap: 'wrap',
   },
   btnWhatsApp: {
     flex: 1,
-    minWidth: 120,
+    minWidth: 0,
     padding: '10px 16px',
     backgroundColor: '#25D366',
     color: '#FFFFFF',
@@ -456,8 +456,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   btnNative: {
-    flex: 1.2,
-    minWidth: 130,
+    flex: 1,
+    minWidth: 0,
     padding: '10px 16px',
     backgroundColor: 'var(--pz-accent)',
     color: 'var(--pz-on-accent)',
@@ -472,9 +472,12 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   btnCopy: {
-    padding: '10px 16px',
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+    padding: '10px 12px',
     backgroundColor: 'var(--pz-bg)',
-    color: 'var(--text-primary)',
+    color: 'var(--pz-ink)',
     border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     fontWeight: 800,
@@ -483,5 +486,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
+    whiteSpace: 'nowrap',
   },
 };
