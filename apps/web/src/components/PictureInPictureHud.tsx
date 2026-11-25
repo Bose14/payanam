@@ -37,6 +37,21 @@ function formatDist(meters?: number): string {
   return `${(meters / 1000).toFixed(1)}k`;
 }
 
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, r);
+  } else {
+    ctx.rect(x, y, w, h);
+  }
+}
+
 export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   pinnedStop,
   distToPinnedStop,
@@ -179,7 +194,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.strokeStyle = '#EF4444';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(10, 42, width - 20, 68, 8);
+      drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
       ctx.fill();
       ctx.stroke();
 
@@ -197,7 +212,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.strokeStyle = '#F0C23A';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(10, 42, width - 20, 68, 8);
+      drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
       ctx.fill();
       ctx.stroke();
 
@@ -230,7 +245,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.strokeStyle = '#1D2431';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(leftColX, 40, colWidth, cardHeight, 6);
+      drawRoundRect(ctx, leftColX, 40, colWidth, cardHeight, 6);
       ctx.fill();
       ctx.stroke();
 
@@ -289,7 +304,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.strokeStyle = '#1D2431';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(rightColX, 40, colWidth, cardHeight, 6);
+      drawRoundRect(ctx, rightColX, 40, colWidth, cardHeight, 6);
       ctx.fill();
       ctx.stroke();
 
