@@ -65,9 +65,10 @@ export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, sty
           <div style={styles.titleRow}>
             <span style={styles.icon}>📺</span>
             <span style={styles.title}>Picture-in-Picture (PiP HUD)</span>
+            <span style={styles.badgeGreen}>Allowed by default</span>
           </div>
           <p style={styles.subtitle}>
-            60 FPS floating cockpit telemetry showing live speed, ahead/behind fellow rider spacing, and next stop.
+            Allowed by default for all users. 60 FPS floating cockpit telemetry showing live speed, ahead/behind fellow rider spacing, and next stop.
           </p>
         </div>
 
@@ -79,7 +80,7 @@ export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, sty
           onClick={() => handleToggleAutoOpen(!prefs.autoOpenOnRide)}
           style={{
             ...styles.switchTrack,
-            backgroundColor: prefs.autoOpenOnRide ? '#F0C23A' : '#2A2E35',
+            backgroundColor: prefs.autoOpenOnRide ? '#10B981' : '#2A2E35',
           }}
           title="Auto-open PiP HUD when entering a ride"
         >
@@ -93,10 +94,10 @@ export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, sty
       </div>
 
       <div style={styles.autoOpenNote}>
-        <span style={{ color: prefs.autoOpenOnRide ? '#F0C23A' : '#9D9C9A', fontWeight: 700, fontSize: 11.5 }}>
+        <span style={{ color: prefs.autoOpenOnRide ? '#10B981' : '#9D9C9A', fontWeight: 700, fontSize: 11.5 }}>
           {prefs.autoOpenOnRide
-            ? '✓ Auto-launch active: PiP HUD will pop out when you join a ride.'
-            : 'Manual launch: Tap the [📺 PiP HUD] button in the Ride tab top bar anytime.'}
+            ? '✓ Allowed & Active by default: 60 FPS PiP HUD opens automatically when you start or join a ride.'
+            : 'Off: PiP HUD will only launch when you tap the [📺 PiP HUD] button in the Ride top bar.'}
         </span>
       </div>
 

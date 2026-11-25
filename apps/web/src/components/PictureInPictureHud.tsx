@@ -66,8 +66,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   renderTrigger,
   onPipStateChange,
 }) => {
-  const [isPipActive, setIsPipActive] = useState(false);
-  const [isFloatingInApp, setIsFloatingInApp] = useState(false);
+  const [isPipActive, setIsPipActive] = useState(() => getPipPreferences().autoOpenOnRide);
+  const [isFloatingInApp, setIsFloatingInApp] = useState(() => getPipPreferences().autoOpenOnRide);
   const [hudDockPosition, setHudDockPosition] = useState<'top' | 'bottom'>(
     () => getPipPreferences().dockPosition
   );
