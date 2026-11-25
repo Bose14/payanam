@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } from '../../services/api';
+import { ChatConversation, ChatGroup, ChatMessage, chatService } from '../../services/api';
 import { apiMessage } from '../../utils/apiMessage';
 import Icon from '../../components/Icon';
 import LocationBubble from '../../components/LocationBubble';
@@ -129,19 +129,9 @@ function Thread({
   const [isLead, setIsLead] = useState(false);
   const [dm, setDm] = useState<{ sentUnreplied: number; blocked: boolean; limit: number } | undefined>();
   const [error, setError] = useState('');
-  const [itin, setItin] = useState<Array<{ id: string; place: string; day_number: number; description?: string }>>([]);
   const [placeName, setPlaceName] = useState('');
   const [shareBusy, setShareBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
-  const tripId = conv.type === 'trip' ? conv.key.slice(5) : null;
-
-  const loadItin = useCallback(async () => {
-    if (!tripId) return;
-    try {
-      const d = await tripService.getTripById(tripId);
-      setItin((d?.trip?.itinerary ?? d?.itinerary ?? []) as typeof itin);
-    } catch { /* keep what we have */ }
-  }, [tripId]);
 
   const load = useCallback(async () => {
     try {
@@ -155,7 +145,6 @@ function Thread({
   }, [conv.key]);
 
   useLivePolling(load, 5000);
-  useEffect(() => { loadItin(); }, [loadItin]);
   useEffect(() => { bottom.current?.scrollIntoView({ block: 'end' }); }, [msgs.length]);
 
   const send = async (text: string) => {
@@ -219,7 +208,7 @@ function Thread({
     setError('');
     try {
       await chatService.confirmStop(conv.key, id);
-      await Promise.all([load(), loadItin()]);
+      await load();
     } catch (e) {
       setError(apiMessage(e, 'Could not confirm the stop.'));
     }
@@ -373,22 +362,6 @@ function Thread({
       {conv.type === 'trip' && <QuickReplies onSend={send} />}
       <Composer onSend={send} disabled={conv.type === 'dm' && !!dm?.blocked} onAttach={conv.type === 'trip' ? () => setMode('menu') : undefined} />
 
-      {conv.type === 'trip' && (
-        <>
-          <div className="pz-label" style={{ marginTop: 16 }}>Itinerary</div>
-          <div className="pz-card">
-            {itin.length ? itin.map((i) => (
-              <div className="pz-row-item" key={i.id}>
-                <span className="pz-mono" style={{ width: 50, flex: 'none' }}>Day {i.day_number}</span>
-                <div className="pz-grow">
-                  {i.place}
-                  {i.description === 'Added from trip chat' && <span className="pz-tag">from chat</span>}
-                </div>
-              </div>
-            )) : <p className="pz-note">No stops yet.</p>}
-          </div>
-        </>
-      )}
     </>
   );
 }
