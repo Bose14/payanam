@@ -135,6 +135,7 @@ function Thread({
       const pos = await getPosition();
       const sent = await chatService.send(conv.key, {
         kind: 'location',
+        place: live ? 'Live location' : 'My location',
         note: placeName.trim() || undefined,
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
