@@ -47,6 +47,27 @@ export default function PlanTab() {
       <h1 className="pz-h1">Trips</h1>
 
       {error && <div className="pz-banner bad" role="alert">{error}</div>}
+      <Link className="pz-btn primary block" to="/trips/new">New trip</Link>
+
+      <div className="pz-label" style={{ marginTop: 8 }}>Join with invite code</div>
+      <div className="pz-card">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+          <input
+            className="pz-input"
+            placeholder="e.g. KSD-7Q2"
+            aria-label="Invite code"
+            value={code}
+            onChange={(e) => { setCode(e.target.value); setCodeError(''); }}
+            onKeyDown={(e) => e.key === 'Enter' && join()}
+            style={{ textTransform: 'uppercase' }}
+          />
+          <button className="pz-btn primary" type="button" onClick={join}>Join</button>
+        </div>
+        {codeError && <p role="alert" style={{ color: 'var(--pz-bad)', fontSize: 13, margin: '8px 0 0' }}>{codeError}</p>}
+        <p className="pz-note" style={{ margin: '8px 0 0' }}>Your captain approves each rider before they join.</p>
+      </div>
+
+      <div className="pz-label" style={{ marginTop: 16 }}>Your trips</div>
       {actionError && <div className="pz-banner bad" role="alert">{actionError}</div>}
       {loading && <p className="pz-note">Loading your trips…</p>}
 
@@ -87,26 +108,6 @@ export default function PlanTab() {
           <p className="pz-note" style={{ margin: '4px 0 0' }}>Plan your first trip, or join one with an invite code.</p>
         </div>
       )}
-
-      <Link className="pz-btn primary block" to="/trips/new">New trip</Link>
-
-      <div className="pz-label" style={{ marginTop: 8 }}>Join with invite code</div>
-      <div className="pz-card">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-          <input
-            className="pz-input"
-            placeholder="e.g. KSD-7Q2"
-            aria-label="Invite code"
-            value={code}
-            onChange={(e) => { setCode(e.target.value); setCodeError(''); }}
-            onKeyDown={(e) => e.key === 'Enter' && join()}
-            style={{ textTransform: 'uppercase' }}
-          />
-          <button className="pz-btn primary" type="button" onClick={join}>Join</button>
-        </div>
-        {codeError && <p role="alert" style={{ color: 'var(--pz-bad)', fontSize: 13, margin: '8px 0 0' }}>{codeError}</p>}
-        <p className="pz-note" style={{ margin: '8px 0 0' }}>Your captain approves each rider before they join.</p>
-      </div>
     </>
   );
 }
