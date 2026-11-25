@@ -77,7 +77,7 @@ import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 
-const RIDER_COLORS = ['#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+const RIDER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
 interface NavStep { instruction: string; distance: number; duration: number; }
 
@@ -559,7 +559,7 @@ export default function RidePage() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current?.release().catch(() => { });
     };
   }, [session, ended, userName, user?.id]);
 
@@ -646,7 +646,7 @@ export default function RidePage() {
       if (d?.trails) {
         setRiderTrails((prev) => ({ ...d.trails, ...prev }));
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     const handleOnline = () => {
       offlinePositionQueue.setOnlineStatus(true);
@@ -759,7 +759,7 @@ export default function RidePage() {
     const dbIntervalMs = batterySaver ? 30000 : 15000;
     dbSyncRef.current = setInterval(() => {
       if (myPosRef.current && navigator.onLine) {
-        rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => {});
+        rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => { });
       }
     }, dbIntervalMs);
 
@@ -775,7 +775,7 @@ export default function RidePage() {
     if (!sessionId || !session || ended || !user) return;
 
     // One-time REST fetch: current rider positions + message history
-    rideService.getAllLocations(sessionId).then((d) => setRiders(d.locations ?? [])).catch(() => {});
+    rideService.getAllLocations(sessionId).then((d) => setRiders(d.locations ?? [])).catch(() => { });
     rideService.getMessages(sessionId).then((d) => {
       const msgs = d.messages ?? [];
       setMessages(msgs);
@@ -804,7 +804,7 @@ export default function RidePage() {
           break;
         }
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Supabase Broadcast channel — real-time, no DB writes for locations
     const channel = supabase.channel(`ride:${sessionId}`, {
@@ -1097,7 +1097,7 @@ export default function RidePage() {
     setMyStatus(value);
     setShowStatusDrawer(false);
     setShowTellGroupSheet(false);
-    await rideService.updateQuickStatus(sessionId, value).catch(() => {});
+    await rideService.updateQuickStatus(sessionId, value).catch(() => { });
     // Broadcast status change so others see rider dot badge update instantly
     channelRef.current?.send({ type: 'broadcast', event: 'status', payload: { userId: user?.id, userName, quickStatus: value } });
     if (value) {
@@ -1659,13 +1659,13 @@ export default function RidePage() {
       // Feature E2 route status (Ahead, on plan, behind, off route, unknown)
       const routeStatus = prog
         ? evaluateRiderRouteStatus({
-            riderProgressMeters: prog.distanceAlong,
-            refProgressMeters,
-            crossTrackMeters: prog.crossTrack,
-            isOffRouteAlert: isOffRoute,
-            isStaleOrUnknown: freshness.isStale || freshness.isUnknown,
-            progressPercent: prog.percent,
-          })
+          riderProgressMeters: prog.distanceAlong,
+          refProgressMeters,
+          crossTrackMeters: prog.crossTrack,
+          isOffRouteAlert: isOffRoute,
+          isStaleOrUnknown: freshness.isStale || freshness.isUnknown,
+          progressPercent: prog.percent,
+        })
         : undefined;
 
       return {
