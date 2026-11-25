@@ -194,7 +194,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 18 }}>🛰️</span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#F1EFEA' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
                   Reliability & Heartbeat
                 </div>
                 <div style={{ fontSize: 11, color: '#9D9C9A' }}>
@@ -289,7 +289,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               <div style={{ fontSize: 10, color: '#9D9C9A', fontWeight: 700, textTransform: 'uppercase' }}>
                 Last Position Fix
               </div>
-              <div style={{ fontSize: 12, color: '#F1EFEA', fontWeight: 800, marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 800, marginTop: 2 }}>
                 {trackingStatus.lastFixTime
                   ? new Date(trackingStatus.lastFixTime).toLocaleTimeString()
                   : 'Awaiting fix'}
@@ -310,7 +310,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               <div style={{ fontSize: 10, color: '#9D9C9A', fontWeight: 700, textTransform: 'uppercase' }}>
                 Positions Recorded
               </div>
-              <div style={{ fontSize: 12, color: '#F1EFEA', fontWeight: 800, marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 800, marginTop: 2 }}>
                 {trackingStatus.totalFixesRecorded} fixes
               </div>
               <div style={{ fontSize: 10, color: '#9D9C9A', marginTop: 1 }}>
@@ -329,7 +329,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 minWidth: '140px',
                 padding: '9px 12px',
                 backgroundColor: copiedDiag ? '#10B981' : '#2A2E35',
-                color: '#F1EFEA',
+                color: 'var(--text-primary)',
                 border: 'none',
                 borderRadius: 10,
                 fontSize: 11.5,
@@ -391,7 +391,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                     }}>
                       [{item.level}]
                     </span>{' '}
-                    <span style={{ color: '#F1EFEA' }}>{item.message}</span>
+                    <span style={{ color: 'var(--text-primary)' }}>{item.message}</span>
                   </div>
                 ))
               )}
@@ -466,7 +466,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 16,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.02em',
   },
   userSub: {
@@ -478,7 +478,7 @@ const styles: Record<string, React.CSSProperties> = {
   backBtn: {
     padding: '7px 16px',
     backgroundColor: '#2A2E35',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     border: 'none',
     borderRadius: 12,
     fontSize: 12,
@@ -540,7 +540,7 @@ const styles: Record<string, React.CSSProperties> = {
   settingTitle: {
     fontSize: 14.5,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: '-0.01em',
   },
   settingSub: {

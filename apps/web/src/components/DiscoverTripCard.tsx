@@ -30,7 +30,7 @@ export default function DiscoverTripCard({
             )}
           </div>
           <div style={styles.authorLine}>
-            by <strong style={{ color: '#F1EFEA' }}>{trip.authorName}</strong> ·{' '}
+            by <strong style={{ color: 'var(--text-primary)' }}>{trip.authorName}</strong> ·{' '}
             <span style={{ color: '#F0C23A', fontWeight: 800 }}>{trip.copiesCount} copies</span> ·{' '}
             <span>{trip.rating.toFixed(1)} ★ from {trip.finishersCount} riders</span>
           </div>
@@ -127,7 +127,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 16,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
   forkedBadge: {
@@ -170,11 +170,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   stopsSummaryLabel: {
     fontWeight: 700,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   stopPill: {
     fontSize: 11,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     backgroundColor: '#111316',
     border: '1px solid #2A2E35',
     padding: '2px 8px',
@@ -214,7 +214,7 @@ const styles: Record<string, React.CSSProperties> = {
   btnSecondary: {
     padding: '9px 14px',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
     fontWeight: 800,

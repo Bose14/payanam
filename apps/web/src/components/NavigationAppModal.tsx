@@ -174,7 +174,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   title: {
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 17,
     fontWeight: 900,
     margin: 0,
@@ -265,7 +265,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 0,
   },
   appName: {
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 14,
     fontWeight: 800,
   },

@@ -137,7 +137,7 @@ export default function ShareLocationModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20 }}>📍</span>
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#F1EFEA' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--text-primary)' }}>
                 Share Location in Trip Chat
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9D9C9A' }}>
@@ -237,7 +237,7 @@ export default function ShareLocationModal({
                 {currentGps ? '🛰️' : '⚠️'}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#F1EFEA' }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                   {currentGps ? 'Live GPS Position Locked' : 'Acquiring GPS...'}
                 </div>
                 <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 2 }}>
@@ -262,7 +262,7 @@ export default function ShareLocationModal({
                     border: '1.5px solid #2A2E35',
                     borderRadius: 10,
                     padding: '9px 12px',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     fontSize: 13,
                     outline: 'none',
                   }}
@@ -274,7 +274,7 @@ export default function ShareLocationModal({
                   style={{
                     padding: '9px 14px',
                     backgroundColor: '#2A2E35',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     border: 'none',
                     borderRadius: 10,
                     fontSize: 12,
@@ -299,7 +299,7 @@ export default function ShareLocationModal({
                     border: '1px solid #2A2E35',
                     borderRadius: 8,
                     padding: '8px 10px',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     fontSize: 12,
                     outline: 'none',
                   }}
@@ -316,7 +316,7 @@ export default function ShareLocationModal({
                     border: '1px solid #2A2E35',
                     borderRadius: 8,
                     padding: '8px 10px',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     fontSize: 12,
                     outline: 'none',
                   }}
@@ -341,7 +341,7 @@ export default function ShareLocationModal({
                 border: '1.5px solid #2A2E35',
                 borderRadius: 10,
                 padding: '9px 12px',
-                color: '#F1EFEA',
+                color: 'var(--text-primary)',
                 fontSize: 13,
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -365,7 +365,7 @@ export default function ShareLocationModal({
                 border: '1.5px solid #2A2E35',
                 borderRadius: 10,
                 padding: '9px 12px',
-                color: '#F1EFEA',
+                color: 'var(--text-primary)',
                 fontSize: 13,
                 outline: 'none',
                 boxSizing: 'border-box',

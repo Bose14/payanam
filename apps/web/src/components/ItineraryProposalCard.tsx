@@ -71,7 +71,7 @@ export default function ItineraryProposalCard({
             {proposal.proposerInitials || proposal.proposerName.slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#F1EFEA' }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
               {proposal.proposerName} proposed
             </div>
             <div style={{ fontSize: 13, fontWeight: 900, color: '#F0C23A', marginTop: 1 }}>
@@ -158,7 +158,7 @@ export default function ItineraryProposalCard({
                   flex: 1,
                   padding: '10px 14px',
                   backgroundColor: '#1B1E23',
-                  color: '#F1EFEA',
+                  color: 'var(--text-primary)',
                   border: '1.5px solid #2A2E35',
                   borderRadius: 10,
                   fontWeight: 800,

@@ -80,7 +80,7 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                 style={{
                   ...styles.presetBtn,
                   backgroundColor: isSelected ? '#F0C23A' : '#1B1E23',
-                  color: isSelected ? '#111316' : '#F1EFEA',
+                  color: isSelected ? '#111316' : 'var(--text-primary)',
                   borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                 }}
               >
@@ -109,7 +109,7 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                     style={{
                       ...styles.presetBtn,
                       backgroundColor: isSelected ? '#F0C23A' : '#1B1E23',
-                      color: isSelected ? '#111316' : '#F1EFEA',
+                      color: isSelected ? '#111316' : 'var(--text-primary)',
                       borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                     }}
                   >
@@ -182,7 +182,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 24,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     margin: 0,
   },
   subtitle: {
@@ -237,7 +237,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 14,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#1B1E23',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontWeight: 800,
     fontSize: 15,
     cursor: 'pointer',

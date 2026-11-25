@@ -34,7 +34,7 @@ export default function DiscoverTripDetailModal({
             </div>
             <h3 style={styles.title}>{trip.title}</h3>
             <div style={styles.authorLine}>
-              Curated by <strong style={{ color: '#F1EFEA' }}>{trip.authorName}</strong> ·{' '}
+              Curated by <strong style={{ color: 'var(--text-primary)' }}>{trip.authorName}</strong> ·{' '}
               <span style={{ color: '#F0C23A' }}>{trip.copiesCount} riders copied</span>
             </div>
           </div>
@@ -58,7 +58,7 @@ export default function DiscoverTripDetailModal({
               <div style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', marginBottom: 4 }}>
                 Rider Overview
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: '#F1EFEA', lineHeight: 1.5 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
                 {trip.description}
               </p>
             </div>
@@ -96,7 +96,7 @@ export default function DiscoverTripDetailModal({
                   <div style={styles.stopIndex}>{idx + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#F1EFEA' }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                         {stop.place}
                       </span>
                       <span style={styles.stopTypePill}>{stop.item_type || 'stop'}</span>
@@ -200,7 +200,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '6px 0 2px',
     fontSize: 18,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   authorLine: {
     fontSize: 12,
@@ -271,7 +271,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   amenityItem: {
     fontSize: 12,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     backgroundColor: '#1B1E23',
     padding: '4px 10px',
     borderRadius: 8,
@@ -337,7 +337,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#111316',
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer',

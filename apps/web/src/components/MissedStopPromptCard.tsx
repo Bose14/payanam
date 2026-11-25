@@ -32,7 +32,7 @@ export const MissedStopPromptCard: React.FC<MissedStopPromptCardProps> = ({
 
       {/* Description */}
       <p style={styles.desc}>
-        You passed <strong style={{ color: '#F1EFEA' }}>{pinnedStop.name}</strong> without marking arrival. Did you take this break or continue riding?
+        You passed <strong style={{ color: 'var(--text-primary)' }}>{pinnedStop.name}</strong> without marking arrival. Did you take this break or continue riding?
       </p>
 
       {/* Action Buttons Row */}
@@ -107,7 +107,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '1px 0 0',
     fontSize: 14,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: -0.2,
   },
   badge: {
@@ -153,7 +153,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: '1px solid #2A2E35',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontWeight: 800,
     fontSize: 11.5,
     cursor: 'pointer',

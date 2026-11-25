@@ -51,7 +51,7 @@ export default function ItineraryStopItem({
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, marginRight: 2 }}>{getStopTypeIcon(stop.item_type)}</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#F1EFEA' }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             {stop.place}
           </span>
 

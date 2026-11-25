@@ -2036,7 +2036,7 @@ export default function RidePage() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               fontSize: 22,
               cursor: 'pointer',
               padding: '0 4px 0 0',
@@ -2050,7 +2050,7 @@ export default function RidePage() {
           </button>
           <div style={{ minWidth: 0, flex: 1 }}>
             <h1 className="mobile-header-title" style={{
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               fontWeight: 900,
               fontSize: 20,
               margin: 0,
@@ -2208,7 +2208,7 @@ export default function RidePage() {
             <span style={{
               fontSize: 13,
               fontWeight: 800,
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -2304,7 +2304,7 @@ export default function RidePage() {
                 {activeAnnouncement.timestamp}
               </span>
             </div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: '#F1EFEA', lineHeight: 1.2 }}>
+            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
               {activeAnnouncement.title}
             </div>
             {activeAnnouncement.message && (
@@ -2321,7 +2321,7 @@ export default function RidePage() {
               backgroundColor: '#111316',
               border: '1.5px solid #2A2E35',
               borderRadius: 10,
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               fontSize: 11,
               fontWeight: 800,
               cursor: 'pointer',
@@ -2513,7 +2513,7 @@ export default function RidePage() {
                 {/* Brand Header: ■ PAYANAM */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, marginTop: 4 }}>
                   <div style={{ width: 12, height: 12, backgroundColor: '#F0C23A', borderRadius: 2 }} />
-                  <span style={{ color: '#F1EFEA', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
                 </div>
 
                 {/* Step Card */}
@@ -2527,7 +2527,7 @@ export default function RidePage() {
                   <div style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
                     CONVOY GPS READY
                   </div>
-                  <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: '#F1EFEA', letterSpacing: -0.3 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: 'var(--text-primary)', letterSpacing: -0.3 }}>
                     Live convoy tracking
                   </h3>
                   <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.5, margin: '0 0 14px' }}>
@@ -2539,7 +2539,7 @@ export default function RidePage() {
                     borderRadius: 12,
                     padding: '10px 14px',
                     fontSize: 12,
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     lineHeight: 1.45,
                   }}>
                     💡 <strong>iPhone Safari Tip:</strong> If location is blocked, tap the <strong>aA</strong> icon in your address bar → <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>, then tap Allow below.
@@ -2581,7 +2581,7 @@ export default function RidePage() {
                     width: '100%',
                     padding: '16px',
                     backgroundColor: '#1B1E23',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     border: '1.5px solid #2A2E35',
                     borderRadius: 14,
                     fontWeight: 800,
@@ -2607,7 +2607,7 @@ export default function RidePage() {
               zIndex: 1000,
               backgroundColor: '#1B1E23',
               border: '1.5px solid #2A2E35',
-              color: '#F1EFEA',
+              color: 'var(--text-primary)',
               borderRadius: 20,
               padding: '6px 14px',
               fontSize: 11,
@@ -2945,7 +2945,7 @@ export default function RidePage() {
             {/* Itinerary Section Card */}
             <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#F1EFEA', letterSpacing: -0.2 }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
                   {session?.trips?.title ?? 'Bengaluru to Kasaragod'}
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#9D9C9A' }}>
@@ -3112,7 +3112,7 @@ export default function RidePage() {
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
             >
               🛠️ View route-cached amenities (fuel, repair, food)
             </button>
@@ -3145,7 +3145,7 @@ export default function RidePage() {
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
-                <p style={{ color: '#F1EFEA', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
+                <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
                 <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group! 👋</p>
               </div>
             )}
@@ -3205,7 +3205,7 @@ export default function RidePage() {
                       <span>📢</span>
                       <span>Captain Announcement · {m.user_name}</span>
                     </div>
-                    <div style={{ color: '#F1EFEA', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: 700, marginTop: 4 }}>
                       {m.message}
                     </div>
                   </div>
@@ -3228,7 +3228,7 @@ export default function RidePage() {
                     padding: '12px 16px',
                     borderRadius: 20,
                     background: isMe ? '#22262D' : '#1B1E23',
-                    color: '#F1EFEA',
+                    color: 'var(--text-primary)',
                     border: isMe ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                   }}>
@@ -3324,7 +3324,7 @@ export default function RidePage() {
                   background: '#1B1E23',
                   border: '1.5px solid #2A2E35',
                   borderRadius: 14,
-                  color: '#F1EFEA',
+                  color: 'var(--text-primary)',
                   fontSize: 12,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -3341,21 +3341,21 @@ export default function RidePage() {
             <button
               type="button"
               onClick={handleShareCurrentLocation}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               📍 Quick GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               📌 Propose Stop
             </button>
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: '#F1EFEA', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               🛠️ Nearby Amenities
             </button>
@@ -3389,7 +3389,7 @@ export default function RidePage() {
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
               placeholder="Trip updates only (WhatsApp for casual chat)..."
-              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: '#F1EFEA', fontSize: 14, outline: 'none' }}
+              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
             />
             <button
               onClick={sendChat}
@@ -3504,15 +3504,15 @@ export default function RidePage() {
             return (
               <div style={{ background: '#1B1E23', padding: '14px 18px', border: '1.5px solid #2A2E35', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
                 <div>
-                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
                   <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>total distance</p>
                 </div>
                 <div>
-                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
                   <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>est. riding time</p>
                 </div>
                 <div>
-                  <p style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
+                  <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
                   <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>turns</p>
                 </div>
               </div>
@@ -3530,7 +3530,7 @@ export default function RidePage() {
                 {stepIcon(step.instruction)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: '#F1EFEA', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
+                <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
                 <p style={{ color: '#9D9C9A', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
               </div>
             </div>

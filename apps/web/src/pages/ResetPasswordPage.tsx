@@ -53,11 +53,19 @@ function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      await authService.resetPassword(token, password);
       try {
-        await supabase.auth.updateUser({ password });
-      } catch {
-        // Optional sync with Supabase Auth
+        await authService.resetPassword(token, password);
+        try {
+          await supabase.auth.updateUser({ password });
+        } catch {
+          // Optional sync with Supabase Auth
+        }
+      } catch (backendErr) {
+        // Fallback: If backend token is invalid/expired, test if user arrived via Supabase recovery session
+        const { error: sbErr } = await supabase.auth.updateUser({ password });
+        if (sbErr) {
+          throw backendErr;
+        }
       }
       setSuccess(true);
     } catch (err: unknown) {

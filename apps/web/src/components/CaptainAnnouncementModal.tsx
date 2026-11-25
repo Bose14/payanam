@@ -138,7 +138,7 @@ export default function CaptainAnnouncementModal({
                 <span style={styles.presetIcon}>{p.icon}</span>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={{
-                    color: isSelected ? '#F0C23A' : '#F1EFEA',
+                    color: isSelected ? '#F0C23A' : 'var(--text-primary)',
                     fontWeight: 800,
                     fontSize: 14,
                   }}>
@@ -279,7 +279,7 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
   },
   title: {
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 18,
     fontWeight: 900,
     margin: '1px 0 0',
@@ -368,7 +368,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
     padding: '9px 12px',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     fontWeight: 600,
     outline: 'none',
@@ -385,7 +385,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 999,
     backgroundColor: '#1B1E23',
     border: '1px solid #3A3F47',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 10.5,
     fontWeight: 700,
     cursor: 'pointer',

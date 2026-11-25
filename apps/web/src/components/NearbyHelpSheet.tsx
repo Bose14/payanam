@@ -205,7 +205,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
             {filteredItems.length === 0 ? (
               <div style={styles.emptyCard}>
                 <div style={{ fontSize: 28, marginBottom: 6 }}>📍</div>
-                <div style={{ color: '#F1EFEA', fontWeight: 800, fontSize: 13 }}>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 13 }}>
                   No {activeCategory} services found near this corridor
                 </div>
                 <button
@@ -428,7 +428,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 18,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   subtitle: {
     margin: '2px 0 0',
@@ -537,7 +537,7 @@ const styles: Record<string, React.CSSProperties> = {
   itemName: {
     fontSize: 14,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   itemSubtitle: {
     fontSize: 12,
@@ -605,7 +605,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#111316',
     border: '1px solid #2A2E35',
     borderRadius: 6,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 10,
     fontWeight: 800,
     cursor: 'pointer',
@@ -649,7 +649,7 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: 140,
     padding: '10px 14px',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
     fontWeight: 800,

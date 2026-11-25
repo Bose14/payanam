@@ -142,7 +142,7 @@ export default function ShareMilestoneModal({
                     }}
                   >
                     <span style={{ fontSize: 18 }}>{p.icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#F1EFEA' }}>{p.name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-primary)' }}>{p.name}</span>
                   </button>
                 );
               })}
@@ -316,7 +316,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 18,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
   subtitle: {
@@ -401,7 +401,7 @@ const styles: Record<string, React.CSSProperties> = {
   toggleLabel: {
     fontSize: 12,
     fontWeight: 700,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   textInput: {
     width: '100%',
@@ -409,7 +409,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     outline: 'none',
   },
@@ -473,7 +473,7 @@ const styles: Record<string, React.CSSProperties> = {
   btnCopy: {
     padding: '10px 16px',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
     fontWeight: 800,

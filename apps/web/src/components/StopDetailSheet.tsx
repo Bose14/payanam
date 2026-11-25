@@ -147,7 +147,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             <span
               style={{
                 ...styles.statVal,
-                color: staleRider ? '#F0C23A' : '#F1EFEA',
+                color: staleRider ? '#F0C23A' : 'var(--text-primary)',
               }}
             >
               {leftCardDisplay}
@@ -160,7 +160,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
             <span
               style={{
                 ...styles.statVal,
-                color: myEtaDisplay === 'Unknown' ? '#9D9C9A' : isMeArrived ? '#10B981' : '#F1EFEA',
+                color: myEtaDisplay === 'Unknown' ? '#9D9C9A' : isMeArrived ? '#10B981' : 'var(--text-primary)',
               }}
             >
               {myEtaDisplay}
@@ -308,7 +308,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: {
     fontSize: 22,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     margin: 0,
     lineHeight: 1.2,
   },
@@ -430,7 +430,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   arrivalNames: {
     fontSize: 13,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontWeight: 600,
     flex: 1,
   },
@@ -460,7 +460,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 14,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#1B1E23',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontWeight: 800,
     fontSize: 14,
     cursor: 'pointer',

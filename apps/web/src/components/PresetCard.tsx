@@ -159,7 +159,7 @@ const styles: Record<string, React.CSSProperties> = {
   senderName: {
     fontSize: 12,
     fontWeight: 800,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   captainBadge: {
     fontSize: 8.5,

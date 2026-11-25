@@ -78,7 +78,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   names: {
     fontSize: 12,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontWeight: 500,
   },
   subtext: {

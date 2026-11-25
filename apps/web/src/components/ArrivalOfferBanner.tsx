@@ -104,7 +104,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '1px 0 0',
     fontSize: 13,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',

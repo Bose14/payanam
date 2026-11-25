@@ -98,7 +98,7 @@ export default function TripMilestoneCard({
       {customization.customNote && (
         <div style={styles.quoteBox}>
           <span>💬</span>
-          <span style={{ fontStyle: 'italic', color: '#F1EFEA', fontSize: 12 }}>
+          <span style={{ fontStyle: 'italic', color: 'var(--text-primary)', fontSize: 12 }}>
             "{customization.customNote}"
           </span>
         </div>
@@ -169,7 +169,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 22,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: 0.5,
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
@@ -194,7 +194,7 @@ const styles: Record<string, React.CSSProperties> = {
   statNumber: {
     fontSize: 20,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     lineHeight: 1.1,
   },
   statLabel: {
@@ -211,7 +211,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
     flexWrap: 'wrap',
     fontSize: 11,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 8,
     padding: '6px 10px',

@@ -75,7 +75,7 @@ export default function ProposeEditModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20 }}>💡</span>
             <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#F1EFEA' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--text-primary)' }}>
                 Propose Itinerary Edit
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9D9C9A' }}>
@@ -117,7 +117,7 @@ export default function ProposeEditModal({
                   borderRadius: 8,
                   fontSize: 11,
                   fontWeight: 700,
-                  color: '#F1EFEA',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer',
                   textAlign: 'left',
                 }}
@@ -146,7 +146,7 @@ export default function ProposeEditModal({
                 border: '1.5px solid #2A2E35',
                 borderRadius: 10,
                 padding: '10px 12px',
-                color: '#F1EFEA',
+                color: 'var(--text-primary)',
                 fontSize: 13,
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -169,7 +169,7 @@ export default function ProposeEditModal({
                 border: '1.5px solid #2A2E35',
                 borderRadius: 10,
                 padding: '10px 12px',
-                color: '#F1EFEA',
+                color: 'var(--text-primary)',
                 fontSize: 13,
                 outline: 'none',
                 resize: 'none',

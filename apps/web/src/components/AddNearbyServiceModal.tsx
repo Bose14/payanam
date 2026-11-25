@@ -134,7 +134,7 @@ export default function AddNearbyServiceModal({
           {/* Location note */}
           <div style={styles.gpsRow}>
             <span>📍 Location:</span>
-            <span style={{ color: '#F1EFEA', fontWeight: 700 }}>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
               {lat.toFixed(4)}, {lng.toFixed(4)}
             </span>
             {currentGps && (
@@ -215,7 +215,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     fontSize: 17,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
   },
   subtitle: {
     margin: '3px 0 0',
@@ -269,7 +269,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     outline: 'none',
   },
@@ -279,7 +279,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
     border: '1.5px solid #2A2E35',
     backgroundColor: '#111316',
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     outline: 'none',
     fontFamily: 'inherit',
@@ -319,7 +319,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#111316',
     border: '1.5px solid #2A2E35',
     borderRadius: 10,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     fontSize: 13,
     fontWeight: 700,
     cursor: 'pointer',

@@ -111,7 +111,7 @@ export const RiderRosterRow: React.FC<RiderRosterRowProps> = ({ rider, onClick }
         style={{
           ...styles.avatar,
           background: freshness.isLive ? '#22262D' : '#111316',
-          color: freshness.isLive ? '#F1EFEA' : color,
+          color: freshness.isLive ? 'var(--text-primary)' : color,
           border: freshness.isLive ? '2px solid #3A3F47' : `2.5px ${freshness.isStale ? 'dashed' : 'solid'} ${color}`,
         }}
       >
@@ -198,7 +198,7 @@ const styles: Record<string, React.CSSProperties> = {
   name: {
     fontWeight: 800,
     fontSize: 15,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     letterSpacing: -0.2,
     whiteSpace: 'nowrap',
     overflow: 'hidden',

@@ -216,7 +216,7 @@ const styles: Record<string, React.CSSProperties> = {
   routeTitle: {
     fontSize: 12,
     fontWeight: 900,
-    color: '#F1EFEA',
+    color: 'var(--text-primary)',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
