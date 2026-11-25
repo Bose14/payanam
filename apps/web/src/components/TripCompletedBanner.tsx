@@ -60,7 +60,7 @@ export default function TripCompletedBanner({
           title="Dismiss completed banner"
           aria-label="Dismiss banner"
         >
-
+          <Icon name="close" />
         </button>
       </div>
     </div>
@@ -69,8 +69,8 @@ export default function TripCompletedBanner({
 
 const styles: Record<string, React.CSSProperties> = {
   banner: {
-    backgroundColor: 'var(--accent-gold-bg, rgba(240, 194, 58, 0.12))',
-    border: '1.5px solid var(--accent-gold, rgba(240, 194, 58, 0.5))',
+    backgroundColor: 'var(--accent-gold-bg, var(--pz-warn-bg))',
+    border: '1.5px solid var(--accent-gold, var(--pz-warn-bg))',
     borderRadius: 16,
     padding: '14px 16px',
     display: 'flex',
@@ -78,15 +78,15 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     gap: 12,
     marginBottom: 16,
-    boxShadow: '0 2px 10px rgba(240, 194, 58, 0.12)',
+    boxShadow: '0 2px 10px var(--pz-warn-bg)',
   },
   trophyIcon: {
     fontSize: 26,
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'var(--accent-gold-bg, rgba(240, 194, 58, 0.25))',
-    border: '1px solid var(--accent-gold, rgba(240, 194, 58, 0.4))',
+    backgroundColor: 'var(--accent-gold-bg, var(--pz-warn-bg))',
+    border: '1px solid var(--accent-gold, var(--pz-warn-bg))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -98,8 +98,8 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 0.8,
     padding: '3px 8px',
     borderRadius: 6,
-    backgroundColor: 'var(--accent-gold, #F0C23A)',
-    color: 'var(--pz-on-accent, #111316)',
+    backgroundColor: 'var(--accent-gold, var(--pz-accent))',
+    color: 'var(--pz-on-accent, var(--pz-bg))',
     display: 'inline-block',
   },
   routeText: {
@@ -119,8 +119,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnShare: {
     padding: '10px 16px',
-    backgroundColor: 'var(--accent-gold, #F0C23A)',
-    color: 'var(--pz-on-accent, #111316)',
+    backgroundColor: 'var(--accent-gold, var(--pz-accent))',
+    color: 'var(--pz-on-accent, var(--pz-bg))',
     border: 'none',
     borderRadius: 10,
     fontWeight: 900,
@@ -130,7 +130,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.3)',
+    boxShadow: '0 2px 8px var(--pz-warn-bg)',
     whiteSpace: 'nowrap',
     minHeight: 40,
     touchAction: 'manipulation',
@@ -140,7 +140,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: 40,
     borderRadius: 10,
     backgroundColor: 'transparent',
-    border: '1px solid var(--pz-line, rgba(240, 194, 58, 0.3))',
+    border: '1px solid var(--pz-line, var(--pz-warn-bg))',
     color: 'var(--pz-muted, var(--text-secondary))',
     fontSize: 14,
     fontWeight: 700,

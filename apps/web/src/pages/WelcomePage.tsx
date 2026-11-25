@@ -249,11 +249,11 @@ export default function WelcomePage() {
     <div
       role="alert"
       style={{
-        backgroundColor: 'var(--pz-bad-bg, rgba(239, 68, 68, 0.12))',
-        border: '1px solid var(--pz-bad, #EF4444)',
+        backgroundColor: 'var(--pz-bad-bg, var(--pz-bad-bg))',
+        border: '1px solid var(--pz-bad, var(--pz-bad))',
         borderRadius: 10,
         padding: '10px 14px',
-        color: 'var(--pz-bad, #EF4444)',
+        color: 'var(--pz-bad, var(--pz-bad))',
         fontSize: 13,
         fontWeight: 600,
         margin: '12px 0 0',

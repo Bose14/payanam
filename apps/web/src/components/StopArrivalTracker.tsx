@@ -119,7 +119,7 @@ export default function StopArrivalTracker({
             style={styles.btnNav}
             title="Open in Maps"
           >
-
+            <Icon name="compass" />
           </button>
           <button
             type="button"

@@ -88,8 +88,8 @@ export default function NavigationAppModal({ isOpen, onClose, target }: Navigati
                 onClick={() => handleLaunch(opt.id)}
                 style={{
                   ...styles.appBtn,
-                  borderColor: isPreferred ? opt.accentColor : '#2A2E35',
-                  backgroundColor: isPreferred ? opt.accentBg : '#1B1E23',
+                  borderColor: isPreferred ? opt.accentColor : 'var(--pz-line)',
+                  backgroundColor: isPreferred ? opt.accentBg : 'var(--pz-surface)',
                 }}
               >
                 <div style={styles.appIcon}><Icon name={opt.icon} size={22} /></div>
@@ -137,14 +137,14 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'fadeIn 0.2s ease-out',
   },
   sheet: {
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     width: '100%',
     maxWidth: 500,
     padding: '16px 20px max(32px, calc(env(safe-area-inset-bottom, 0px) + 20px))',
     boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.7)',
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     boxSizing: 'border-box',
     maxHeight: '85vh',
     overflowY: 'auto',
@@ -153,7 +153,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 44,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3A3F47',
+    backgroundColor: 'var(--pz-line)',
     margin: '0 auto 16px',
   },
   header: {
@@ -167,8 +167,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(240, 194, 58, 0.12)',
-    border: '1px solid #F0C23A',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1px solid var(--pz-accent)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -182,7 +182,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: -0.2,
   },
   subtitle: {
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 13,
     fontWeight: 600,
     margin: '2px 0 0',
@@ -191,9 +191,9 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   closeBtn: {
-    background: '#1B1E23',
-    border: '1px solid #2A2E35',
-    color: '#9D9C9A',
+    background: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
+    color: 'var(--pz-muted)',
     borderRadius: '50%',
     width: 32,
     height: 32,
@@ -208,11 +208,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     padding: '8px 12px',
     borderRadius: 10,
     marginBottom: 10,
-    border: '1px solid #2A2E35',
+    border: '1px solid var(--pz-line)',
   },
   coordText: {
     color: '#D4D2CD',
@@ -221,9 +221,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
   },
   copyBtn: {
-    background: '#111316',
-    border: '1px solid #2A2E35',
-    color: '#F0C23A',
+    background: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
+    color: 'var(--pz-warn)',
     borderRadius: 6,
     padding: '4px 10px',
     fontSize: 11,
@@ -231,7 +231,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   hintText: {
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 12,
     lineHeight: 1.4,
     margin: '0 0 14px',
@@ -246,7 +246,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 14,
     padding: '12px 14px',
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 14,
     cursor: 'pointer',
     textAlign: 'left',
@@ -271,7 +271,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 800,
   },
   appDesc: {
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 11,
     marginTop: 2,
     lineHeight: 1.2,

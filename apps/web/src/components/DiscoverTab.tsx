@@ -105,7 +105,7 @@ export default function DiscoverTab({
             style={styles.clearBtn}
             title="Clear search"
           >
-
+            <Icon name="close" />
           </button>
         )}
       </div>

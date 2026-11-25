@@ -77,6 +77,7 @@ import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 import Icon, { iconSvg } from '../components/Icon';
+import ExpenseTracker from '../components/ExpenseTracker';
 
 const RIDER_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -153,11 +154,11 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 // Navigation arrow for the current user — rotates with heading
 function makeMyNavIcon(color: string, heading: number, status: string, isStale: boolean = false) {
-  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#1B1E23;color:#F1EFEA;border:1.5px solid #2A2E35;font-size:10px;padding:2px 7px;border-radius:8px;font-weight:800;box-shadow:0 3px 8px rgba(0,0,0,0.4);">${status}</div>` : '';
-  const fill = isStale ? '#1B1E23' : '#F0C23A';
-  const stroke = isStale ? color : '#111316';
+  const badge = status ? `<div style="position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--pz-surface);color:var(--pz-ink);border:1.5px solid var(--pz-line);font-size:10px;padding:2px 7px;border-radius:8px;font-weight:800;box-shadow:0 3px 8px rgba(0,0,0,0.4);">${status}</div>` : '';
+  const fill = isStale ? 'var(--pz-surface)' : 'var(--pz-accent)';
+  const stroke = isStale ? color : 'var(--pz-bg)';
   const opacity = isStale ? '0.8' : '1';
-  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="#F0C23A" stroke="#111316" stroke-width="2" opacity="0.3"/>`;
+  const ringAura = isStale ? '' : `<circle cx="22" cy="22" r="20" fill="var(--pz-accent)" stroke="var(--pz-bg)" stroke-width="2" opacity="0.3"/>`;
 
   return L.divIcon({
     className: '',
@@ -168,7 +169,7 @@ function makeMyNavIcon(color: string, heading: number, status: string, isStale: 
         <svg width="44" height="44" viewBox="0 0 44 44">
           ${ringAura}
           <polygon points="22,4 34,38 22,30 10,38" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/>
-          <circle cx="22" cy="22" r="5" fill="#111316"/>
+          <circle cx="22" cy="22" r="5" fill="var(--pz-bg)"/>
         </svg>
       </div>
       ${badge}
@@ -187,10 +188,10 @@ function makeStopIcon(placeName?: string, itemType?: string, orderIndex?: number
     iconSize: [24, 24],
     html: `
       <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
-        <div style="width:24px;height:24px;background:#1B1E23;border:2px solid #F0C23A;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.6);font-size:11px;color:#F0C23A;">
+        <div style="width:24px;height:24px;background:var(--pz-surface);border:2px solid var(--pz-accent);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.6);font-size:11px;color:var(--pz-accent);">
           ${iconSvg(iconEmoji, 16)}
         </div>
-        <div style="position:absolute;top:26px;background:#111316;color:#F1EFEA;border:1px solid #2A2E35;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);letter-spacing:-0.2px;">
+        <div style="position:absolute;top:26px;background:var(--pz-bg);color:var(--pz-ink);border:1px solid var(--pz-line);padding:1px 6px;border-radius:6px;font-size:9px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.5);letter-spacing:-0.2px;">
           ${label}
         </div>
       </div>
@@ -337,6 +338,7 @@ export default function RidePage() {
   const [chatInput, setChatInput] = useState('');
   const [sending, setSending] = useState(false);
   // /ride/:id?tab=chat opens straight into a tab (used by the Chat tab in the app shell).
+  const [planSection, setPlanSection] = useState<'itinerary' | 'money'>('itinerary');
   const [tab, setTab] = useState<TabType>(() => {
     const t = new URLSearchParams(window.location.search).get('tab');
     return t === 'chat' || t === 'plan' || t === 'riders' || t === 'nav' || t === 'discover' || t === 'me' ? t : 'map';
@@ -2019,15 +2021,15 @@ export default function RidePage() {
   if (loading) return (
     <div style={s.fullCenter}>
       <div style={{ fontSize: 40 }}><Icon name="bike" /></div>
-      <p style={{ color: '#fff', marginTop: 12 }}>Joining ride...</p>
+      <p style={{ color: 'var(--pz-ink)', marginTop: 12 }}>Joining ride...</p>
     </div>
   );
 
   if (ended) return (
     <div style={s.fullCenter}>
       <div style={{ fontSize: 48 }}><Icon name="flag" /></div>
-      <h2 style={{ color: '#fff', marginTop: 12 }}>Ride Ended</h2>
-      <p style={{ color: '#9ca3af' }}>This ride session has ended.</p>
+      <h2 style={{ color: 'var(--pz-ink)', marginTop: 12 }}>Ride Ended</h2>
+      <p style={{ color: 'var(--pz-muted)' }}>This ride session has ended.</p>
       <button onClick={() => navigate(-1)} style={s.btnWhite}>← Go Back</button>
     </div>
   );
@@ -2035,12 +2037,12 @@ export default function RidePage() {
   const isLead = session?.started_by === user?.id;
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: '#111316', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--pz-bg)', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
       {/* Dynamic Dark Style for Map & Elements */}
       <style>{`
         .warm-map-container,
         .leaflet-container {
-          background-color: #111316 !important;
+          background-color: var(--pz-bg) !important;
           width: 100%;
           height: 100%;
         }
@@ -2074,7 +2076,7 @@ export default function RidePage() {
 
       {/* Header — Matte Obsidian Dark matching Mockup */}
       <div style={{
-        backgroundColor: '#111316',
+        backgroundColor: 'var(--pz-bg)',
         padding: 'max(14px, env(safe-area-inset-top, 14px)) 18px 8px',
         display: 'flex',
         alignItems: 'center',
@@ -2128,8 +2130,8 @@ export default function RidePage() {
               width: 34,
               height: 34,
               borderRadius: 10,
-              backgroundColor: 'var(--pz-surface, #1B1E23)',
-              border: '1px solid var(--pz-line, #2A2E35)',
+              backgroundColor: 'var(--pz-surface, var(--pz-surface))',
+              border: '1px solid var(--pz-line, var(--pz-line))',
               fontSize: 13,
               cursor: 'pointer',
               display: 'flex',
@@ -2139,7 +2141,7 @@ export default function RidePage() {
             }}
             title="Nearby Amenities (Fuel, Repair, Food, Rest)"
           >
-
+            <Icon name="wrench" />
           </button>
 
           {/* Captain-only announcement control on Ride tab */}
@@ -2151,9 +2153,9 @@ export default function RidePage() {
                 width: 34,
                 height: 34,
                 borderRadius: 10,
-                backgroundColor: 'var(--pz-warn-bg, rgba(240, 194, 58, 0.15))',
-                border: '1px solid var(--pz-accent, #F0C23A)',
-                color: 'var(--pz-accent, #F0C23A)',
+                backgroundColor: 'var(--pz-warn-bg, var(--pz-warn-bg))',
+                border: '1px solid var(--pz-accent, var(--pz-accent))',
+                color: 'var(--pz-accent, var(--pz-accent))',
                 fontSize: 13,
                 fontWeight: 900,
                 cursor: 'pointer',
@@ -2164,7 +2166,7 @@ export default function RidePage() {
               }}
               title="Captain Announcement"
             >
-
+              <Icon name="crown" />
             </button>
           )}
 
@@ -2175,9 +2177,9 @@ export default function RidePage() {
             style={{
               height: 34,
               padding: '0 10px',
-              backgroundColor: 'var(--pz-bad-bg, rgba(239, 68, 68, 0.15))',
-              border: '1px solid var(--pz-bad, #EF4444)',
-              color: 'var(--pz-bad, #EF4444)',
+              backgroundColor: 'var(--pz-bad-bg, var(--pz-bad-bg))',
+              border: '1px solid var(--pz-bad, var(--pz-bad))',
+              color: 'var(--pz-bad, var(--pz-bad))',
               borderRadius: 10,
               fontSize: 11.5,
               fontWeight: 900,
@@ -2203,9 +2205,9 @@ export default function RidePage() {
                 width: 34,
                 height: 34,
                 borderRadius: 10,
-                backgroundColor: 'var(--pz-surface, #1B1E23)',
-                border: '1px solid var(--pz-line, #2A2E35)',
-                color: 'var(--pz-bad, #EF4444)',
+                backgroundColor: 'var(--pz-surface, var(--pz-surface))',
+                border: '1px solid var(--pz-line, var(--pz-line))',
+                color: 'var(--pz-bad, var(--pz-bad))',
                 fontSize: 13,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -2225,8 +2227,8 @@ export default function RidePage() {
       {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
       {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (
         <div style={{
-          backgroundColor: '#1B1E23',
-          border: '1.5px solid #2A2E35',
+          backgroundColor: 'var(--pz-surface)',
+          border: '1.5px solid var(--pz-line)',
           borderRadius: 14,
           margin: '2px 12px 6px',
           padding: '6px 12px',
@@ -2245,12 +2247,12 @@ export default function RidePage() {
               width: 22,
               height: 22,
               borderRadius: 6,
-              backgroundColor: 'rgba(240, 194, 58, 0.15)',
-              color: '#F0C23A',
+              backgroundColor: 'var(--pz-warn-bg)',
+              color: 'var(--pz-warn)',
               fontSize: 12,
               flexShrink: 0,
             }}>
-
+              <Icon name="map" />
             </span>
             <span style={{
               fontSize: 13,
@@ -2268,9 +2270,9 @@ export default function RidePage() {
           <span style={{
             fontSize: 11,
             fontWeight: 700,
-            color: '#9D9C9A',
-            backgroundColor: '#111316',
-            border: '1px solid #2A2E35',
+            color: 'var(--pz-muted)',
+            backgroundColor: 'var(--pz-bg)',
+            border: '1px solid var(--pz-line)',
             padding: '2px 8px',
             borderRadius: 999,
             flexShrink: 0,
@@ -2312,9 +2314,9 @@ export default function RidePage() {
           margin: '0 16px 8px 16px',
           padding: '12px 14px',
           borderRadius: 18,
-          backgroundColor: '#1B1E23',
-          border: activeAnnouncement.urgency === 'high' ? '1.5px solid #EF4444' : '1.5px solid #F0C23A',
-          boxShadow: activeAnnouncement.urgency === 'high' ? '0 4px 20px rgba(239, 68, 68, 0.35)' : '0 4px 20px rgba(240, 194, 58, 0.35)',
+          backgroundColor: 'var(--pz-surface)',
+          border: activeAnnouncement.urgency === 'high' ? '1.5px solid var(--pz-bad)' : '1.5px solid var(--pz-accent)',
+          boxShadow: activeAnnouncement.urgency === 'high' ? '0 4px 20px var(--pz-bad-bg)' : '0 4px 20px var(--pz-warn-bg)',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
@@ -2326,8 +2328,8 @@ export default function RidePage() {
             width: 36,
             height: 36,
             borderRadius: 10,
-            backgroundColor: activeAnnouncement.urgency === 'high' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(240, 194, 58, 0.15)',
-            border: activeAnnouncement.urgency === 'high' ? '1px solid #EF4444' : '1px solid #F0C23A',
+            backgroundColor: activeAnnouncement.urgency === 'high' ? 'var(--pz-bad-bg)' : 'var(--pz-warn-bg)',
+            border: activeAnnouncement.urgency === 'high' ? '1px solid var(--pz-bad)' : '1px solid var(--pz-accent)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -2341,13 +2343,13 @@ export default function RidePage() {
               <span style={{
                 fontSize: 9,
                 fontWeight: 900,
-                color: activeAnnouncement.urgency === 'high' ? '#EF4444' : '#F0C23A',
+                color: activeAnnouncement.urgency === 'high' ? 'var(--pz-bad)' : 'var(--pz-accent)',
                 letterSpacing: 0.8,
                 textTransform: 'uppercase',
               }}>
                 CAPTAIN ANNOUNCEMENT
               </span>
-              <span style={{ fontSize: 9.5, color: '#9D9C9A', fontWeight: 600 }}>
+              <span style={{ fontSize: 9.5, color: 'var(--pz-muted)', fontWeight: 600 }}>
                 {activeAnnouncement.timestamp}
               </span>
             </div>
@@ -2355,7 +2357,7 @@ export default function RidePage() {
               {activeAnnouncement.title}
             </div>
             {activeAnnouncement.message && (
-              <div style={{ fontSize: 11.5, color: '#9D9C9A', fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
+              <div style={{ fontSize: 11.5, color: 'var(--pz-muted)', fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
                 {activeAnnouncement.message}
               </div>
             )}
@@ -2365,8 +2367,8 @@ export default function RidePage() {
             onClick={() => setActiveAnnouncement(null)}
             style={{
               padding: '6px 12px',
-              backgroundColor: '#111316',
-              border: '1.5px solid #2A2E35',
+              backgroundColor: 'var(--pz-bg)',
+              border: '1.5px solid var(--pz-line)',
               borderRadius: 10,
               color: 'var(--text-primary)',
               fontSize: 11,
@@ -2502,7 +2504,7 @@ export default function RidePage() {
         display: tab === 'map' ? 'flex' : 'none',
         flexDirection: 'column',
         position: 'relative',
-        backgroundColor: '#111316',
+        backgroundColor: 'var(--pz-bg)',
         minHeight: 0,
       }}>
         {/* Feature E2: Planned Route Progress Strip along planned line */}
@@ -2536,11 +2538,11 @@ export default function RidePage() {
           minHeight: 0,
           margin: splitView ? '0 12px 6px' : '0',
           borderRadius: splitView ? 18 : 0,
-          border: splitView ? '1.5px solid #2A2E35' : 'none',
+          border: splitView ? '1.5px solid var(--pz-line)' : 'none',
           position: 'relative',
           overflow: 'hidden',
           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          backgroundColor: '#111316',
+          backgroundColor: 'var(--pz-bg)',
           boxShadow: splitView ? '0 4px 16px rgba(0, 0, 0, 0.35)' : 'none',
         }}>
           {gpsError && (
@@ -2548,7 +2550,7 @@ export default function RidePage() {
               position: 'absolute',
               inset: 0,
               zIndex: 2000,
-              backgroundColor: '#111316',
+              backgroundColor: 'var(--pz-bg)',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
@@ -2559,30 +2561,30 @@ export default function RidePage() {
               <div>
                 {/* Brand Header: ■ PAYANAM */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, marginTop: 4 }}>
-                  <div style={{ width: 12, height: 12, backgroundColor: '#F0C23A', borderRadius: 2 }} />
+                  <div style={{ width: 12, height: 12, backgroundColor: 'var(--pz-accent)', borderRadius: 2 }} />
                   <span style={{ color: 'var(--text-primary)', fontWeight: 900, fontSize: 18, letterSpacing: 1.5 }}>PAYANAM</span>
                 </div>
 
                 {/* Step Card */}
                 <div style={{
-                  backgroundColor: '#1B1E23',
-                  border: '1.5px solid #2A2E35',
+                  backgroundColor: 'var(--pz-surface)',
+                  border: '1.5px solid var(--pz-line)',
                   borderRadius: 20,
                   padding: '22px 20px',
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#F0C23A', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-warn)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
                     CONVOY GPS READY
                   </div>
                   <h3 style={{ fontSize: 20, fontWeight: 900, margin: '0 0 10px', color: 'var(--text-primary)', letterSpacing: -0.3 }}>
                     Live convoy tracking
                   </h3>
-                  <p style={{ fontSize: 14, color: '#9D9C9A', lineHeight: 1.5, margin: '0 0 14px' }}>
+                  <p style={{ fontSize: 14, color: 'var(--pz-muted)', lineHeight: 1.5, margin: '0 0 14px' }}>
                     We use your location only while the ride is active so your convoy can see your live position and keep the group together.
                   </p>
                   <div style={{
-                    backgroundColor: 'rgba(240, 194, 58, 0.08)',
-                    border: '1px solid rgba(240, 194, 58, 0.25)',
+                    backgroundColor: 'var(--pz-warn-bg)',
+                    border: '1px solid var(--pz-warn-bg)',
                     borderRadius: 12,
                     padding: '10px 14px',
                     fontSize: 12,
@@ -2608,14 +2610,14 @@ export default function RidePage() {
                   style={{
                     width: '100%',
                     padding: '16px',
-                    backgroundColor: '#F0C23A',
-                    color: '#111316',
+                    backgroundColor: 'var(--pz-accent)',
+                    color: 'var(--pz-on-accent)',
                     border: 'none',
                     borderRadius: 14,
                     fontWeight: 900,
                     fontSize: 16,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 16px rgba(240, 194, 58, 0.25)',
+                    boxShadow: '0 4px 16px var(--pz-warn-bg)',
                     textAlign: 'center',
                   }}
                 >
@@ -2627,9 +2629,9 @@ export default function RidePage() {
                   style={{
                     width: '100%',
                     padding: '16px',
-                    backgroundColor: '#1B1E23',
+                    backgroundColor: 'var(--pz-surface)',
                     color: 'var(--text-primary)',
-                    border: '1.5px solid #2A2E35',
+                    border: '1.5px solid var(--pz-line)',
                     borderRadius: 14,
                     fontWeight: 800,
                     fontSize: 15,
@@ -2663,7 +2665,7 @@ export default function RidePage() {
                 style={{
                   backgroundColor: 'rgba(27, 30, 35, 0.88)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid var(--pz-line, #2A2E35)',
+                  border: '1px solid var(--pz-line, var(--pz-line))',
                   color: 'var(--text-primary)',
                   borderRadius: 20,
                   padding: '5px 12px',
@@ -2684,10 +2686,10 @@ export default function RidePage() {
                 type="button"
                 onClick={() => setShowServicePins(!showServicePins)}
                 style={{
-                  backgroundColor: showServicePins ? 'rgba(240, 194, 58, 0.2)' : 'rgba(27, 30, 35, 0.88)',
+                  backgroundColor: showServicePins ? 'var(--pz-warn-bg)' : 'rgba(27, 30, 35, 0.88)',
                   backdropFilter: 'blur(10px)',
-                  border: showServicePins ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid var(--pz-line, #2A2E35)',
-                  color: showServicePins ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-muted, #9D9C9A)',
+                  border: showServicePins ? '1.5px solid var(--pz-accent, var(--pz-accent))' : '1px solid var(--pz-line, var(--pz-line))',
+                  color: showServicePins ? 'var(--pz-accent, var(--pz-accent))' : 'var(--pz-muted, var(--pz-muted))',
                   borderRadius: 20,
                   padding: '5px 10px',
                   fontSize: 11,
@@ -2725,8 +2727,8 @@ export default function RidePage() {
                   pointerEvents: 'auto',
                   backgroundColor: 'rgba(27, 30, 35, 0.88)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid var(--pz-ok, #10B981)',
-                  color: 'var(--pz-ok, #10B981)',
+                  border: '1px solid var(--pz-ok, var(--pz-ok))',
+                  color: 'var(--pz-ok, var(--pz-ok))',
                   fontSize: 11,
                   fontWeight: 800,
                   padding: '4px 8px',
@@ -2753,9 +2755,9 @@ export default function RidePage() {
                 bottom: splitView ? 12 : (pinnedStop ? 115 : 20),
                 right: 12,
                 zIndex: 1000,
-                backgroundColor: '#1B1E23',
-                border: '2px solid #F0C23A',
-                color: '#F0C23A',
+                backgroundColor: 'var(--pz-surface)',
+                border: '2px solid var(--pz-accent)',
+                color: 'var(--pz-warn)',
                 borderRadius: '50%',
                 width: 38,
                 height: 38,
@@ -2768,7 +2770,7 @@ export default function RidePage() {
               }}
               title="Re-center on me"
             >
-
+              <Icon name="pin" />
             </button>
           )}
 
@@ -2782,8 +2784,8 @@ export default function RidePage() {
                 bottom: 20,
                 left: 12,
                 zIndex: 1000,
-                backgroundColor: '#F0C23A',
-                color: '#111316',
+                backgroundColor: 'var(--pz-accent)',
+                color: 'var(--pz-on-accent)',
                 border: 'none',
                 borderRadius: 24,
                 padding: '10px 18px',
@@ -2818,14 +2820,14 @@ export default function RidePage() {
             )}
             {/* Road-following route (OSRM): Amber dashed route line matching mockup */}
             {(osrmRoute.length > 1 ? osrmRoute : routeCoords).length > 1 && (
-              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="#F0C23A" weight={5} dashArray="8, 8" opacity={0.95} />
+              <Polyline positions={osrmRoute.length > 1 ? osrmRoute : routeCoords} color="var(--pz-accent)" weight={5} dashArray="8, 8" opacity={0.95} />
             )}
 
             {/* Feature B: Rider recorded breadcrumb trails (Group map catches up) */}
             {Object.entries(riderTrails).map(([rId, trailPts]) => {
               if (!trailPts || trailPts.length < 2) return null;
               const rIdx = riders.findIndex((r) => r.user_id === rId);
-              const trailColor = rId === user?.id ? '#10B981' : (rIdx >= 0 ? RIDER_COLORS[rIdx % RIDER_COLORS.length] : '#F0C23A');
+              const trailColor = rId === user?.id ? 'var(--pz-ok)' : (rIdx >= 0 ? RIDER_COLORS[rIdx % RIDER_COLORS.length] : 'var(--pz-accent)');
               return (
                 <Polyline
                   key={`trail-${rId}`}
@@ -2902,7 +2904,7 @@ export default function RidePage() {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            backgroundColor: '#111316',
+            backgroundColor: 'var(--pz-bg)',
           }}>
             {/* Stale Riders Warning Banner */}
             <StaleRidersAlertBanner
@@ -2920,16 +2922,16 @@ export default function RidePage() {
               padding: '2px 12px 4px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '2px 2px 6px' }}>
-                <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', letterSpacing: 0.8, textTransform: 'uppercase' }}>
                   Convoy Roster ({ridersWithFreshness.length})
                 </span>
-                <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>
+                <span style={{ fontSize: 11, color: 'var(--pz-ok)', fontWeight: 800 }}>
                   ● {ridersWithFreshness.filter(r => r.freshness.isLive).length} LIVE
                 </span>
               </div>
 
               {ridersWithFreshness.length === 0 && (
-                <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 14, fontSize: 13 }}>
+                <p style={{ color: 'var(--pz-muted)', textAlign: 'center', marginTop: 14, fontSize: 13 }}>
                   Waiting for riders to join and share GPS...
                 </p>
               )}
@@ -2985,27 +2987,43 @@ export default function RidePage() {
 
       {/* Plan Tab (Mockup Screen 7: Trip detail · itinerary) */}
       {tab === 'plan' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316', padding: '12px 16px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--pz-bg)', padding: '12px 16px' }}>
           {/* Top Subheader Filter Tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            <span style={{ backgroundColor: '#F0C23A', color: '#111316', padding: '6px 14px', borderRadius: 20, fontSize: 11, fontWeight: 800 }}>
-              ITINERARY
-            </span>
-            <span style={{ color: '#9D9C9A', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
-              PEOPLE
-            </span>
-            <span style={{ color: '#9D9C9A', padding: '6px 10px', fontSize: 11, fontWeight: 700 }}>
-              MONEY
-            </span>
+          <div role="tablist" style={{ display: 'flex', gap: 8, marginBottom: 14, flexShrink: 0, position: 'relative', zIndex: 5 }}>
+            {([['itinerary', 'ITINERARY'], ['people', 'PEOPLE'], ['money', 'MONEY']] as const).map(([key, label]) => {
+              const active = key !== 'people' && planSection === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => (key === 'people' ? setTab('riders') : setPlanSection(key))}
+                  style={{
+                    backgroundColor: active ? 'var(--pz-accent)' : 'transparent',
+                    color: active ? 'var(--pz-on-accent)' : 'var(--pz-muted)',
+                    border: 'none', borderRadius: 20, padding: '6px 14px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
             <button
+              type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ background: 'none', border: 'none', color: '#F0C23A', padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: 'var(--pz-warn)', padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}
             >
-              HELP ↗
+              HELP <Icon name="arrowRight" />
             </button>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {planSection === 'money' && session?.trip_id && user && (
+              <ExpenseTracker tripId={session.trip_id} currentUserId={user.id} tripTitle={session?.trips?.title ?? 'Trip'} />
+            )}
+            {planSection === 'itinerary' && (
+            <>
             {/* Feature 2: Trip Completed Celebration Banner (Only when ride is ended) */}
             {ended && milestoneSummary && (
               <TripCompletedBanner
@@ -3018,16 +3036,16 @@ export default function RidePage() {
             )}
 
             {/* Itinerary Section Card */}
-            <div style={{ backgroundColor: '#1B1E23', borderRadius: 18, border: '1.5px solid #2A2E35', padding: '16px 18px' }}>
+            <div style={{ backgroundColor: 'var(--pz-surface)', borderRadius: 18, border: '1.5px solid var(--pz-line)', padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
                   {session?.trips?.title ?? 'Bengaluru to Kasaragod'}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#9D9C9A' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--pz-muted)' }}>
                   3 days · {ridersWithFreshness.length} riders
                 </span>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
                 DAY 2 · HUBLI TO MANGALURU
               </div>
 
@@ -3074,10 +3092,10 @@ export default function RidePage() {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    backgroundColor: '#111316',
-                    border: '1.5px dashed #2A2E35',
+                    backgroundColor: 'var(--pz-bg)',
+                    border: '1.5px dashed var(--pz-line)',
                     borderRadius: 10,
-                    color: '#F0C23A',
+                    color: 'var(--pz-warn)',
                     fontWeight: 800,
                     fontSize: 12,
                     cursor: 'pointer',
@@ -3096,10 +3114,10 @@ export default function RidePage() {
                   style={{
                     flex: 1,
                     padding: '10px',
-                    backgroundColor: '#111316',
-                    border: '1.5px dashed #F0C23A',
+                    backgroundColor: 'var(--pz-bg)',
+                    border: '1.5px dashed var(--pz-accent)',
                     borderRadius: 10,
-                    color: '#F0C23A',
+                    color: 'var(--pz-warn)',
                     fontWeight: 800,
                     fontSize: 12,
                     cursor: 'pointer',
@@ -3140,10 +3158,10 @@ export default function RidePage() {
                 onClick={() => setShowPublishModal(true)}
                 style={{
                   padding: '12px 14px',
-                  backgroundColor: '#1B1E23',
-                  border: isTripPublished(session.trips.id) ? '1.5px solid #10B981' : '1.5px dashed #F0C23A',
+                  backgroundColor: 'var(--pz-surface)',
+                  border: isTripPublished(session.trips.id) ? '1.5px solid var(--pz-ok)' : '1.5px dashed var(--pz-accent)',
                   borderRadius: 14,
-                  color: isTripPublished(session.trips.id) ? '#10B981' : '#F0C23A',
+                  color: isTripPublished(session.trips.id) ? 'var(--pz-ok)' : 'var(--pz-accent)',
                   fontWeight: 800,
                   fontSize: 13,
                   cursor: 'pointer',
@@ -3165,10 +3183,10 @@ export default function RidePage() {
                 onClick={() => setShowMilestoneModal(true)}
                 style={{
                   padding: '12px 14px',
-                  backgroundColor: 'rgba(240, 194, 58, 0.1)',
-                  border: '1.5px solid #F0C23A',
+                  backgroundColor: 'var(--pz-warn-bg)',
+                  border: '1.5px solid var(--pz-accent)',
                   borderRadius: 14,
-                  color: '#F0C23A',
+                  color: 'var(--pz-warn)',
                   fontWeight: 900,
                   fontSize: 13,
                   cursor: 'pointer',
@@ -3187,10 +3205,12 @@ export default function RidePage() {
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '14px', backgroundColor: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '14px', backgroundColor: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 14, color: 'var(--text-primary)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
             >
               View route-cached amenities (fuel, repair, food)
             </button>
+            </>
+            )}
           </div>
         </div>
       )}
@@ -3209,7 +3229,7 @@ export default function RidePage() {
 
       {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards & WhatsApp Link) */}
       {tab === 'chat' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#111316' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--pz-bg)' }}>
           {/* Feature H2 Step 4: Chat stays trip-only banner */}
           <div style={{ padding: '10px 16px 0' }}>
             <TripChatWhatsAppBanner
@@ -3221,7 +3241,7 @@ export default function RidePage() {
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
                 <p style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>No messages yet.</p>
-                <p style={{ color: '#9D9C9A', fontSize: 13 }}>Share a stop or say hi to your group!</p>
+                <p style={{ color: 'var(--pz-muted)', fontSize: 13 }}>Share a stop or say hi to your group!</p>
               </div>
             )}
             {messages.map((m) => {
@@ -3254,9 +3274,9 @@ export default function RidePage() {
                   <div key={m.id} style={{ textAlign: 'center', margin: '2px 0' }}>
                     <span style={{
                       fontSize: 11,
-                      color: isStopArrival ? '#10B981' : '#9D9C9A',
-                      background: isStopArrival ? 'rgba(16, 185, 129, 0.15)' : '#1B1E23',
-                      border: isStopArrival ? '1.5px solid #10B981' : '1.5px solid #2A2E35',
+                      color: isStopArrival ? 'var(--pz-ok)' : 'var(--pz-muted)',
+                      background: isStopArrival ? 'var(--pz-ok-bg)' : 'var(--pz-surface)',
+                      border: isStopArrival ? '1.5px solid var(--pz-ok)' : '1.5px solid var(--pz-line)',
                       padding: '3px 12px',
                       borderRadius: 14,
                       fontWeight: 700,
@@ -3270,13 +3290,13 @@ export default function RidePage() {
               if (isAnnouncement) {
                 return (
                   <div key={m.id} style={{
-                    background: 'rgba(240, 194, 58, 0.08)',
-                    border: '1.5px solid #F0C23A',
+                    background: 'var(--pz-warn-bg)',
+                    border: '1.5px solid var(--pz-accent)',
                     borderRadius: 16,
                     padding: '12px 14px',
                     margin: '4px 0',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: '#F0C23A', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 900, color: 'var(--pz-warn)', textTransform: 'uppercase' }}>
                       <span><Icon name="megaphone" /></span>
                       <span>Captain Announcement · {m.user_name}</span>
                     </div>
@@ -3294,7 +3314,7 @@ export default function RidePage() {
               return (
                 <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                   {!isMe && (
-                    <span style={{ fontSize: 12, color: '#9D9C9A', marginBottom: 4, fontWeight: 700 }}>
+                    <span style={{ fontSize: 12, color: 'var(--pz-muted)', marginBottom: 4, fontWeight: 700 }}>
                       {m.user_name}
                     </span>
                   )}
@@ -3302,9 +3322,9 @@ export default function RidePage() {
                     maxWidth: '88%',
                     padding: '12px 16px',
                     borderRadius: 20,
-                    background: isMe ? '#22262D' : '#1B1E23',
+                    background: isMe ? '#22262D' : 'var(--pz-surface)',
                     color: 'var(--text-primary)',
-                    border: isMe ? '1.5px solid #F0C23A' : '1.5px solid #2A2E35',
+                    border: isMe ? '1.5px solid var(--pz-accent)' : '1.5px solid var(--pz-line)',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                   }}>
                     <div style={{ fontSize: 14, lineHeight: 1.4 }}>{m.message}</div>
@@ -3335,7 +3355,7 @@ export default function RidePage() {
                       />
                     )}
                   </div>
-                  <span style={{ fontSize: 10, color: '#9D9C9A', marginTop: 3 }}>
+                  <span style={{ fontSize: 10, color: 'var(--pz-muted)', marginTop: 3 }}>
                     {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -3345,16 +3365,16 @@ export default function RidePage() {
           </div>
 
           {/* Quick Chat Pill Row & Feature G Presets */}
-          <div style={{ padding: '6px 14px', background: '#111316', display: 'flex', gap: 8, borderTop: '1px solid #2A2E35', overflowX: 'auto' }}>
+          <div style={{ padding: '6px 14px', background: 'var(--pz-bg)', display: 'flex', gap: 8, borderTop: '1px solid var(--pz-line)', overflowX: 'auto' }}>
             <button
               type="button"
               onClick={() => setShowTellGroupSheet(true)}
               style={{
                 padding: '6px 14px',
-                background: 'rgba(240, 194, 58, 0.15)',
-                border: '1.5px solid #F0C23A',
+                background: 'var(--pz-warn-bg)',
+                border: '1.5px solid var(--pz-accent)',
                 borderRadius: 14,
-                color: '#F0C23A',
+                color: 'var(--pz-warn)',
                 fontSize: 12,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -3373,10 +3393,10 @@ export default function RidePage() {
               onClick={() => setShowShareLocationModal(true)}
               style={{
                 padding: '6px 13px',
-                background: 'rgba(240, 194, 58, 0.15)',
-                border: '1.5px solid #F0C23A',
+                background: 'var(--pz-warn-bg)',
+                border: '1.5px solid var(--pz-accent)',
                 borderRadius: 14,
-                color: '#F0C23A',
+                color: 'var(--pz-warn)',
                 fontSize: 12,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -3396,8 +3416,8 @@ export default function RidePage() {
                 onClick={() => pickStatus(p.label)}
                 style={{
                   padding: '6px 12px',
-                  background: '#1B1E23',
-                  border: '1.5px solid #2A2E35',
+                  background: 'var(--pz-surface)',
+                  border: '1.5px solid var(--pz-line)',
                   borderRadius: 14,
                   color: 'var(--text-primary)',
                   fontSize: 12,
@@ -3416,28 +3436,28 @@ export default function RidePage() {
             <button
               type="button"
               onClick={handleShareCurrentLocation}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               Quick GPS
             </button>
             <button
               type="button"
               onClick={() => setShowPinModal(true)}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               Propose Stop
             </button>
             <button
               type="button"
               onClick={() => setShowNearbyHelp(true)}
-              style={{ padding: '6px 12px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ padding: '6px 12px', background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               Nearby Amenities
             </button>
           </div>
 
           {/* Message Input matching mockup */}
-          <div style={{ padding: '8px 14px 10px', background: '#111316', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ padding: '8px 14px 10px', background: 'var(--pz-bg)', display: 'flex', gap: 8, alignItems: 'center' }}>
             <button
               type="button"
               onClick={() => setShowShareLocationModal(true)}
@@ -3446,9 +3466,9 @@ export default function RidePage() {
                 width: 44,
                 height: 44,
                 borderRadius: '50%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
-                color: '#F0C23A',
+                backgroundColor: 'var(--pz-surface)',
+                border: '1.5px solid var(--pz-line)',
+                color: 'var(--pz-warn)',
                 fontSize: 18,
                 cursor: 'pointer',
                 display: 'flex',
@@ -3457,14 +3477,14 @@ export default function RidePage() {
                 flexShrink: 0,
               }}
             >
-
+              <Icon name="pin" />
             </button>
             <input
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
               placeholder="Trip updates only (WhatsApp for casual chat)..."
-              style={{ flex: 1, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 24, padding: '11px 18px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+              style={{ flex: 1, background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 24, padding: '11px 18px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
             />
             <button
               onClick={sendChat}
@@ -3473,8 +3493,8 @@ export default function RidePage() {
                 width: 44,
                 height: 44,
                 borderRadius: '50%',
-                backgroundColor: '#F0C23A',
-                color: '#111316',
+                backgroundColor: 'var(--pz-accent)',
+                color: 'var(--pz-on-accent)',
                 border: 'none',
                 fontWeight: 900,
                 fontSize: 16,
@@ -3486,7 +3506,7 @@ export default function RidePage() {
                 flexShrink: 0,
               }}
             >
-
+              <Icon name="arrowRight" />
             </button>
           </div>
         </div>
@@ -3494,7 +3514,7 @@ export default function RidePage() {
 
       {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
-        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 14px', backgroundColor: '#111316' }}>
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 14px', backgroundColor: 'var(--pz-bg)' }}>
           {/* Stale Riders Warning Banner */}
           <StaleRidersAlertBanner
             staleCount={staleRiders.length}
@@ -3502,16 +3522,16 @@ export default function RidePage() {
           />
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 2px 10px' }}>
-            <span style={{ fontSize: 11, fontWeight: 900, color: '#9D9C9A', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', letterSpacing: 0.8, textTransform: 'uppercase' }}>
               Convoy Roster ({ridersWithFreshness.length})
             </span>
-            <span style={{ fontSize: 11, color: '#10B981', fontWeight: 800 }}>
+            <span style={{ fontSize: 11, color: 'var(--pz-ok)', fontWeight: 800 }}>
               ● {ridersWithFreshness.filter((r) => r.freshness.isLive).length} LIVE
             </span>
           </div>
 
           {ridersWithFreshness.length === 0 && (
-            <p style={{ color: '#9D9C9A', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
+            <p style={{ color: 'var(--pz-muted)', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
               No riders online yet. Positions will appear here when riders connect.
             </p>
           )}
@@ -3531,9 +3551,9 @@ export default function RidePage() {
 
       {/* Nav / Directions panel */}
       {tab === 'nav' && (
-        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: '#111316', padding: '12px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: 'var(--pz-bg)', padding: '12px 16px' }}>
           {/* Quick Launch External Navigation Apps */}
-          <div style={{ padding: '12px 16px', background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
+          <div style={{ padding: '12px 16px', background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 16, marginBottom: 12, display: 'flex', gap: 10 }}>
             <button
               onClick={() => {
                 if (pinnedStop) {
@@ -3553,8 +3573,8 @@ export default function RidePage() {
               style={{
                 flex: 1,
                 padding: '12px 14px',
-                background: '#F0C23A',
-                color: '#111316',
+                background: 'var(--pz-accent)',
+                color: 'var(--pz-on-accent)',
                 border: 'none',
                 borderRadius: 12,
                 fontWeight: 900,
@@ -3577,18 +3597,18 @@ export default function RidePage() {
             const hrs = Math.floor(totalSecs / 3600);
             const mins = Math.round((totalSecs % 3600) / 60);
             return (
-              <div style={{ background: '#1B1E23', padding: '14px 18px', border: '1.5px solid #2A2E35', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
+              <div style={{ background: 'var(--pz-surface)', padding: '14px 18px', border: '1.5px solid var(--pz-line)', borderRadius: 16, display: 'flex', gap: 24, marginBottom: 14 }}>
                 <div>
                   <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{fmtDist(totalDist)}</p>
-                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>total distance</p>
+                  <p style={{ color: 'var(--pz-muted)', fontSize: 11, margin: 0 }}>total distance</p>
                 </div>
                 <div>
                   <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{hrs > 0 ? `${hrs}h ${mins}m` : `${mins} min`}</p>
-                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>est. riding time</p>
+                  <p style={{ color: 'var(--pz-muted)', fontSize: 11, margin: 0 }}>est. riding time</p>
                 </div>
                 <div>
                   <p style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 16, margin: 0 }}>{navSteps.length}</p>
-                  <p style={{ color: '#9D9C9A', fontSize: 11, margin: 0 }}>turns</p>
+                  <p style={{ color: 'var(--pz-muted)', fontSize: 11, margin: 0 }}>turns</p>
                 </div>
               </div>
             );
@@ -3596,17 +3616,17 @@ export default function RidePage() {
           {navSteps.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 16px' }}>
               <p style={{ fontSize: 32 }}><Icon name="map" /></p>
-              <p style={{ color: '#9D9C9A', fontSize: 14 }}>Fetching route directions…</p>
+              <p style={{ color: 'var(--pz-muted)', fontSize: 14 }}>Fetching route directions…</p>
             </div>
           )}
           {navSteps.map((step, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid #2A2E35', background: i === 0 ? 'rgba(240, 194, 58, 0.08)' : 'transparent' }}>
-              <div style={{ width: 36, height: 36, background: '#1B1E23', border: '1.5px solid #2A2E35', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--pz-line)', background: i === 0 ? 'var(--pz-warn-bg)' : 'transparent' }}>
+              <div style={{ width: 36, height: 36, background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
                 {stepIcon(step.instruction)}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ color: 'var(--text-primary)', fontSize: 14, fontWeight: i === 0 ? 800 : 500, margin: 0 }}>{step.instruction}</p>
-                <p style={{ color: '#9D9C9A', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
+                <p style={{ color: 'var(--pz-muted)', fontSize: 12, margin: '3px 0 0' }}>{fmtDist(step.distance)}</p>
               </div>
             </div>
           ))}
@@ -3839,8 +3859,8 @@ export default function RidePage() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  fullCenter: { height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#111827', gap: 8 },
-  btnWhite: { marginTop: 16, padding: '10px 24px', background: '#fff', color: '#111827', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
+  fullCenter: { height: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--pz-bg)', gap: 8 },
+  btnWhite: { marginTop: 16, padding: '10px 24px', background: 'var(--pz-accent)', color: 'var(--pz-on-accent)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' },
 };
 
 

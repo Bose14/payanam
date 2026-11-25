@@ -105,9 +105,9 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
                   <div
                     style={{
                       ...styles.stopIconDisc,
-                      borderColor: isSelected ? 'var(--pz-accent, #F0C23A)' : '#3A3F47',
+                      borderColor: isSelected ? 'var(--pz-accent, var(--pz-accent))' : 'var(--pz-line)',
                       transform: isSelected ? 'scale(1.2)' : 'none',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(240, 194, 58, 0.35)' : undefined,
+                      boxShadow: isSelected ? '0 0 0 3px var(--pz-warn-bg)' : undefined,
                     }}
                   >
                     <Icon name={stop.itemType === 'fuel' ? 'fuel' : stop.itemType === 'food' ? 'food' : 'star'} />
@@ -151,14 +151,14 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
                   <div
                     style={{
                       ...styles.riderPip,
-                      backgroundColor: status === 'unknown' ? '#1B1E23' : badgeTextColor,
-                      borderColor: status === 'unknown' ? '#4B5563' : '#111316',
+                      backgroundColor: status === 'unknown' ? 'var(--pz-surface)' : badgeTextColor,
+                      borderColor: status === 'unknown' ? '#4B5563' : 'var(--pz-bg)',
                       borderRadius,
                       boxShadow: `0 2px 8px ${badgeTextColor}66`,
                     }}
                   >
                     <span style={{
-                      color: status === 'unknown' ? '#9D9C9A' : '#111316',
+                      color: status === 'unknown' ? 'var(--pz-muted)' : 'var(--pz-bg)',
                       fontSize: 10,
                       fontWeight: 900,
                     }}>
@@ -182,7 +182,7 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
           {/* Bottom Convoy Progress Summary Pill Row */}
           <div style={styles.summaryRow}>
             <div style={styles.summaryItem}>
-              <span style={{ ...styles.statusDot, backgroundColor: '#10B981' }} />
+              <span style={{ ...styles.statusDot, backgroundColor: 'var(--pz-ok)' }} />
               <span style={styles.summaryText}>{onPlanCount} on plan</span>
             </div>
             {aheadCount > 0 && (
@@ -199,8 +199,8 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
             )}
             {offRouteCount > 0 && (
               <div style={styles.summaryItem}>
-                <span style={{ ...styles.statusDot, backgroundColor: '#EF4444' }} />
-                <span style={{ ...styles.summaryText, color: '#EF4444' }}>{offRouteCount} off route</span>
+                <span style={{ ...styles.statusDot, backgroundColor: 'var(--pz-bad)' }} />
+                <span style={{ ...styles.summaryText, color: 'var(--pz-bad)' }}>{offRouteCount} off route</span>
               </div>
             )}
           </div>
@@ -212,8 +212,8 @@ export const RouteProgressStrip: React.FC<RouteProgressStripProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    backgroundColor: 'var(--pz-surface, #1B1E23)',
-    border: '1px solid var(--pz-line, #2A2E35)',
+    backgroundColor: 'var(--pz-surface, var(--pz-surface))',
+    border: '1px solid var(--pz-line, var(--pz-line))',
     borderRadius: 14,
     margin: '0 12px 6px 12px',
     padding: '8px 12px',
@@ -249,9 +249,9 @@ const styles: Record<string, React.CSSProperties> = {
   routeKm: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#9D9C9A',
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    color: 'var(--pz-muted)',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     padding: '1px 6px',
     borderRadius: 999,
     flexShrink: 0,
@@ -265,16 +265,16 @@ const styles: Record<string, React.CSSProperties> = {
   offRouteTag: {
     fontSize: 10,
     fontWeight: 900,
-    color: '#EF4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    border: '1px solid #EF4444',
+    color: 'var(--pz-bad)',
+    backgroundColor: 'var(--pz-bad-bg)',
+    border: '1px solid var(--pz-bad)',
     padding: '2px 6px',
     borderRadius: 999,
   },
   toggleBtn: {
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 11,
     fontWeight: 800,
     cursor: 'pointer',
@@ -292,17 +292,17 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     height: 6,
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     borderRadius: 999,
-    border: '1px solid #2A2E35',
+    border: '1px solid var(--pz-line)',
     overflow: 'hidden',
   },
   railFill: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#F0C23A',
+    backgroundColor: 'var(--pz-accent)',
     opacity: 0.85,
-    backgroundImage: 'repeating-linear-gradient(90deg, #F0C23A, #F0C23A 8px, #1B1E23 8px, #1B1E23 14px)',
+    backgroundImage: 'repeating-linear-gradient(90deg, var(--pz-accent), var(--pz-accent) 8px, var(--pz-surface) 8px, var(--pz-surface) 14px)',
   },
   stopMilestone: {
     position: 'absolute',
@@ -318,8 +318,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: 18,
     height: 18,
     borderRadius: '50%',
-    backgroundColor: 'var(--pz-surface, #1B1E23)',
-    border: '1.5px solid var(--pz-accent, #F0C23A)',
+    backgroundColor: 'var(--pz-surface, var(--pz-surface))',
+    border: '1.5px solid var(--pz-accent, var(--pz-accent))',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -331,7 +331,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'absolute',
     bottom: 22,
     transform: 'translateX(-50%)',
-    backgroundColor: 'var(--pz-ink, #111316)',
+    backgroundColor: 'var(--pz-ink, var(--pz-bg))',
     color: 'var(--pz-surface, #f1efea)',
     padding: '3px 8px',
     borderRadius: 8,
@@ -340,7 +340,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
     boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
     pointerEvents: 'none',
-    border: '1px solid var(--pz-line, #3A3F47)',
+    border: '1px solid var(--pz-line, var(--pz-line))',
     zIndex: 30,
   },
   riderMarkerWrap: {
@@ -357,7 +357,7 @@ const styles: Record<string, React.CSSProperties> = {
   riderPip: {
     width: 22,
     height: 22,
-    border: '2px solid #111316',
+    border: '2px solid var(--pz-bg)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -365,7 +365,7 @@ const styles: Record<string, React.CSSProperties> = {
   riderLabelTag: {
     fontSize: 7.5,
     fontWeight: 900,
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     border: '1px solid',
     borderRadius: 999,
     padding: '0.5px 4px',
@@ -394,7 +394,7 @@ const styles: Record<string, React.CSSProperties> = {
   summaryText: {
     fontSize: 10,
     fontWeight: 700,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
 };
 

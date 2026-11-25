@@ -104,7 +104,7 @@ export default function ShareMilestoneModal({
         <div style={styles.body}>
           {/* Card Preview (Live render) */}
           <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: '#9D9C9A', textTransform: 'uppercase', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.2, color: 'var(--pz-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
               COMMEMORATIVE COMPLETION BADGE
             </div>
             <TripMilestoneCard
@@ -121,7 +121,7 @@ export default function ShareMilestoneModal({
           {/* Privacy Guarantee Note (Step 2 requirement) */}
           <div style={styles.privacyShieldCard}>
             <span style={{ fontSize: 18 }}><Icon name="shield" /></span>
-            <div style={{ fontSize: 12, color: '#10B981', lineHeight: 1.4 }}>
+            <div style={{ fontSize: 12, color: 'var(--pz-ok)', lineHeight: 1.4 }}>
               <strong>Privacy rule enforced:</strong> Hidden stops and residential home starting addresses are strictly excluded from the milestone card.
             </div>
           </div>
@@ -138,8 +138,8 @@ export default function ShareMilestoneModal({
                     onClick={() => setCustomization({ ...customization, backdropPreset: p.id })}
                     style={{
                       ...styles.presetBtn,
-                      border: isSelected ? `2px solid ${p.accent}` : '1.5px solid #2A2E35',
-                      backgroundColor: isSelected ? 'rgba(255,255,255,0.06)' : '#111316',
+                      border: isSelected ? `2px solid ${p.accent}` : '1.5px solid var(--pz-line)',
+                      backgroundColor: isSelected ? 'rgba(255,255,255,0.06)' : 'var(--pz-bg)',
                     }}
                   >
                     <span style={{ fontSize: 18 }}><Icon name={p.icon} /></span>
@@ -220,11 +220,11 @@ export default function ShareMilestoneModal({
 
           {/* Step 4: Link leads back explanation */}
           <div style={styles.step4NoticeBox}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#F0C23A', fontWeight: 800, fontSize: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--pz-warn)', fontWeight: 800, fontSize: 12 }}>
               <span><Icon name="link" /></span>
               <span>GROWTH & DISCOVER INTEGRATION</span>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9D9C9A', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--pz-muted)', lineHeight: 1.45 }}>
               {summary.isPublished ? (
                 <>
                   Your milestone link leads directly to your <strong>published Discover itinerary</strong>.
@@ -295,8 +295,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
   },
   modal: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 20,
     width: '100%',
     maxWidth: 620,
@@ -311,7 +311,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: '16px 18px 12px',
-    borderBottom: '1px solid #2A2E35',
+    borderBottom: '1px solid var(--pz-line)',
   },
   title: {
     margin: 0,
@@ -323,19 +323,19 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     margin: '4px 0 0',
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 18,
     cursor: 'pointer',
     padding: 4,
   },
   toastBar: {
-    backgroundColor: '#10B981',
-    color: '#111316',
+    backgroundColor: 'var(--pz-ok)',
+    color: 'var(--pz-on-accent)',
     padding: '8px 16px',
     fontSize: 12,
     fontWeight: 900,
@@ -350,8 +350,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    border: '1.5px solid rgba(16, 185, 129, 0.4)',
+    backgroundColor: 'var(--pz-ok-bg)',
+    border: '1.5px solid var(--pz-ok-bg)',
     borderRadius: 12,
     padding: '10px 14px',
   },
@@ -359,7 +359,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 900,
     letterSpacing: 1.2,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     textTransform: 'uppercase',
     marginBottom: 8,
   },
@@ -387,8 +387,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#111316',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 10,
     padding: '8px 12px',
     cursor: 'pointer',
@@ -396,7 +396,7 @@ const styles: Record<string, React.CSSProperties> = {
   checkbox: {
     width: 16,
     height: 16,
-    accentColor: '#F0C23A',
+    accentColor: 'var(--pz-accent)',
     cursor: 'pointer',
   },
   toggleLabel: {
@@ -408,23 +408,23 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '11px 14px',
     borderRadius: 10,
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#111316',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-bg)',
     color: 'var(--text-primary)',
     fontSize: 13,
     outline: 'none',
   },
   step4NoticeBox: {
     marginTop: 18,
-    backgroundColor: '#111316',
-    border: '1px dashed #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1px dashed var(--pz-line)',
     borderRadius: 12,
     padding: '12px 14px',
   },
   linkButton: {
     background: 'none',
     border: 'none',
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     fontWeight: 800,
     padding: 0,
     cursor: 'pointer',
@@ -435,8 +435,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 10,
     padding: '12px 16px max(14px, env(safe-area-inset-bottom, 14px))',
-    borderTop: '1px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    borderTop: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
     flexWrap: 'wrap',
   },
   btnWhatsApp: {
@@ -459,8 +459,8 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1.2,
     minWidth: 130,
     padding: '10px 16px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 10,
     fontWeight: 900,
@@ -473,9 +473,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnCopy: {
     padding: '10px 16px',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     color: 'var(--text-primary)',
-    border: '1.5px solid #2A2E35',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     fontWeight: 800,
     fontSize: 13,

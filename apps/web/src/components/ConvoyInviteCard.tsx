@@ -50,9 +50,9 @@ export default function ConvoyInviteCard({
   return (
     <div
       style={{
-        backgroundColor: '#1B1E23',
+        backgroundColor: 'var(--pz-surface)',
         borderRadius: 18,
-        border: '1.5px solid #2A2E35',
+        border: '1.5px solid var(--pz-line)',
         padding: '16px 18px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
         display: 'flex',
@@ -62,19 +62,19 @@ export default function ConvoyInviteCard({
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 900, color: '#F0C23A', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+          <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-warn)', textTransform: 'uppercase', letterSpacing: 0.8 }}>
             CONVOY INVITATION (FEATURE 1A)
           </span>
           <h4 style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 900, color: 'var(--text-primary)' }}>
             Invite members to itinerary
           </h4>
         </div>
-        <span style={{ fontSize: 10, fontWeight: 800, color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10B981', padding: '2px 6px', borderRadius: 4 }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--pz-ok)', backgroundColor: 'var(--pz-ok-bg)', border: '1px solid var(--pz-ok)', padding: '2px 6px', borderRadius: 4 }}>
           ONE SHARED PLAN
         </span>
       </div>
 
-      <p style={{ margin: 0, fontSize: 12, color: '#9D9C9A', lineHeight: 1.35 }}>
+      <p style={{ margin: 0, fontSize: 12, color: 'var(--pz-muted)', lineHeight: 1.35 }}>
         Members join with this invitation code or link. Everyone sees the same stops, notes, and live updates.
       </p>
 
@@ -84,17 +84,17 @@ export default function ConvoyInviteCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#111316',
-          border: '1.5px dashed #3A3F47',
+          backgroundColor: 'var(--pz-bg)',
+          border: '1.5px dashed var(--pz-line)',
           borderRadius: 14,
           padding: '10px 14px',
         }}
       >
         <div>
-          <div style={{ fontSize: 10, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase' }}>
             Invitation Code
           </div>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 2, color: '#F0C23A', marginTop: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 2, color: 'var(--pz-warn)', marginTop: 1 }}>
             {inviteCode}
           </div>
         </div>
@@ -104,10 +104,10 @@ export default function ConvoyInviteCard({
           onClick={handleCopyCode}
           style={{
             padding: '7px 12px',
-            backgroundColor: '#1B1E23',
-            border: '1px solid #2A2E35',
+            backgroundColor: 'var(--pz-surface)',
+            border: '1px solid var(--pz-line)',
             borderRadius: 8,
-            color: copiedCode ? '#10B981' : 'var(--text-primary)',
+            color: copiedCode ? 'var(--pz-ok)' : 'var(--text-primary)',
             fontSize: 11,
             fontWeight: 800,
             cursor: 'pointer',
@@ -129,10 +129,10 @@ export default function ConvoyInviteCard({
           style={{
             flex: 1,
             padding: '9px 12px',
-            backgroundColor: '#111316',
-            border: '1px solid #2A2E35',
+            backgroundColor: 'var(--pz-bg)',
+            border: '1px solid var(--pz-line)',
             borderRadius: 10,
-            color: copiedLink ? '#10B981' : 'var(--text-primary)',
+            color: copiedLink ? 'var(--pz-ok)' : 'var(--text-primary)',
             fontSize: 12,
             fontWeight: 800,
             cursor: 'pointer',

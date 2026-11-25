@@ -32,16 +32,16 @@ export default function NavigationHandoffButton({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: '#F0C23A',
-          color: '#111316',
+          backgroundColor: 'var(--pz-accent)',
+          color: 'var(--pz-on-accent)',
           border: 'none',
-          boxShadow: '0 2px 8px rgba(240, 194, 58, 0.25)',
+          boxShadow: '0 2px 8px var(--pz-warn-bg)',
         };
       case 'compact':
         return {
-          backgroundColor: '#1B1E23',
-          color: '#F1EFEA',
-          border: '1px solid #2A2E35',
+          backgroundColor: 'var(--pz-surface)',
+          color: 'var(--pz-ink)',
+          border: '1px solid var(--pz-line)',
           padding: '6px 12px',
           fontSize: 11,
           borderRadius: 8,
@@ -49,7 +49,7 @@ export default function NavigationHandoffButton({
       case 'ghost':
         return {
           backgroundColor: 'transparent',
-          color: '#F0C23A',
+          color: 'var(--pz-warn)',
           border: 'none',
           padding: 0,
           fontSize: 11,
@@ -58,9 +58,9 @@ export default function NavigationHandoffButton({
       case 'secondary':
       default:
         return {
-          backgroundColor: '#1B1E23',
-          color: '#F1EFEA',
-          border: '1.5px solid #2A2E35',
+          backgroundColor: 'var(--pz-surface)',
+          color: 'var(--pz-ink)',
+          border: '1.5px solid var(--pz-line)',
           boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
         };
     }

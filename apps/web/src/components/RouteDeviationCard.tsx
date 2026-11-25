@@ -58,7 +58,7 @@ export const RouteDeviationCard: React.FC<RouteDeviationCardProps> = ({
               style={styles.dismissBtn}
               aria-label="Dismiss alert"
             >
-
+              <Icon name="close" />
             </button>
           )}
         </div>
@@ -124,10 +124,10 @@ const styles: Record<string, React.CSSProperties> = {
   cardContainer: {
     margin: '4px 12px 8px',
     padding: '12px 14px',
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #EF4444',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-bad)',
     borderRadius: 18,
-    boxShadow: '0 6px 24px rgba(239, 68, 68, 0.25)',
+    boxShadow: '0 6px 24px var(--pz-bad-bg)',
     zIndex: 950,
     animation: 'slideDown 0.25s ease-out',
   },
@@ -149,7 +149,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     fontWeight: 900,
     letterSpacing: '0.06em',
-    color: '#EF4444',
+    color: 'var(--pz-bad)',
     textTransform: 'uppercase',
   },
   metricsWrap: {
@@ -165,13 +165,13 @@ const styles: Record<string, React.CSSProperties> = {
   metricDuration: {
     fontSize: 11,
     fontWeight: 600,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   dismissBtn: {
     marginLeft: 6,
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 13,
     cursor: 'pointer',
     padding: '0 4px',
@@ -187,9 +187,9 @@ const styles: Record<string, React.CSSProperties> = {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    border: '1.5px solid #EF4444',
-    color: '#EF4444',
+    backgroundColor: 'var(--pz-bad-bg)',
+    border: '1.5px solid var(--pz-bad)',
+    color: 'var(--pz-bad)',
     fontSize: 11,
     fontWeight: 900,
     display: 'flex',
@@ -214,7 +214,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '2px 0 0',
     fontSize: 11,
     fontWeight: 500,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     lineHeight: 1.35,
   },
   actionRow: {
@@ -225,8 +225,8 @@ const styles: Record<string, React.CSSProperties> = {
   regroupBtn: {
     flex: 1,
     padding: '8px 12px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 12,
     fontSize: 12,
@@ -236,13 +236,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    boxShadow: '0 2px 8px rgba(240, 194, 58, 0.3)',
+    boxShadow: '0 2px 8px var(--pz-warn-bg)',
     transition: 'all 0.15s ease',
   },
   rejoinBtn: {
     flex: 1,
     padding: '8px 12px',
-    backgroundColor: '#10B981',
+    backgroundColor: 'var(--pz-ok)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: 12,
@@ -256,9 +256,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   secondaryBtn: {
     padding: '8px 12px',
-    backgroundColor: '#2A2E35',
+    backgroundColor: 'var(--pz-line)',
     color: 'var(--text-primary)',
-    border: '1px solid #3A3F47',
+    border: '1px solid var(--pz-line)',
     borderRadius: 12,
     fontSize: 11.5,
     fontWeight: 700,

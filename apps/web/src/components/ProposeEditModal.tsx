@@ -54,8 +54,8 @@ export default function ProposeEditModal({
         style={{
           width: '100%',
           maxWidth: 440,
-          backgroundColor: '#111316',
-          border: '1.5px solid #2A2E35',
+          backgroundColor: 'var(--pz-bg)',
+          border: '1.5px solid var(--pz-line)',
           borderRadius: 20,
           overflow: 'hidden',
           display: 'flex',
@@ -67,7 +67,7 @@ export default function ProposeEditModal({
         <div
           style={{
             padding: '16px 18px',
-            borderBottom: '1.5px solid #2A2E35',
+            borderBottom: '1.5px solid var(--pz-line)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -79,7 +79,7 @@ export default function ProposeEditModal({
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--text-primary)' }}>
                 Propose Itinerary Edit
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9D9C9A' }}>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--pz-muted)' }}>
                 Sent to group & subject to Captain approval
               </p>
             </div>
@@ -90,19 +90,19 @@ export default function ProposeEditModal({
             style={{
               background: 'none',
               border: 'none',
-              color: '#9D9C9A',
+              color: 'var(--pz-muted)',
               fontSize: 18,
               cursor: 'pointer',
               padding: 4,
             }}
           >
-
+            <Icon name="close" />
           </button>
         </div>
 
         {/* Quick Suggestion Chips */}
         <div style={{ padding: '14px 18px 0' }}>
-          <label style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
             Quick suggestions
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -113,8 +113,8 @@ export default function ProposeEditModal({
                 onClick={() => setTitle(preset)}
                 style={{
                   padding: '5px 10px',
-                  backgroundColor: '#1B1E23',
-                  border: '1px solid #2A2E35',
+                  backgroundColor: 'var(--pz-surface)',
+                  border: '1px solid var(--pz-line)',
                   borderRadius: 8,
                   fontSize: 11,
                   fontWeight: 700,
@@ -132,7 +132,7 @@ export default function ProposeEditModal({
         {/* Form Body */}
         <form onSubmit={handleSubmit} style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
               Proposed Change *
             </label>
             <input
@@ -143,8 +143,8 @@ export default function ProposeEditModal({
               onChange={(e) => setTitle(e.target.value)}
               style={{
                 width: '100%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
+                backgroundColor: 'var(--pz-surface)',
+                border: '1.5px solid var(--pz-line)',
                 borderRadius: 10,
                 padding: '10px 12px',
                 color: 'var(--text-primary)',
@@ -156,7 +156,7 @@ export default function ProposeEditModal({
           </div>
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 11, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 4 }}>
               Reason / Explanation (Optional)
             </label>
             <textarea
@@ -166,8 +166,8 @@ export default function ProposeEditModal({
               onChange={(e) => setDescription(e.target.value)}
               style={{
                 width: '100%',
-                backgroundColor: '#1B1E23',
-                border: '1.5px solid #2A2E35',
+                backgroundColor: 'var(--pz-surface)',
+                border: '1.5px solid var(--pz-line)',
                 borderRadius: 10,
                 padding: '10px 12px',
                 color: 'var(--text-primary)',
@@ -186,8 +186,8 @@ export default function ProposeEditModal({
               width: '100%',
               marginTop: 6,
               padding: '12px',
-              backgroundColor: '#F0C23A',
-              color: '#111316',
+              backgroundColor: 'var(--pz-accent)',
+              color: 'var(--pz-on-accent)',
               border: 'none',
               borderRadius: 12,
               fontWeight: 900,
@@ -198,7 +198,7 @@ export default function ProposeEditModal({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              boxShadow: '0 4px 12px rgba(240, 194, 58, 0.25)',
+              boxShadow: '0 4px 12px var(--pz-warn-bg)',
             }}
           >
             <span><Icon name="bulb" /></span>

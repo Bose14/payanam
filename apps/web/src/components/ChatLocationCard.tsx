@@ -62,8 +62,8 @@ export default function ChatLocationCard({
       style={{
         marginTop: 10,
         padding: '12px 14px',
-        backgroundColor: '#111316',
-        border: isConfirmed ? '1.5px solid #10B981' : '1.5px dashed #3A3F47',
+        backgroundColor: 'var(--pz-bg)',
+        border: isConfirmed ? '1.5px solid var(--pz-ok)' : '1.5px dashed var(--pz-line)',
         borderRadius: 14,
         display: 'flex',
         flexDirection: 'column',
@@ -82,9 +82,9 @@ export default function ChatLocationCard({
                 style={{
                   fontSize: 10,
                   fontWeight: 800,
-                  color: '#10B981',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid #10B981',
+                  color: 'var(--pz-ok)',
+                  backgroundColor: 'var(--pz-ok-bg)',
+                  border: '1px solid var(--pz-ok)',
                   padding: '1px 6px',
                   borderRadius: 4,
                   letterSpacing: 0.5,
@@ -102,7 +102,7 @@ export default function ChatLocationCard({
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: 11, color: '#9D9C9A' }}>
+            <span style={{ fontSize: 11, color: 'var(--pz-muted)' }}>
               Shared {formattedTime}
             </span>
             {lat != null && lng != null && (
@@ -112,7 +112,7 @@ export default function ChatLocationCard({
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#F0C23A',
+                  color: 'var(--pz-warn)',
                   fontSize: 11,
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -132,8 +132,8 @@ export default function ChatLocationCard({
               width: 32,
               height: 32,
               borderRadius: 8,
-              backgroundColor: '#1B1E23',
-              border: '1px solid #2A2E35',
+              backgroundColor: 'var(--pz-surface)',
+              border: '1px solid var(--pz-line)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -141,7 +141,7 @@ export default function ChatLocationCard({
               flexShrink: 0,
             }}
           >
-
+            <Icon name="pin" />
           </div>
         )}
       </div>
@@ -154,8 +154,8 @@ export default function ChatLocationCard({
           style={{
             width: '100%',
             padding: '8px 12px',
-            backgroundColor: '#1B1E23',
-            border: '1.5px solid #2A2E35',
+            backgroundColor: 'var(--pz-surface)',
+            border: '1.5px solid var(--pz-line)',
             borderRadius: 10,
             color: 'var(--text-primary)',
             fontSize: 12,
@@ -179,15 +179,15 @@ export default function ChatLocationCard({
           style={{
             marginTop: 4,
             padding: '8px 10px',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            border: '1px solid #10B981',
+            backgroundColor: 'var(--pz-ok-bg)',
+            border: '1px solid var(--pz-ok)',
             borderRadius: 8,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 800, color: '#10B981', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--pz-ok)', display: 'flex', alignItems: 'center', gap: 5 }}>
             <span><Icon name="check" /></span> Confirmed in itinerary
           </span>
           {onViewInPlan && (
@@ -197,7 +197,7 @@ export default function ChatLocationCard({
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#F0C23A',
+                color: 'var(--pz-warn)',
                 fontSize: 11,
                 fontWeight: 800,
                 cursor: 'pointer',
@@ -217,8 +217,8 @@ export default function ChatLocationCard({
             width: '100%',
             marginTop: 4,
             padding: '10px 14px',
-            backgroundColor: '#F0C23A',
-            color: '#111316',
+            backgroundColor: 'var(--pz-accent)',
+            color: 'var(--pz-on-accent)',
             border: 'none',
             borderRadius: 10,
             fontWeight: 900,
@@ -229,7 +229,7 @@ export default function ChatLocationCard({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
-            boxShadow: '0 2px 6px rgba(240, 194, 58, 0.25)',
+            boxShadow: '0 2px 6px var(--pz-warn-bg)',
             transition: 'background-color 0.2s',
           }}
         >
@@ -241,20 +241,20 @@ export default function ChatLocationCard({
           style={{
             marginTop: 4,
             padding: '7px 10px',
-            backgroundColor: '#1B1E23',
-            border: '1px solid #2A2E35',
+            backgroundColor: 'var(--pz-surface)',
+            border: '1px solid var(--pz-line)',
             borderRadius: 8,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             fontSize: 11,
-            color: '#9D9C9A',
+            color: 'var(--pz-muted)',
           }}
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <span><Icon name="clock" /></span> Waiting for Captain to confirm as stop
           </span>
-          <span style={{ fontWeight: 700, color: '#F0C23A' }}>Captain only</span>
+          <span style={{ fontWeight: 700, color: 'var(--pz-warn)' }}>Captain only</span>
         </div>
       )}
     </div>

@@ -56,14 +56,14 @@ export default function TrackingPausedBanner({
 const styles: Record<string, React.CSSProperties> = {
   banner: {
     backgroundColor: '#7F1D1D', // Dark amber/red background
-    border: '1.5px solid #EF4444',
+    border: '1.5px solid var(--pz-bad)',
     borderRadius: 14,
     padding: '8px 12px',
     margin: '4px 12px 6px',
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    boxShadow: '0 4px 16px rgba(239, 68, 68, 0.35)',
+    boxShadow: '0 4px 16px var(--pz-bad-bg)',
     zIndex: 1001,
     flexShrink: 0,
   },
@@ -71,7 +71,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 32,
     height: 32,
     borderRadius: '50%',
-    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+    backgroundColor: 'var(--pz-bad-bg)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -100,7 +100,7 @@ const styles: Record<string, React.CSSProperties> = {
   btnResume: {
     minHeight: 36,
     padding: '6px 12px',
-    backgroundColor: '#EF4444',
+    backgroundColor: 'var(--pz-bad)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: 10,
