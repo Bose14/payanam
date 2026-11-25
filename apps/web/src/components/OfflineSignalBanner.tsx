@@ -10,6 +10,11 @@ export interface OfflineSignalBannerProps {
   onSimulateToggle?: () => void;
 }
 
+/**
+ * Icon-only connectivity indicator for the ride header. Hidden while online with nothing
+ * waiting. Offline: a no-signal icon with the number of saved positions; tap to retry the
+ * upload. Syncing: a spinner. Just synced: a check mark.
+ */
 export const OfflineSignalBanner: React.FC<OfflineSignalBannerProps> = ({
   isOnline,
   pendingCount,
@@ -17,247 +22,57 @@ export const OfflineSignalBanner: React.FC<OfflineSignalBannerProps> = ({
   justSynced = false,
   onForceSync,
 }) => {
-  // If online, not syncing, and nothing pending or recently synced, banner sits quietly hidden
-  if (isOnline && pendingCount === 0 && !isSyncing && !justSynced) {
-    return null;
-  }
+  if (isOnline && pendingCount === 0 && !isSyncing && !justSynced) return null;
 
-  // STATE 1: Signal restored & syncing queued fixes in batches
+  let icon = 'signal';
+  let color = 'var(--pz-warn)';
+  let label = `No signal. ${pendingCount} position${pendingCount === 1 ? '' : 's'} saved and will sync.`;
+  let spin = false;
   if (isSyncing) {
-    return (
-      <div style={styles.syncBanner}>
-        <div style={styles.contentLeft}>
-          <div style={styles.syncIconWrap}>
-            <span style={styles.syncSpinner}><Icon name="refresh" /></span>
-          </div>
-          <div style={styles.textWrap}>
-            <div style={styles.syncTitle}>
-              Signal restored · Syncing {pendingCount > 0 ? `${pendingCount} saved position${pendingCount === 1 ? '' : 's'}` : 'positions'}...
-            </div>
-            <div style={styles.syncSub}>
-              Uploading queued fixes in sequence order
-            </div>
-          </div>
-        </div>
-        <span style={styles.syncPill}>
-          BATCH SYNC
-        </span>
-      </div>
-    );
+    icon = 'refresh'; color = 'var(--pz-ok)'; spin = true;
+    label = 'Signal restored. Syncing saved positions.';
+  } else if (justSynced && isOnline && pendingCount === 0) {
+    icon = 'check'; color = 'var(--pz-ok)';
+    label = 'All positions synced.';
   }
 
-  // STATE 2: Just synced confirmation
-  if (justSynced && isOnline && pendingCount === 0) {
-    return (
-      <div style={styles.justSyncedBanner}>
-        <div style={styles.contentLeft}>
-          <div style={styles.successIconWrap}><Icon name="check" /></div>
-          <div style={styles.textWrap}>
-            <div style={styles.successTitle}>All positions synced</div>
-            <div style={styles.syncSub}>Group map has caught up with your trail</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const canRetry = isOnline && !isSyncing && pendingCount > 0 && !!onForceSync;
 
-  // STATE 3: No signal — exactly matching the design spec
-  // "Runs in the background. The only visible part is the Ride banner: No signal. Your position is saved and will sync."
   return (
-    <div style={styles.noSignalBanner}>
-      <div style={styles.contentLeft}>
-        <div style={styles.warningIconWrap}>
-          <Icon name="signal" />
-        </div>
-        <div style={styles.textWrap}>
-          <div style={styles.noSignalTitle}>
-            No signal. Your position is saved and will sync.
-          </div>
-          <div style={styles.noSignalSub}>
-            Fixes write directly to local phone storage
-          </div>
-        </div>
-      </div>
-
-      <div style={styles.actionWrap}>
-        {pendingCount > 0 && (
-          <span style={styles.savedPill}>
-            {pendingCount} saved
-          </span>
-        )}
-        {onForceSync && isOnline && (
-          <button
-            type="button"
-            onClick={onForceSync}
-            style={styles.retryBtn}
-          >
-            Retry
-          </button>
-        )}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={canRetry ? onForceSync : undefined}
+      title={label}
+      aria-label={label}
+      style={{
+        position: 'relative',
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: 'var(--pz-surface)',
+        border: `1.5px solid ${color}`,
+        color,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        cursor: canRetry ? 'pointer' : 'default',
+        padding: 0,
+      }}
+    >
+      <span style={spin ? { display: 'inline-flex', animation: 'pz-spin 1s linear infinite' } : { display: 'inline-flex' }}>
+        <Icon name={icon} />
+      </span>
+      {!isOnline && pendingCount > 0 && (
+        <span style={{
+          position: 'absolute', top: -6, right: -6, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8,
+          backgroundColor: color, color: 'var(--pz-on-accent)', fontSize: 10, fontWeight: 800,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {pendingCount > 99 ? '99+' : pendingCount}
+        </span>
+      )}
+      <style>{'@keyframes pz-spin { to { transform: rotate(360deg); } }'}</style>
+    </button>
   );
 };
-
-const styles: Record<string, React.CSSProperties> = {
-  noSignalBanner: {
-    margin: '4px 12px 8px',
-    padding: '9px 14px',
-    borderRadius: 16,
-    backgroundColor: 'var(--pz-surface)',
-    border: '1.5px solid var(--pz-accent)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
-    zIndex: 900,
-  },
-  syncBanner: {
-    margin: '4px 12px 8px',
-    padding: '9px 14px',
-    borderRadius: 16,
-    backgroundColor: 'var(--pz-surface)',
-    border: '1.5px solid var(--pz-ok)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
-    zIndex: 900,
-  },
-  justSyncedBanner: {
-    margin: '4px 12px 8px',
-    padding: '8px 14px',
-    borderRadius: 16,
-    backgroundColor: 'var(--pz-surface)',
-    border: '1px solid var(--pz-ok)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
-    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.35)',
-    zIndex: 900,
-  },
-  contentLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    minWidth: 0,
-    flex: 1,
-  },
-  warningIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: 'var(--pz-warn-bg)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 14,
-    color: 'var(--pz-warn)',
-    flexShrink: 0,
-  },
-  syncIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: 'var(--pz-ok-bg)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 14,
-    color: 'var(--pz-ok)',
-    flexShrink: 0,
-  },
-  successIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    backgroundColor: 'var(--pz-ok-bg)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 13,
-    fontWeight: 900,
-    color: 'var(--pz-ok)',
-    flexShrink: 0,
-  },
-  syncSpinner: {
-    display: 'inline-block',
-  },
-  textWrap: {
-    minWidth: 0,
-    flex: 1,
-  },
-  noSignalTitle: {
-    fontSize: 12.5,
-    fontWeight: 800,
-    color: 'var(--text-primary)',
-    letterSpacing: '-0.01em',
-    lineHeight: 1.25,
-  },
-  noSignalSub: {
-    fontSize: 10.5,
-    fontWeight: 600,
-    color: 'var(--pz-muted)',
-    marginTop: 1,
-  },
-  syncTitle: {
-    fontSize: 12.5,
-    fontWeight: 800,
-    color: 'var(--pz-ok)',
-    letterSpacing: '-0.01em',
-    lineHeight: 1.25,
-  },
-  syncSub: {
-    fontSize: 10.5,
-    fontWeight: 600,
-    color: 'var(--pz-muted)',
-    marginTop: 1,
-  },
-  successTitle: {
-    fontSize: 12,
-    fontWeight: 800,
-    color: 'var(--pz-ok)',
-  },
-  actionWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    flexShrink: 0,
-  },
-  savedPill: {
-    fontSize: 10,
-    fontWeight: 800,
-    color: 'var(--pz-warn)',
-    backgroundColor: 'var(--pz-warn-bg)',
-    border: '1px solid var(--pz-accent)',
-    padding: '3px 8px',
-    borderRadius: 12,
-    whiteSpace: 'nowrap',
-    letterSpacing: '0.02em',
-  },
-  syncPill: {
-    fontSize: 9.5,
-    fontWeight: 900,
-    color: 'var(--pz-ok)',
-    backgroundColor: 'var(--pz-ok-bg)',
-    border: '1px solid var(--pz-ok)',
-    padding: '3px 7px',
-    borderRadius: 10,
-    whiteSpace: 'nowrap',
-    letterSpacing: '0.04em',
-  },
-  retryBtn: {
-    fontSize: 10,
-    fontWeight: 700,
-    color: 'var(--text-primary)',
-    backgroundColor: 'var(--pz-line)',
-    border: 'none',
-    padding: '4px 8px',
-    borderRadius: 8,
-    cursor: 'pointer',
-  },
-};
-
