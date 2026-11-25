@@ -185,7 +185,7 @@ export default function PublishItineraryModal({
               <div style={styles.privacyShieldCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 20 }}><Icon name="shield" /></span>
-                  <span style={{ fontWeight: 800, fontSize: 13, color: '#10B981' }}>
+                  <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--pz-ok)' }}>
                     PRIVACY PROTECTIONS ACTIVE
                   </span>
                 </div>
@@ -270,7 +270,7 @@ export default function PublishItineraryModal({
               <div>
                 <h4 style={styles.sectionHeading}>2. PRIVACY & SAFETY FILTERS</h4>
                 <div style={styles.toggleGrid}>
-                  <label style={{ ...styles.toggleRow, borderColor: '#10B981' }}>
+                  <label style={{ ...styles.toggleRow, borderColor: 'var(--pz-ok)' }}>
                     <input
                       type="checkbox"
                       checked={settings.hideHomeStart}
@@ -278,7 +278,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={{ ...styles.toggleTitle, color: '#10B981' }}>
+                      <div style={{ ...styles.toggleTitle, color: 'var(--pz-ok)' }}>
                         Hide Home / Starting Address
                       </div>
                       <div style={styles.toggleDesc}>
@@ -309,7 +309,7 @@ export default function PublishItineraryModal({
                     <h4 style={{ ...styles.sectionHeading, margin: 0 }}>
                       3. STOP PRIVACY (CLICK TO HIDE INDIVIDUAL STOPS)
                     </h4>
-                    <span style={{ fontSize: 11, color: '#9D9C9A' }}>
+                    <span style={{ fontSize: 11, color: 'var(--pz-muted)' }}>
                       {hiddenCount > 0 ? `${hiddenCount} stops hidden` : 'All stops visible'}
                     </span>
                   </div>
@@ -328,7 +328,7 @@ export default function PublishItineraryModal({
                           style={{
                             ...styles.stopItemRow,
                             opacity: isHidden ? 0.6 : 1,
-                            borderColor: isHidden ? '#EF4444' : '#2A2E35',
+                            borderColor: isHidden ? 'var(--pz-bad)' : 'var(--pz-line)',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
@@ -340,7 +340,7 @@ export default function PublishItineraryModal({
                                 Day {stop.day_number || 1} · {stop.place}
                               </div>
                               {stop.description && (
-                                <div style={{ fontSize: 11, color: '#9D9C9A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <div style={{ fontSize: 11, color: 'var(--pz-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {stop.description}
                                 </div>
                               )}
@@ -371,7 +371,7 @@ export default function PublishItineraryModal({
                   placeholder="e.g. TWISTY, 3-5 DAYS, GHATS, SCENIC, COASTAL"
                   style={styles.textInput}
                 />
-                <div style={{ fontSize: 11, color: '#9D9C9A', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'var(--pz-muted)', marginTop: 4 }}>
                   Tags help other riders filter by riding style and terrain in Discover.
                 </div>
               </div>
@@ -393,7 +393,7 @@ export default function PublishItineraryModal({
                     <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>
                       {trip.title}
                     </h3>
-                    <div style={{ fontSize: 12, color: '#F0C23A', fontWeight: 700, marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: 'var(--pz-warn)', fontWeight: 700, marginTop: 4 }}>
                       by {user?.fullName || 'You'} · New Release · 5.0 rating
                     </div>
                   </div>
@@ -417,7 +417,7 @@ export default function PublishItineraryModal({
 
                 {/* Stops breakdown */}
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase', marginBottom: 8 }}>
                     Published Stops ({previewStops.length})
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto' }}>
@@ -429,7 +429,7 @@ export default function PublishItineraryModal({
                             {s.place}
                           </div>
                           {s.description && (
-                            <div style={{ fontSize: 11, color: '#9D9C9A' }}>{s.description}</div>
+                            <div style={{ fontSize: 11, color: 'var(--pz-muted)' }}>{s.description}</div>
                           )}
                         </div>
                         <span style={styles.previewStopType}>{s.item_type || 'stop'}</span>
@@ -441,7 +441,7 @@ export default function PublishItineraryModal({
                 {/* Source attribution preview */}
                 <div style={styles.previewAttributionNotice}>
                   <span>When riders tap <strong>"Copy to my trips"</strong>, they get an editable draft that credits you as the original source:</span>
-                  <div style={{ marginTop: 4, fontStyle: 'italic', color: '#F0C23A' }}>
+                  <div style={{ marginTop: 4, fontStyle: 'italic', color: 'var(--pz-warn)' }}>
                     "Forked from @{user?.fullName || 'You'} ({trip.title})"
                   </div>
                 </div>
@@ -507,8 +507,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
   },
   modal: {
-    backgroundColor: '#1B1E23',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 20,
     width: '100%',
     maxWidth: 620,
@@ -523,7 +523,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     padding: '20px 24px 14px',
-    borderBottom: '1px solid #2A2E35',
+    borderBottom: '1px solid var(--pz-line)',
   },
   title: {
     margin: 0,
@@ -535,7 +535,7 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     margin: '4px 0 0',
     fontSize: 12,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   liveBadge: {
     fontSize: 10,
@@ -543,30 +543,30 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
     padding: '2px 8px',
     borderRadius: 6,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    border: '1px solid #10B981',
-    color: '#10B981',
+    backgroundColor: 'var(--pz-ok-bg)',
+    border: '1px solid var(--pz-ok)',
+    color: 'var(--pz-ok)',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 18,
     cursor: 'pointer',
     padding: 4,
   },
   tabBar: {
     display: 'flex',
-    borderBottom: '1px solid #2A2E35',
-    backgroundColor: '#111316',
+    borderBottom: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-bg)',
   },
   tabActive: {
     flex: 1,
     padding: '12px 16px',
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     border: 'none',
-    borderBottom: '2.5px solid #F0C23A',
-    color: '#F0C23A',
+    borderBottom: '2.5px solid var(--pz-accent)',
+    color: 'var(--pz-warn)',
     fontWeight: 800,
     fontSize: 13,
     cursor: 'pointer',
@@ -577,7 +577,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '12px 16px',
     backgroundColor: 'transparent',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontWeight: 700,
     fontSize: 13,
     cursor: 'pointer',
@@ -589,8 +589,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '18px 24px',
   },
   privacyShieldCard: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    border: '1.5px solid rgba(16, 185, 129, 0.4)',
+    backgroundColor: 'var(--pz-ok-bg)',
+    border: '1.5px solid var(--pz-ok-bg)',
     borderRadius: 14,
     padding: '12px 16px',
   },
@@ -598,7 +598,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 900,
     letterSpacing: 1.2,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     textTransform: 'uppercase',
     margin: '0 0 10px',
   },
@@ -611,8 +611,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 12,
     padding: '10px 14px',
     cursor: 'pointer',
@@ -620,7 +620,7 @@ const styles: Record<string, React.CSSProperties> = {
   checkbox: {
     width: 18,
     height: 18,
-    accentColor: '#F0C23A',
+    accentColor: 'var(--pz-accent)',
     cursor: 'pointer',
   },
   toggleTitle: {
@@ -630,7 +630,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   toggleDesc: {
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     marginTop: 2,
   },
   stopsList: {
@@ -639,8 +639,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
     maxHeight: 180,
     overflowY: 'auto',
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 12,
     padding: 8,
   },
@@ -649,8 +649,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    backgroundColor: '#1B1E23',
-    border: '1px solid #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 8,
     padding: '8px 12px',
     cursor: 'pointer',
@@ -659,16 +659,16 @@ const styles: Record<string, React.CSSProperties> = {
   publicPill: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    color: 'var(--pz-ok)',
+    backgroundColor: 'var(--pz-ok-bg)',
     padding: '2px 8px',
     borderRadius: 6,
   },
   hiddenPill: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#EF4444',
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    color: 'var(--pz-bad)',
+    backgroundColor: 'var(--pz-bad-bg)',
     padding: '2px 8px',
     borderRadius: 6,
   },
@@ -676,8 +676,8 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '11px 14px',
     borderRadius: 10,
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#111316',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-bg)',
     color: 'var(--text-primary)',
     fontSize: 13,
     outline: 'none',
@@ -686,16 +686,16 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(240, 194, 58, 0.1)',
-    border: '1px solid rgba(240, 194, 58, 0.3)',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1px solid var(--pz-warn-bg)',
     borderRadius: 10,
     padding: '10px 14px',
     fontSize: 12,
     color: 'var(--text-primary)',
   },
   previewCard: {
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 16,
     padding: 16,
   },
@@ -705,26 +705,26 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
     padding: '3px 8px',
     borderRadius: 6,
-    backgroundColor: 'rgba(240, 194, 58, 0.15)',
-    color: '#F0C23A',
-    border: '1px solid #F0C23A',
+    backgroundColor: 'var(--pz-warn-bg)',
+    color: 'var(--pz-warn)',
+    border: '1px solid var(--pz-accent)',
   },
   chipTag: {
     fontSize: 10,
     fontWeight: 800,
     padding: '2px 8px',
     borderRadius: 6,
-    backgroundColor: '#1B1E23',
-    border: '1px solid #2A2E35',
-    color: '#9D9C9A',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
+    color: 'var(--pz-muted)',
   },
   sanitizedSummaryBar: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
     fontSize: 11,
-    color: '#10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--pz-ok)',
+    backgroundColor: 'var(--pz-ok-bg)',
     padding: '6px 10px',
     borderRadius: 8,
     marginTop: 12,
@@ -733,17 +733,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     padding: '8px 10px',
     borderRadius: 8,
-    border: '1px solid #2A2E35',
+    border: '1px solid var(--pz-line)',
   },
   previewStopNumber: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#2A2E35',
-    color: '#F0C23A',
+    backgroundColor: 'var(--pz-line)',
+    color: 'var(--pz-warn)',
     fontSize: 11,
     fontWeight: 900,
     display: 'flex',
@@ -753,8 +753,8 @@ const styles: Record<string, React.CSSProperties> = {
   previewStopType: {
     fontSize: 10,
     fontWeight: 800,
-    color: '#9D9C9A',
-    backgroundColor: '#111316',
+    color: 'var(--pz-muted)',
+    backgroundColor: 'var(--pz-bg)',
     padding: '2px 6px',
     borderRadius: 4,
     textTransform: 'uppercase',
@@ -763,33 +763,33 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 16,
     padding: '10px 12px',
     borderRadius: 10,
-    backgroundColor: '#1B1E23',
-    border: '1px dashed #2A2E35',
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px dashed var(--pz-line)',
     fontSize: 11,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     lineHeight: 1.4,
   },
   footer: {
     display: 'flex',
     alignItems: 'center',
     padding: '16px 24px max(16px, env(safe-area-inset-bottom, 16px))',
-    borderTop: '1px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    borderTop: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
   },
   btnUnpublish: {
     padding: '9px 14px',
     backgroundColor: 'transparent',
-    border: '1.5px solid #EF4444',
+    border: '1.5px solid var(--pz-bad)',
     borderRadius: 10,
-    color: '#EF4444',
+    color: 'var(--pz-bad)',
     fontSize: 12,
     fontWeight: 800,
     cursor: 'pointer',
   },
   btnCancel: {
     padding: '9px 16px',
-    backgroundColor: '#111316',
-    border: '1.5px solid #2A2E35',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-line)',
     borderRadius: 10,
     color: 'var(--text-primary)',
     fontSize: 13,
@@ -798,10 +798,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnPreview: {
     padding: '9px 18px',
-    backgroundColor: '#111316',
-    border: '1.5px solid #F0C23A',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-accent)',
     borderRadius: 10,
-    color: '#F0C23A',
+    color: 'var(--pz-warn)',
     fontSize: 13,
     fontWeight: 800,
     cursor: 'pointer',
@@ -811,10 +811,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnPublishPrimary: {
     padding: '9px 20px',
-    backgroundColor: '#F0C23A',
+    backgroundColor: 'var(--pz-accent)',
     border: 'none',
     borderRadius: 10,
-    color: '#111316',
+    color: 'var(--pz-on-accent)',
     fontSize: 13,
     fontWeight: 900,
     cursor: 'pointer',
