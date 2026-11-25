@@ -8,8 +8,13 @@ export interface PipRiderData {
   isCaptain?: boolean;
   isMe?: boolean;
   isLive?: boolean;
+  isStale?: boolean;
+  staleAgeLabel?: string;
   distanceKm?: number;
   progressPercent?: number;
+  distanceAlongMeters?: number;
+  relativePosition?: 'ahead' | 'behind' | 'you';
+  relativeDistanceMeters?: number;
 }
 
 export interface PictureInPictureHudProps {
@@ -24,6 +29,12 @@ export interface PictureInPictureHudProps {
   tripTitle?: string;
   renderTrigger?: (props: { isPipActive: boolean; togglePip: () => void; isSupported: boolean }) => React.ReactNode;
   onPipStateChange?: (active: boolean) => void;
+}
+
+function formatDist(meters?: number): string {
+  if (meters == null || isNaN(meters)) return '--';
+  if (meters < 1000) return `${Math.round(meters)}m`;
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
@@ -81,7 +92,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     setIsSupported(hasVideoPip || hasDocPip);
   }, []);
 
-  // 60 FPS Canvas Drawing Engine
+  // 60 FPS Canvas Drawing Engine with Relative Ahead / Behind Positions
   const drawFrame = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, time: number) => {
     const {
       pinnedStop: stop,
@@ -95,134 +106,222 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       tripTitle: title,
     } = stateRef.current;
 
-    // Background: Deep Obsidian with subtle corner vignette
-    ctx.fillStyle = '#0F1216';
+    // Background: Deep Obsidian
+    ctx.fillStyle = '#0B0D11';
     ctx.fillRect(0, 0, width, height);
 
-    // Subtle Outer Glow Border
-    ctx.lineWidth = 3;
+    // Outer Glow Border
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = sos ? '#EF4444' : '#F0C23A';
     ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
 
-    // --- TOP BAR: Status, Speedometer, Clock ---
-    // 1. Live Indicator with 60 FPS Pulse
+    // --- 1. TOP BAR: Live Status, Speedometer, Clock (0 - 44px) ---
     const pulse = (Math.sin(time / 180) + 1) / 2;
     const liveRiders = riderList.filter((r) => r.isLive !== false).length;
     const greenRadius = 4 + pulse * 2;
 
+    // Live beacon
     ctx.fillStyle = '#10B981';
     ctx.beginPath();
-    ctx.arc(22, 26, greenRadius, 0, Math.PI * 2);
+    ctx.arc(20, 24, greenRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#10B981';
-    ctx.fillText(`${liveRiders} LIVE`, 34, 30);
+    ctx.fillText(`${liveRiders} LIVE`, 32, 28);
 
-    // 2. Speed Gauge Readout (Center)
+    // Speedometer (Center)
     const roundedSpeed = Math.round(speed || 0);
     ctx.textAlign = 'center';
-    ctx.font = '900 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '900 30px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(`${roundedSpeed}`, width / 2 - 16, 36);
+    ctx.fillText(`${roundedSpeed}`, width / 2 - 16, 32);
 
-    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#F0C23A';
-    ctx.fillText('KM/H', width / 2 + 28, 36);
+    ctx.fillText('KM/H', width / 2 + 26, 32);
 
-    // 3. Digital Clock (Right)
+    // Digital Clock (Right)
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     ctx.textAlign = 'right';
-    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#9D9C9A';
-    ctx.fillText(timeStr, width - 18, 30);
+    ctx.fillText(timeStr, width - 16, 27);
 
-    // Divider Line
+    // Divider
     ctx.lineWidth = 1;
-    ctx.strokeStyle = '#22262E';
+    ctx.strokeStyle = '#1E232B';
     ctx.beginPath();
-    ctx.moveTo(14, 48);
-    ctx.lineTo(width - 14, 48);
+    ctx.moveTo(12, 44);
+    ctx.lineTo(width - 12, 44);
     ctx.stroke();
 
-    // --- MIDDLE SECTION: Convoy Spacing & Micro Rail ---
+    // --- 2. FELLOW RIDERS IN FRONT (▲ AHEAD) (48 - 104px) ---
+    const ridersAhead = riderList
+      .filter((r) => !r.isMe && (r.relativePosition === 'ahead' || ((r.relativeDistanceMeters ?? 0) > 0 && r.relativePosition !== 'behind')))
+      .sort((a, b) => (a.relativeDistanceMeters ?? 0) - (b.relativeDistanceMeters ?? 0));
+
+    ctx.fillStyle = '#141820';
+    ctx.strokeStyle = '#222834';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(12, 48, width - 24, 56, 8);
+    ctx.fill();
+    ctx.stroke();
+
     ctx.textAlign = 'left';
+    ctx.font = '900 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#10B981';
+    ctx.fillText(`▲ IN FRONT OF YOU (${ridersAhead.length})`, 22, 64);
 
-    // Captain spacing info
-    const captain = riderList.find((r) => r.isCaptain);
-    const me = riderList.find((r) => r.isMe);
-    let leadText = '👑 Captain: Convoy Lead';
-    if (me?.isCaptain) {
-      leadText = '👑 You are Captain';
-    } else if (captain) {
-      const capDist = captain.distanceKm != null ? `${(captain.distanceKm * 1000).toFixed(0)}m` : 'ahead';
-      leadText = `👑 ${captain.userName}: +${capDist} ▲`;
-    }
-
-    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#F0C23A';
-    ctx.fillText(leadText, 18, 70);
-
-    // Tail / Lagging Rider status
-    const tailRider = riderList.slice().sort((a, b) => (a.progressPercent ?? 0) - (b.progressPercent ?? 0))[0];
-    ctx.textAlign = 'right';
-    if (tailRider && !tailRider.isMe && (tailRider.progressPercent ?? 100) < (me?.progressPercent ?? 0) - 5) {
-      ctx.fillStyle = '#EF4444';
-      ctx.fillText(`⚠️ ${tailRider.userName}: lagging ▼`, width - 18, 70);
+    if (ridersAhead.length === 0) {
+      ctx.font = '600 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#F0C23A';
+      ctx.fillText('👑 You are in the lead · No fellow riders ahead', 22, 86);
     } else {
+      const first = ridersAhead[0];
+      const second = ridersAhead[1];
+
+      // First rider ahead
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#FFFFFF';
+      const capTag1 = first.isCaptain ? '👑 ' : '';
+      const name1 = first.userName.length > 10 ? `${first.userName.slice(0, 9)}…` : first.userName;
+      ctx.fillText(`${capTag1}${name1}:`, 22, 86);
+
+      ctx.font = '900 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#10B981';
-      ctx.fillText('✓ Convoy Tight', width - 18, 70);
+      ctx.fillText(`${formatDist(first.relativeDistanceMeters)} ▲`, 116, 86);
+
+      if (first.speedKmh != null && first.speedKmh > 0) {
+        ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#9D9C9A';
+        ctx.fillText(`(${Math.round(first.speedKmh)} km/h)`, 180, 86);
+      }
+
+      // Second rider ahead (if exists)
+      if (second) {
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        const capTag2 = second.isCaptain ? '👑 ' : '';
+        const name2 = second.userName.length > 8 ? `${second.userName.slice(0, 7)}…` : second.userName;
+        ctx.fillText(`${capTag2}${name2}: `, width - 85, 86);
+
+        ctx.font = '900 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#10B981';
+        ctx.fillText(`${formatDist(second.relativeDistanceMeters)} ▲`, width - 22, 86);
+      }
     }
 
-    // --- MICRO CONVOY RAIL (Horizontal animated track) ---
-    const railY = 100;
+    // --- 3. FELLOW RIDERS BEHIND (▼ BEHIND) (108 - 164px) ---
+    const ridersBehind = riderList
+      .filter((r) => !r.isMe && (r.relativePosition === 'behind' || ((r.relativeDistanceMeters ?? 0) < 0)))
+      .sort((a, b) => (a.relativeDistanceMeters ?? 0) - (b.relativeDistanceMeters ?? 0));
+
+    ctx.fillStyle = '#141820';
+    ctx.strokeStyle = '#222834';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(12, 108, width - 24, 56, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.font = '900 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#F59E0B';
+    ctx.fillText(`▼ BEHIND YOU (${ridersBehind.length})`, 22, 124);
+
+    if (ridersBehind.length === 0) {
+      ctx.font = '600 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#9D9C9A';
+      ctx.fillText('🏁 You are at the tail · No fellow riders behind', 22, 146);
+    } else {
+      const first = ridersBehind[0];
+      const second = ridersBehind[1];
+
+      // First rider behind
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#FFFFFF';
+      const isFirstLagging = (first.relativeDistanceMeters ?? 0) > 1200;
+      const warnTag1 = isFirstLagging ? '⚠️ ' : '';
+      const name1 = first.userName.length > 10 ? `${first.userName.slice(0, 9)}…` : first.userName;
+      ctx.fillText(`${warnTag1}${name1}:`, 22, 146);
+
+      ctx.font = '900 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = isFirstLagging ? '#EF4444' : '#F59E0B';
+      ctx.fillText(`${formatDist(first.relativeDistanceMeters)} ▼`, 116, 146);
+
+      if (first.speedKmh != null && first.speedKmh > 0) {
+        ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#9D9C9A';
+        ctx.fillText(`(${Math.round(first.speedKmh)} km/h)`, 180, 146);
+      }
+
+      // Second rider behind (if exists)
+      if (second) {
+        ctx.textAlign = 'right';
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#FFFFFF';
+        const isSecondLagging = (second.relativeDistanceMeters ?? 0) > 1200;
+        const warnTag2 = isSecondLagging ? '⚠️ ' : '';
+        const name2 = second.userName.length > 8 ? `${second.userName.slice(0, 7)}…` : second.userName;
+        ctx.fillText(`${warnTag2}${name2}: `, width - 85, 146);
+
+        ctx.font = '900 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = isSecondLagging ? '#EF4444' : '#F59E0B';
+        ctx.fillText(`${formatDist(second.relativeDistanceMeters)} ▼`, width - 22, 146);
+      }
+    }
+
+    // --- 4. CONVOY RADAR RAIL (168 - 198px) ---
+    const railY = 184;
     const railLeft = 24;
     const railRight = width - 24;
     const railWidth = railRight - railLeft;
 
-    // Track background
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#1F242D';
+    // Track rail background
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = '#1E2430';
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(railLeft, railY);
     ctx.lineTo(railRight, railY);
     ctx.stroke();
 
-    // Active progress line
-    const avgProgress = riderList.length > 0
-      ? riderList.reduce((acc, r) => acc + (r.progressPercent ?? 30), 0) / riderList.length
-      : 40;
-    const activeFillX = railLeft + (railWidth * Math.min(100, Math.max(5, avgProgress))) / 100;
-
-    ctx.strokeStyle = '#F0C23A';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(railLeft, railY);
-    ctx.lineTo(activeFillX, railY);
-    ctx.stroke();
-
-    // Rider Pips along rail
+    // Rider Pips along rail with YOU highlighted
     riderList.forEach((r, idx) => {
       const pct = Math.min(95, Math.max(5, r.progressPercent ?? (25 + idx * 15)));
       const pipX = railLeft + (railWidth * pct) / 100;
 
-      // Glow ring for current user
       if (r.isMe) {
-        ctx.fillStyle = 'rgba(240, 194, 58, 0.4)';
+        // Pulsing glow for YOU
+        ctx.fillStyle = 'rgba(240, 194, 58, 0.35)';
         ctx.beginPath();
-        ctx.arc(pipX, railY, 8, 0, Math.PI * 2);
+        ctx.arc(pipX, railY, 8 + pulse * 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#F0C23A';
+        ctx.beginPath();
+        ctx.arc(pipX, railY, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // "YOU" Label
+        ctx.textAlign = 'center';
+        ctx.font = '900 9px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = '#F0C23A';
+        ctx.fillText('YOU', pipX, railY - 10);
+      } else {
+        ctx.fillStyle = r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? '#10B981' : '#3B82F6';
+        ctx.beginPath();
+        ctx.arc(pipX, railY, 4, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      ctx.fillStyle = r.isCaptain ? '#F0C23A' : r.isMe ? '#10B981' : '#3B82F6';
-      ctx.beginPath();
-      ctx.arc(pipX, railY, r.isMe ? 5 : 4, 0, Math.PI * 2);
-      ctx.fill();
     });
 
-    // --- BOTTOM SECTION: Next Pinned Stop or Emergency Alert ---
+    // --- 5. BOTTOM SECTION: Next Stop or Urgent Alert (202 - 258px) ---
     ctx.textAlign = 'left';
 
     if (sos) {
@@ -232,81 +331,81 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.strokeStyle = '#EF4444';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(14, 126, width - 28, 68, 12);
+      ctx.roundRect(12, 202, width - 24, 56, 8);
       ctx.fill();
       ctx.stroke();
 
-      ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '900 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#EF4444';
-      ctx.fillText('🚨 SOS ALERT — RIDER NEEDS HELP!', 28, 154);
+      ctx.fillText('🚨 SOS ALERT — RIDER NEEDS HELP!', 22, 224);
 
-      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText('Check group map immediately', 28, 176);
+      ctx.fillText('Fellow rider reported emergency on road', 22, 244);
     } else if (announcement) {
       // 📢 Captain Announcement Banner
       ctx.fillStyle = 'rgba(240, 194, 58, 0.15)';
       ctx.strokeStyle = '#F0C23A';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.roundRect(14, 126, width - 28, 68, 12);
+      ctx.roundRect(12, 202, width - 24, 56, 8);
       ctx.fill();
       ctx.stroke();
 
-      ctx.font = '900 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#F0C23A';
-      ctx.fillText(`📢 CAPTAIN: ${announcement.message.slice(0, 36)}`, 26, 154);
+      ctx.fillText(`📢 CAPTAIN: ${announcement.message.slice(0, 38)}`, 22, 224);
 
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#9D9C9A';
-      ctx.fillText(title || 'Payanam Convoy', 26, 176);
+      ctx.fillText(title || 'Payanam Convoy', 22, 244);
     } else if (stop) {
       // 📌 Next Pinned Stop Card
-      ctx.fillStyle = '#171A20';
-      ctx.strokeStyle = '#2A2E35';
+      ctx.fillStyle = '#141820';
+      ctx.strokeStyle = '#222834';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(14, 122, width - 28, 72, 12);
+      ctx.roundRect(12, 202, width - 24, 56, 8);
       ctx.fill();
       ctx.stroke();
 
       // Disc icon
       ctx.fillStyle = 'rgba(240, 194, 58, 0.2)';
       ctx.beginPath();
-      ctx.arc(36, 158, 16, 0, Math.PI * 2);
+      ctx.arc(32, 230, 14, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillText(stop.type === 'fuel' ? '⛽' : stop.type === 'food' ? '🍲' : '📌', 28, 164);
+      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillText(stop.type === 'fuel' ? '⛽' : stop.type === 'food' ? '🍲' : '📌', 25, 235);
 
       // Stop Name
-      ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '900 13.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#FFFFFF';
-      const stopName = stop.name.length > 22 ? `${stop.name.slice(0, 20)}…` : stop.name;
-      ctx.fillText(stopName, 60, 150);
+      const stopName = stop.name.length > 24 ? `${stop.name.slice(0, 22)}…` : stop.name;
+      ctx.fillText(stopName, 54, 224);
 
       // Distance & Arrival Counter
-      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#F0C23A';
       const distStr = stopDist != null ? `${stopDist.toFixed(1)} km away` : 'Next Target';
-      ctx.fillText(`${distStr} · ${arrived}/${Math.max(total, 1)} arrived`, 60, 172);
+      ctx.fillText(`${distStr} · ${arrived}/${Math.max(total, 1)} arrived`, 54, 244);
     } else {
       // No stop pinned placeholder
-      ctx.fillStyle = '#171A20';
-      ctx.strokeStyle = '#2A2E35';
+      ctx.fillStyle = '#141820';
+      ctx.strokeStyle = '#222834';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(14, 122, width - 28, 72, 12);
+      ctx.roundRect(12, 202, width - 24, 56, 8);
       ctx.fill();
       ctx.stroke();
 
-      ctx.font = 'bold 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText('No target stop pinned', 28, 152);
+      ctx.fillText('No target stop pinned', 24, 224);
 
-      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#9D9C9A';
-      ctx.fillText('Trip itinerary active · Stay safe on road', 28, 174);
+      ctx.fillText('Convoy synchronized · Stay safe on road', 24, 244);
     }
   }, []);
 
@@ -341,7 +440,6 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     if (!canvas || !video) return;
 
     try {
-      // If PiP is currently active, exit it
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
         setIsPipActive(false);
@@ -349,7 +447,6 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         return;
       }
 
-      // Initialize media stream from 60 FPS canvas if not ready
       if (!streamRef.current) {
         const stream = canvas.captureStream(60);
         streamRef.current = stream;
@@ -391,11 +488,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
   return (
     <>
-      {/* Hidden Offscreen 60 FPS Canvas (480x210 for widescreen HUD) */}
+      {/* Hidden Offscreen 60 FPS Canvas (480x270 for native 16:9 widescreen HUD) */}
       <canvas
         ref={canvasRef}
         width={480}
-        height={210}
+        height={270}
         style={{
           position: 'fixed',
           top: -9999,

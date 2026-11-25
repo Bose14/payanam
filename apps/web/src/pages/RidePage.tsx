@@ -1721,20 +1721,6 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
-  // 60 FPS Picture-in-Picture Telemetry Dataset
-  const pipRiders: PipRiderData[] = useMemo(() => {
-    return ridersWithFreshness.map((r) => ({
-      userId: r.userId,
-      userName: r.userName,
-      speedKmh: r.speedKmh,
-      isCaptain: r.isCaptain,
-      isMe: r.isMe,
-      isLive: r.freshness.isLive,
-      distanceKm: r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) : undefined,
-      progressPercent: ridersForProgressStrip.find((rp) => rp.userId === r.userId)?.progressPercent ?? 30,
-    }));
-  }, [ridersWithFreshness, myLat, myLng, ridersForProgressStrip]);
-
   // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop)
   const distToPinnedStop = useMemo(() => {
     if (!pinnedStop || !myLat || !myLng) return null;
@@ -1760,6 +1746,57 @@ export default function RidePage() {
     const prog = calculateRouteProgress([myLat, myLng], activeRoute, totalRouteDist);
     return prog.distanceAlongMeters;
   }, [myLat, myLng, activeRoute, totalRouteDist]);
+
+  // 60 FPS Picture-in-Picture Telemetry Dataset with Fellow Riders Relative Positions (Ahead / Behind)
+  const pipRiders: PipRiderData[] = useMemo(() => {
+    const myDistM = myRouteProgressMeters ?? 0;
+
+    return ridersWithFreshness.map((r) => {
+      const isMe = r.isMe || r.userId === user?.id;
+      const progressInfo = ridersForProgressStrip.find((rp) => rp.userId === r.userId);
+      const directDistM = r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) * 1000 : 0;
+
+      let relativePosition: 'ahead' | 'behind' | 'you' = 'you';
+      let relativeDistanceMeters = 0;
+
+      if (!isMe) {
+        if (myRouteProgressMeters != null && progressInfo?.distanceAlongMeters != null) {
+          const delta = progressInfo.distanceAlongMeters - myDistM;
+          if (delta > 15) {
+            relativePosition = 'ahead';
+            relativeDistanceMeters = Math.round(delta);
+          } else if (delta < -15) {
+            relativePosition = 'behind';
+            relativeDistanceMeters = Math.round(Math.abs(delta));
+          } else {
+            relativePosition = 'ahead';
+            relativeDistanceMeters = Math.max(1, Math.round(directDistM));
+          }
+        } else {
+          const myProg = ridersForProgressStrip.find((rp) => rp.isMe)?.progressPercent ?? 50;
+          const riderProg = progressInfo?.progressPercent ?? 50;
+          relativePosition = riderProg >= myProg ? 'ahead' : 'behind';
+          relativeDistanceMeters = Math.max(1, Math.round(directDistM));
+        }
+      }
+
+      return {
+        userId: r.userId,
+        userName: r.userName,
+        speedKmh: r.speedKmh,
+        isCaptain: r.isCaptain,
+        isMe,
+        isLive: r.freshness.isLive,
+        isStale: r.freshness.isStale || r.freshness.isUnknown,
+        staleAgeLabel: r.freshness.ageLabel,
+        distanceKm: r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) : undefined,
+        progressPercent: progressInfo?.progressPercent ?? 30,
+        distanceAlongMeters: progressInfo?.distanceAlongMeters,
+        relativePosition,
+        relativeDistanceMeters,
+      };
+    });
+  }, [ridersWithFreshness, myLat, myLng, user?.id, myRouteProgressMeters, ridersForProgressStrip]);
 
   // Format riders for StopDetailSheet (Feature J arrival status)
   const ridersForStopDetail = useMemo(() => {
