@@ -135,7 +135,7 @@ export default function DiscoverTab({
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)' }}>
                 Have a great route? Publish your itinerary!
               </div>
-              <div style={{ fontSize: 11, color: '#9D9C9A' }}>
+              <div style={{ fontSize: 11, color: 'var(--pz-muted)' }}>
                 Share with safety shields (home addresses automatically masked)
               </div>
             </div>
@@ -151,10 +151,10 @@ export default function DiscoverTab({
 
       {/* Results Header */}
       <div style={styles.resultsHeader}>
-        <span style={{ fontSize: 12, fontWeight: 800, color: '#9D9C9A', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--pz-muted)', textTransform: 'uppercase' }}>
           Discover Routes ({filteredTrips.length})
         </span>
-        <span style={{ fontSize: 11, color: '#F0C23A' }}>
+        <span style={{ fontSize: 11, color: 'var(--pz-warn)' }}>
           Community Verified
         </span>
       </div>
@@ -167,7 +167,7 @@ export default function DiscoverTab({
             <p style={{ fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 4px', fontSize: 15 }}>
               No itineraries found for "{searchQuery}"
             </p>
-            <p style={{ color: '#9D9C9A', fontSize: 13, margin: 0 }}>
+            <p style={{ color: 'var(--pz-muted)', fontSize: 13, margin: 0 }}>
               Try searching for popular touring hubs like <strong>Bengaluru</strong>, <strong>Coorg</strong>, <strong>Kasaragod</strong>, or <strong>Goa</strong>.
             </p>
             <button
@@ -208,7 +208,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    backgroundColor: '#111316',
+    backgroundColor: 'var(--pz-bg)',
     padding: '12px 16px',
     position: 'relative',
   },
@@ -217,8 +217,8 @@ const styles: Record<string, React.CSSProperties> = {
     top: 14,
     left: '50%',
     transform: 'translateX(-50%)',
-    backgroundColor: '#10B981',
-    color: '#111316',
+    backgroundColor: 'var(--pz-ok)',
+    color: 'var(--pz-on-accent)',
     padding: '8px 16px',
     borderRadius: 12,
     fontWeight: 900,
@@ -238,14 +238,14 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'absolute',
     left: 14,
     fontSize: 14,
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
   },
   searchInput: {
     width: '100%',
     padding: '12px 38px 12px 38px',
     borderRadius: 16,
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
     color: 'var(--text-primary)',
     fontSize: 14,
     fontWeight: 600,
@@ -256,7 +256,7 @@ const styles: Record<string, React.CSSProperties> = {
     right: 12,
     background: 'none',
     border: 'none',
-    color: '#9D9C9A',
+    color: 'var(--pz-muted)',
     fontSize: 14,
     cursor: 'pointer',
     padding: 4,
@@ -271,9 +271,9 @@ const styles: Record<string, React.CSSProperties> = {
   chipActive: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#10B981',
-    border: '1.5px solid #10B981',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--pz-ok)',
+    border: '1.5px solid var(--pz-ok)',
+    backgroundColor: 'var(--pz-ok-bg)',
     padding: '5px 12px',
     borderRadius: 8,
     cursor: 'pointer',
@@ -282,9 +282,9 @@ const styles: Record<string, React.CSSProperties> = {
   chipInactive: {
     fontSize: 11,
     fontWeight: 800,
-    color: '#9D9C9A',
-    border: '1.5px solid #2A2E35',
-    backgroundColor: '#1B1E23',
+    color: 'var(--pz-muted)',
+    border: '1.5px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-surface)',
     padding: '5px 12px',
     borderRadius: 8,
     cursor: 'pointer',
@@ -294,8 +294,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(240, 194, 58, 0.08)',
-    border: '1.5px dashed rgba(240, 194, 58, 0.4)',
+    backgroundColor: 'var(--pz-warn-bg)',
+    border: '1.5px dashed var(--pz-accent)',
     borderRadius: 14,
     padding: '10px 14px',
     marginBottom: 14,
@@ -303,8 +303,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   btnPublishCta: {
     padding: '7px 14px',
-    backgroundColor: '#F0C23A',
-    color: '#111316',
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     border: 'none',
     borderRadius: 8,
     fontSize: 12,
@@ -329,16 +329,16 @@ const styles: Record<string, React.CSSProperties> = {
   emptyState: {
     textAlign: 'center',
     padding: '40px 20px',
-    backgroundColor: '#1B1E23',
+    backgroundColor: 'var(--pz-surface)',
     borderRadius: 16,
-    border: '1.5px dashed #2A2E35',
+    border: '1.5px dashed var(--pz-line)',
   },
   btnResetSearch: {
     marginTop: 16,
     padding: '8px 16px',
-    backgroundColor: '#111316',
-    border: '1.5px solid #F0C23A',
-    color: '#F0C23A',
+    backgroundColor: 'var(--pz-bg)',
+    border: '1.5px solid var(--pz-accent)',
+    color: 'var(--pz-warn)',
     borderRadius: 8,
     fontSize: 12,
     fontWeight: 800,
