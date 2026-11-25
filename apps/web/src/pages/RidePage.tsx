@@ -67,6 +67,8 @@ import {
   getCachedNearbyServices,
   makeServicePinIcon,
   TrackingPausedBanner,
+  PictureInPictureHud,
+  PipRiderData,
   backgroundTrackingEngine,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem, BackgroundTrackingStatus } from '../components';
@@ -1719,6 +1721,20 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
+  // 60 FPS Picture-in-Picture Telemetry Dataset
+  const pipRiders: PipRiderData[] = useMemo(() => {
+    return ridersWithFreshness.map((r) => ({
+      userId: r.userId,
+      userName: r.userName,
+      speedKmh: r.speedKmh,
+      isCaptain: r.isCaptain,
+      isMe: r.isMe,
+      isLive: r.freshness.isLive,
+      distanceKm: r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) : undefined,
+      progressPercent: ridersForProgressStrip.find((rp) => rp.userId === r.userId)?.progressPercent ?? 30,
+    }));
+  }, [ridersWithFreshness, myLat, myLng, ridersForProgressStrip]);
+
   // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop)
   const distToPinnedStop = useMemo(() => {
     if (!pinnedStop || !myLat || !myLng) return null;
@@ -2649,6 +2665,19 @@ export default function RidePage() {
                 <span>🛠️</span>
                 <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
               </button>
+
+              {/* 60 FPS Picture-in-Picture Convoy Floating HUD */}
+              <PictureInPictureHud
+                pinnedStop={pinnedStop}
+                distToPinnedStop={distToPinnedStop}
+                arrivedCount={arrivedCount}
+                totalRiders={ridersWithFreshness.length}
+                riders={pipRiders}
+                currentSpeedKmh={mySpeedKmh}
+                sosActive={sosActive}
+                activeAnnouncement={activeAnnouncement ? { message: activeAnnouncement.message, urgency: activeAnnouncement.urgency, icon: activeAnnouncement.icon } : null}
+                tripTitle={session?.trips?.title}
+              />
             </div>
 
             {/* Right Status Indicator */}

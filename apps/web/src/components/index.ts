@@ -45,6 +45,8 @@ export { default as ShareMilestoneModal } from './ShareMilestoneModal';
 export { default as TripCompletedBanner } from './TripCompletedBanner';
 export { default as AddNearbyServiceModal } from './AddNearbyServiceModal';
 export { default as TrackingPausedBanner } from './TrackingPausedBanner';
+export { default as PictureInPictureHud } from './PictureInPictureHud';
+export type { PipRiderData } from './PictureInPictureHud';
 export type { RouteProgressRider, RouteMilestoneStop } from './RouteProgressStrip';
 export * from '../utils/lastSeen';
 export * from '../utils/routeDeviation';
