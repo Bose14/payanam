@@ -343,6 +343,29 @@ export default function RidePage() {
     const t = new URLSearchParams(window.location.search).get('tab');
     return t === 'chat' || t === 'plan' || t === 'riders' || t === 'nav' || t === 'discover' || t === 'me' ? t : 'map';
   });
+  // Make the phone/browser back gesture behave like the header arrow: from any convoy tab
+  // it returns to the ride map instead of leaving the ride.
+  const tabEntryPushed = useRef(false);
+  useEffect(() => {
+    if (tab !== 'map' && !tabEntryPushed.current) {
+      window.history.pushState({ ...(window.history.state || {}), rideTab: true }, '');
+      tabEntryPushed.current = true;
+    } else if (tab === 'map' && tabEntryPushed.current) {
+      tabEntryPushed.current = false;
+      window.history.back();
+    }
+  }, [tab]);
+  useEffect(() => {
+    const onPop = () => {
+      if (tabEntryPushed.current) {
+        tabEntryPushed.current = false;
+        setTab('map');
+        setPlanSection('itinerary');
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [showStatusDrawer, setShowStatusDrawer] = useState(false);
   const [myStatus, setMyStatus] = useState('');
   const [sosActive, setSosActive] = useState(false);
@@ -2088,7 +2111,12 @@ export default function RidePage() {
         {/* Left: Clean Minimal Back Arrow + Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              // Inside a convoy tab (itinerary, roster, chat...) the arrow goes back to the ride
+              // map; it only leaves the ride from the map itself.
+              if (tab !== 'map') { setTab('map'); setPlanSection('itinerary'); return; }
+              navigate(-1);
+            }}
             style={{
               background: 'none',
               border: 'none',
@@ -2100,7 +2128,7 @@ export default function RidePage() {
               lineHeight: 1,
               flexShrink: 0,
             }}
-            title="Leave Ride Screen"
+            title={tab === 'map' ? 'Leave Ride Screen' : 'Back to ride map'}
           >
             ←
           </button>
