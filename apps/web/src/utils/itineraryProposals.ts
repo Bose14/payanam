@@ -51,22 +51,7 @@ export function getStoredProposals(tripId: string): ItineraryProposal[] {
     // ignore
   }
 
-  // Default demo proposal matching Mockup 7
-  return [
-    {
-      id: 'prop_demo_meera',
-      tripId,
-      proposerId: 'user_meera',
-      proposerName: 'Meera',
-      proposerInitials: 'MR',
-      title: 'Lunch at 13:30 instead',
-      description: 'Ghat section traffic delayed our average cruising speed by 15 min.',
-      targetStopPlace: 'Lunch, Udupi',
-      proposedTime: '13:30',
-      status: 'pending',
-      createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    },
-  ];
+  return [];
 }
 
 export function saveProposals(tripId: string, proposals: ItineraryProposal[]): void {
