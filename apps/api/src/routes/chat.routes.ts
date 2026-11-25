@@ -19,7 +19,13 @@ router.post('/messages/:messageId/stop-live', c.stopLive);
 
 router.post('/groups', c.createGroup);
 router.post('/groups/join', c.joinGroup);
+router.put('/rename', c.renameTrip);
 router.get('/groups/:id', c.getGroup);
+router.put('/groups/:id', c.updateGroup);
+router.post('/groups/:id/leave', c.leaveGroup);
+router.post('/groups/:id/reset-code', c.resetCode);
+router.put('/groups/:id/members/:userId/role', c.setRole);
+router.delete('/groups/:id/members/:userId', c.removeMember);
 router.put('/groups/:id/requests/:userId', c.respondGroup);
 
 export default router;

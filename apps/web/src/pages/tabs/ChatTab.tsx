@@ -72,8 +72,29 @@ function Bubble({ m }: { m: ChatMessage }) {
 /* ----------------------------- thread (trip / group / DM) ----------------------------- */
 
 function Thread({
-  conv, onBack, onOpenGroup,
-}: { conv: ChatConversation; onBack: () => void; onOpenGroup: (id: string) => void }) {
+  conv, onBack, onOpenGroup, onRenamed,
+}: { conv: ChatConversation; onBack: () => void; onOpenGroup: (id: string) => void; onRenamed: () => void }) {
+  const [title, setTitle] = useState(conv.title);
+  const [renaming, setRenaming] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [renameBusy, setRenameBusy] = useState(false);
+  useEffect(() => { setTitle(conv.title); }, [conv.title]);
+  const saveName = async () => {
+    const n = newName.trim();
+    if (n.length < 2) { setError('Name must be at least 2 characters.'); return; }
+    setRenameBusy(true);
+    setError('');
+    try {
+      const r = await chatService.renameTrip(conv.key, n);
+      setTitle(r.name);
+      setRenaming(false);
+      onRenamed();
+    } catch (e) {
+      setError(apiMessage(e, 'Could not rename the chat.'));
+    } finally {
+      setRenameBusy(false);
+    }
+  };
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [isLead, setIsLead] = useState(false);
   const [dm, setDm] = useState<{ sentUnreplied: number; blocked: boolean; limit: number } | undefined>();
@@ -177,9 +198,24 @@ function Thread({
       <div className="pz-row">
         <button className="pz-btn small" type="button" onClick={onBack} aria-label="Back to chats" title="Back to chats">←</button>
         <div className="pz-grow">
-          <b>{conv.title}</b>
+          {renaming ? (
+            <input className="pz-input" autoFocus value={newName} maxLength={100} aria-label="Chat name"
+              style={{ width: '100%', boxSizing: 'border-box' }}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setRenaming(false); }} />
+          ) : (
+            <b>{title}</b>
+          )}
           <div className="pz-note">{kind}</div>
         </div>
+        {conv.type === 'trip' && (renaming ? (
+          <>
+            <button className="pz-btn small primary" type="button" onClick={saveName} disabled={renameBusy}>{renameBusy ? 'Saving…' : 'Save'}</button>
+            <button className="pz-btn small" type="button" onClick={() => setRenaming(false)} disabled={renameBusy}>Cancel</button>
+          </>
+        ) : (
+          <button className="pz-btn small" type="button" onClick={() => { setNewName(title); setRenaming(true); }}>Rename</button>
+        ))}
         {conv.type === 'group' && (
           <button className="pz-btn small" type="button" onClick={() => onOpenGroup(conv.key.slice(6))}>Group page</button>
         )}
@@ -311,41 +347,116 @@ function GroupPage({ id, onBack }: { id: string; onBack: () => void }) {
   const [g, setG] = useState<ChatGroup | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [form, setForm] = useState({ name: '', description: '', region: '' });
+  const [busy, setBusy] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try { setG(await chatService.group(id)); } catch (e) { setError(apiMessage(e, 'Could not load the group.')); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
 
-  const answer = async (userId: string, action: 'accept' | 'decline') => {
+  const run = async (fn: () => Promise<unknown>, fallback: string) => {
     setError('');
-    try { await chatService.respondToGroupRequest(id, userId, action); await load(); }
-    catch (e) { setError(apiMessage(e, 'Could not update the request.')); }
+    setBusy(true);
+    try { await fn(); await load(); } catch (e) { setError(apiMessage(e, fallback)); } finally { setBusy(false); }
   };
+
+  const answer = (userId: string, action: 'accept' | 'decline') =>
+    run(() => chatService.respondToGroupRequest(id, userId, action), 'Could not update the request.');
 
   const copy = async () => {
     if (!g) return;
     try { await navigator.clipboard.writeText(g.inviteCode); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* shown on screen */ }
   };
 
+  const startEdit = () => {
+    if (!g) return;
+    setForm({ name: g.name, description: g.description, region: g.region });
+    setEdit(true);
+  };
+  const saveEdit = () => run(async () => { await chatService.updateGroup(id, form); setEdit(false); }, 'Could not save the changes.');
+
+  const toggle = (key: 'requireApproval' | 'membersCanEdit' | 'onlyAdminsPost', value: boolean) =>
+    run(() => chatService.updateGroup(id, { [key]: value }), 'Could not change the setting.');
+
+  const leave = async () => {
+    setBusy(true);
+    setError('');
+    try { await chatService.leaveGroup(id); window.location.assign('/chat'); }
+    catch (e) { setError(apiMessage(e, 'Could not leave the group.')); setBusy(false); }
+  };
+
+  const Switch = ({ label, hint, on, onChange }: { label: string; hint: string; on: boolean; onChange: (v: boolean) => void }) => (
+    <div className="pz-row-item" style={{ alignItems: 'center' }}>
+      <div className="pz-grow">
+        <b>{label}</b>
+        <div className="pz-note">{hint}</div>
+      </div>
+      <button type="button" role="switch" aria-checked={on} aria-label={label} disabled={busy} onClick={() => onChange(!on)}
+        style={{
+          width: 46, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', flexShrink: 0, position: 'relative',
+          background: on ? 'var(--pz-accent)' : 'var(--pz-line)', transition: 'background .15s',
+        }}>
+        <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 22, height: 22, borderRadius: 11, background: '#fff', transition: 'left .15s' }} />
+      </button>
+    </div>
+  );
+
   return (
     <>
-      <div className="pz-row"><button className="pz-btn small" type="button" onClick={onBack}>← Group chat</button></div>
+      <div className="pz-row"><button className="pz-btn small" type="button" onClick={onBack} aria-label="Back to group chat" title="Back to group chat">←</button></div>
       {error && <div className="pz-banner bad" role="alert" style={{ marginTop: 10 }}>{error}</div>}
       {g && (
         <>
-          <h1 className="pz-h1">{g.name}</h1>
-          <div className="pz-note" style={{ marginBottom: 12 }}>{g.members.length} {g.members.length === 1 ? 'member' : 'members'}</div>
-          <div className="pz-card">
+          {edit ? (
+            <div className="pz-card" style={{ marginTop: 12 }}>
+              <label className="pz-label" htmlFor="g-name">Group name</label>
+              <input id="g-name" className="pz-input" style={{ width: '100%', boxSizing: 'border-box' }} maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <label className="pz-label" htmlFor="g-region" style={{ marginTop: 10, display: 'block' }}>City or region</label>
+              <input id="g-region" className="pz-input" style={{ width: '100%', boxSizing: 'border-box' }} maxLength={80} placeholder="e.g. Coimbatore, Tamil Nadu" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} />
+              <label className="pz-label" htmlFor="g-desc" style={{ marginTop: 10, display: 'block' }}>About this group</label>
+              <textarea id="g-desc" className="pz-input" rows={3} style={{ width: '100%', boxSizing: 'border-box', font: 'inherit' }} maxLength={500}
+                placeholder="Who is it for, what rides do you do, any rules" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <div className="pz-row" style={{ marginTop: 12 }}>
+                <button className="pz-btn small primary" type="button" onClick={saveEdit} disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+                <button className="pz-btn small" type="button" onClick={() => setEdit(false)} disabled={busy}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="pz-row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
+                <div className="pz-grow">
+                  <h1 className="pz-h1" style={{ marginBottom: 2 }}>{g.name}</h1>
+                  <div className="pz-note">
+                    {g.members.length} {g.members.length === 1 ? 'member' : 'members'}{g.region ? `, ${g.region}` : ''}
+                  </div>
+                </div>
+                {g.canEdit && <button className="pz-btn small" type="button" onClick={startEdit}>Edit</button>}
+              </div>
+              {g.description && <p style={{ margin: '10px 0 4px' }}>{g.description}</p>}
+            </>
+          )}
+
+          <div className="pz-card" style={{ marginTop: 12 }}>
             <div className="pz-label">Invite</div>
             <div className="pz-row">
               <div className="pz-grow">
                 <div className="pz-h2">{g.inviteCode}</div>
-                <div className="pz-note">Members join with this code. The admin approves requests.</div>
+                <div className="pz-note">{g.requireApproval ? 'Members join with this code. An admin approves requests.' : 'Anyone with this code joins straight away.'}</div>
               </div>
               <button className="pz-btn small" type="button" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
             </div>
+            {g.isAdmin && (
+              <button className="pz-btn small" type="button" style={{ marginTop: 10 }} disabled={busy}
+                onClick={() => run(() => chatService.resetInviteCode(id), 'Could not make a new code.')}>
+                Make a new code
+              </button>
+            )}
           </div>
+
           {g.isAdmin && g.requests.length > 0 && (
             <div className="pz-card">
               <div className="pz-label">Join requests</div>
@@ -353,20 +464,61 @@ function GroupPage({ id, onBack }: { id: string; onBack: () => void }) {
                 <div className="pz-row-item" key={r.userId}>
                   <div className="pz-av" aria-hidden="true">{r.name.charAt(0)}</div>
                   <div className="pz-grow"><b>{r.name}</b><div className="pz-note">Wants to join</div></div>
-                  <button className="pz-btn small primary" type="button" onClick={() => answer(r.userId, 'accept')}>Accept</button>
-                  <button className="pz-btn small" type="button" onClick={() => answer(r.userId, 'decline')}>Decline</button>
+                  <button className="pz-btn small primary" type="button" onClick={() => answer(r.userId, 'accept')} disabled={busy}>Accept</button>
+                  <button className="pz-btn small" type="button" onClick={() => answer(r.userId, 'decline')} disabled={busy}>Decline</button>
                 </div>
               ))}
             </div>
           )}
+
+          {g.isAdmin && (
+            <div className="pz-card">
+              <div className="pz-label">Group settings</div>
+              <Switch label="Approve new members" hint="Off lets anyone with the code join straight away." on={g.requireApproval} onChange={(v) => toggle('requireApproval', v)} />
+              <Switch label="Members can edit group info" hint="Lets any member change the name, region and about text." on={g.membersCanEdit} onChange={(v) => toggle('membersCanEdit', v)} />
+              <Switch label="Only admins can post" hint="Good for announcements. Members can still read." on={g.onlyAdminsPost} onChange={(v) => toggle('onlyAdminsPost', v)} />
+            </div>
+          )}
+
           <div className="pz-card">
             <div className="pz-label">Members</div>
             {g.members.map((m) => (
-              <div className="pz-row-item" key={m.userId}>
+              <div className="pz-row-item" key={m.userId} style={{ flexWrap: 'wrap' }}>
                 <div className="pz-av" aria-hidden="true">{m.name.charAt(0)}</div>
                 <div className="pz-grow">{m.name}{m.you && <span className="pz-tag">You</span>}{m.role === 'admin' && <span className="pz-tag">Admin</span>}</div>
+                {g.isAdmin && !m.you && (
+                  removing === m.userId ? (
+                    <>
+                      <button className="pz-btn small" type="button" disabled={busy}
+                        onClick={() => { setRemoving(null); run(() => chatService.removeMember(id, m.userId), 'Could not remove the member.'); }}>Remove</button>
+                      <button className="pz-btn small" type="button" onClick={() => setRemoving(null)}>Keep</button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="pz-btn small" type="button" disabled={busy}
+                        onClick={() => run(() => chatService.setMemberRole(id, m.userId, m.role === 'admin' ? 'member' : 'admin'), 'Could not change the role.')}>
+                        {m.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                      </button>
+                      <button className="pz-btn small" type="button" onClick={() => setRemoving(m.userId)}>Remove</button>
+                    </>
+                  )
+                )}
               </div>
             ))}
+          </div>
+
+          <div className="pz-card">
+            {confirmLeave ? (
+              <>
+                <p style={{ margin: '0 0 10px' }}>Leave {g.name}? {g.isAdmin && g.members.filter((m) => m.role === 'admin').length <= 1 && g.members.length > 1 ? 'The longest-standing member becomes admin.' : ''}</p>
+                <div className="pz-row">
+                  <button className="pz-btn small primary" type="button" onClick={leave} disabled={busy}>Leave group</button>
+                  <button className="pz-btn small" type="button" onClick={() => setConfirmLeave(false)} disabled={busy}>Stay</button>
+                </div>
+              </>
+            ) : (
+              <button className="pz-btn block" type="button" onClick={() => setConfirmLeave(true)} style={{ color: 'var(--pz-bad)' }}>Leave group</button>
+            )}
           </div>
         </>
       )}
@@ -463,6 +615,7 @@ export default function ChatTab() {
         conv={open}
         onBack={() => { setParams({}); load(); }}
         onOpenGroup={(id) => setParams({ group: id })}
+        onRenamed={() => { load(); }}
       />
     );
   }

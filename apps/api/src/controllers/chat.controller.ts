@@ -17,6 +17,16 @@ const liveSchema = z.object({ lat: z.number().min(-90).max(90), lng: z.number().
 const groupSchema = z.object({ name: z.string().trim().min(2).max(100) });
 const joinSchema = z.object({ code: z.string().trim().min(4).max(12) });
 const respondSchema = z.object({ action: z.enum(['accept', 'decline']) });
+const renameSchema = z.object({ name: z.string().trim().min(2).max(100) });
+const settingsSchema = z.object({
+  name: z.string().max(100).optional(),
+  description: z.string().max(500).optional(),
+  region: z.string().max(80).optional(),
+  requireApproval: z.boolean().optional(),
+  membersCanEdit: z.boolean().optional(),
+  onlyAdminsPost: z.boolean().optional(),
+});
+const roleSchema = z.object({ role: z.enum(['admin', 'member']) });
 const uuidSchema = z.string().uuid();
 
 type H = (req: Request, res: Response) => Promise<unknown>;
@@ -48,3 +58,16 @@ export const getGroup = wrap(async (req, res) =>
 export const respondGroup = wrap(async (req, res) =>
   sendSuccess(res, await chat.respondToGroupRequest(req.userId!, uuidSchema.parse(req.params.id),
     uuidSchema.parse(req.params.userId), respondSchema.parse(req.body).action)));
+
+export const renameTrip = wrap(async (req, res) =>
+  sendSuccess(res, await chat.renameTripChat(String(req.query.key), req.userId!, renameSchema.parse(req.body).name)));
+export const updateGroup = wrap(async (req, res) =>
+  sendSuccess(res, await chat.updateGroupSettings(req.userId!, uuidSchema.parse(req.params.id), settingsSchema.parse(req.body))));
+export const setRole = wrap(async (req, res) =>
+  sendSuccess(res, await chat.setMemberRole(req.userId!, uuidSchema.parse(req.params.id), uuidSchema.parse(req.params.userId), roleSchema.parse(req.body).role)));
+export const removeMember = wrap(async (req, res) =>
+  sendSuccess(res, await chat.removeMember(req.userId!, uuidSchema.parse(req.params.id), uuidSchema.parse(req.params.userId))));
+export const leaveGroup = wrap(async (req, res) =>
+  sendSuccess(res, await chat.leaveGroup(req.userId!, uuidSchema.parse(req.params.id))));
+export const resetCode = wrap(async (req, res) =>
+  sendSuccess(res, await chat.resetInviteCode(req.userId!, uuidSchema.parse(req.params.id))));
