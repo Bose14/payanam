@@ -1721,7 +1721,7 @@ export default function RidePage() {
     return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
   }, [ridersWithFreshness]);
 
-  // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop)
+  // Feature F+I & J: Stop approach evaluation (pre-alert, arrival detection & missed stop distance tracking)
   const distToPinnedStop = useMemo(() => {
     if (!pinnedStop || !myLat || !myLng) return null;
     return haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng);
