@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } from '../../services/api';
 import { apiMessage } from '../../utils/apiMessage';
 import Icon from '../../components/Icon';
+import LocationBubble from '../../components/LocationBubble';
+import { startLiveShare, stopLiveShare, isSharingLive, onLiveSharesChange } from '../../utils/liveShare';
 
 type Filter = 'All' | 'Trips' | 'Groups' | 'Direct';
 
@@ -21,7 +23,7 @@ function useLivePolling(fn: () => void, ms: number) {
   }, [ms]);
 }
 
-function Composer({ onSend, disabled }: { onSend: (text: string) => Promise<void>; disabled?: boolean }) {
+function Composer({ onSend, disabled, onAttach }: { onSend: (text: string) => Promise<void>; disabled?: boolean; onAttach?: () => void }) {
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const submit = async () => {
@@ -36,7 +38,13 @@ function Composer({ onSend, disabled }: { onSend: (text: string) => Promise<void
     }
   };
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 10 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: onAttach ? 'auto 1fr auto' : '1fr auto', gap: 8, marginTop: 10 }}>
+      {onAttach && (
+        <button className="pz-btn" type="button" onClick={onAttach} aria-label="Share location" title="Share location"
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 12px' }}>
+          <Icon name="pin" />
+        </button>
+      )}
       <input
         className="pz-input"
         placeholder="Write a message"
@@ -70,7 +78,6 @@ function Thread({
   const [dm, setDm] = useState<{ sentUnreplied: number; blocked: boolean; limit: number } | undefined>();
   const [error, setError] = useState('');
   const [itin, setItin] = useState<Array<{ id: string; place: string; day_number: number; description?: string }>>([]);
-  const [sharing, setSharing] = useState(false);
   const [placeName, setPlaceName] = useState('');
   const [shareBusy, setShareBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
@@ -110,37 +117,45 @@ function Thread({
     }
   };
 
-  const shareLocation = () => {
+  const [, bump] = useState(0);
+  useEffect(() => onLiveSharesChange(() => bump((n) => n + 1)), []);
+  const [liveMinutes, setLiveMinutes] = useState<15 | 60 | 480>(60);
+  const [mode, setMode] = useState<'menu' | 'live' | null>(null);
+
+  const getPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
+    if (!('geolocation' in navigator)) { reject(new Error('unsupported')); return; }
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+  });
+
+  const shareLocation = async (live: boolean) => {
     setError('');
-    if (!('geolocation' in navigator)) {
-      setError('This device cannot share a location.');
-      return;
-    }
     setShareBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          await chatService.send(conv.key, {
-            kind: 'location',
-            place: placeName.trim() || 'My location',
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-          setSharing(false);
-          setPlaceName('');
-          await load();
-        } catch (e) {
-          setError(apiMessage(e, 'Could not share your location.'));
-        } finally {
-          setShareBusy(false);
-        }
-      },
-      () => {
-        setShareBusy(false);
-        setError('Location is blocked. Allow it in your browser settings to share where you are.');
-      },
-      { enableHighAccuracy: true, timeout: 15000 },
-    );
+    try {
+      const pos = await getPosition();
+      const sent = await chatService.send(conv.key, {
+        kind: 'location',
+        place: placeName.trim() || undefined,
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        ...(live ? { liveMinutes } : {}),
+      });
+      if (live && sent.meta?.live) startLiveShare(conv.key, sent.id, new Date(sent.meta.live.until).getTime());
+      setMode(null);
+      setPlaceName('');
+      await load();
+    } catch (e) {
+      const code = (e as { code?: number }).code;
+      if (code === 1) setError('Location is blocked. Allow it in your browser settings to share where you are.');
+      else if (code === 2 || code === 3 || (e as Error).message === 'unsupported') setError('Could not find your location. Move to open sky and try again.');
+      else setError(apiMessage(e, 'Could not share your location.'));
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const stopLive = async (id: string) => {
+    stopLiveShare(id);
+    try { await chatService.stopLive(conv.key, id); await load(); } catch (e) { setError(apiMessage(e, 'Could not stop sharing.')); }
   };
 
   const confirm = async (id: string) => {
@@ -172,21 +187,14 @@ function Thread({
         {!msgs.length && <p className="pz-note">No messages yet.</p>}
         {msgs.map((m) =>
           m.kind === 'location' && m.meta ? (
-            <div key={m.id} className={`pz-bubble${m.mine ? ' me' : ''}`}>
-              <div className="who">{m.mine ? 'You' : m.senderName} · {clock(m.createdAt)}</div>
-              <div style={{ display: 'grid', gap: 6, justifyItems: 'start' }}>
-                <b>{m.meta.place}</b>
-                <div className="pz-note">Shared location</div>
-                <a className="pz-btn small" href={`https://www.google.com/maps?q=${m.meta.lat},${m.meta.lng}`} target="_blank" rel="noreferrer">Open in maps</a>
-                {m.meta.confirmed ? (
-                  <span className="pz-pill ok">Confirmed. Added to the itinerary for everyone.</span>
-                ) : isLead ? (
-                  <button className="pz-btn small" type="button" onClick={() => confirm(m.id)}>Confirm as stop</button>
-                ) : (
-                  <span className="pz-pill stale">Waiting for the captain to confirm</span>
-                )}
-              </div>
-            </div>
+            <LocationBubble
+              key={m.id}
+              m={m}
+              isLead={isLead}
+              sharingLive={isSharingLive(m.id)}
+              onStop={() => stopLive(m.id)}
+              onConfirm={() => confirm(m.id)}
+            />
           ) : (
             <Bubble key={m.id} m={m} />
           ),
@@ -196,19 +204,50 @@ function Thread({
 
       {error && <div className="pz-banner bad" role="alert">{error}</div>}
 
-      {conv.type === 'trip' && (
-        sharing ? (
-          <div className="pz-card">
-            <label className="pz-label" htmlFor="pz-place">Name this place</label>
-            <input id="pz-place" className="pz-input" placeholder="e.g. Chai, Sagar Highway Dhaba" value={placeName} onChange={(e) => setPlaceName(e.target.value)} />
-            <div className="pz-row" style={{ marginTop: 10 }}>
-              <button className="pz-btn small primary" type="button" onClick={shareLocation} disabled={shareBusy}>{shareBusy ? 'Finding you…' : 'Share'}</button>
-              <button className="pz-btn small" type="button" onClick={() => setSharing(false)}>Cancel</button>
+      {conv.type === 'trip' && mode && (
+        <div role="dialog" aria-modal="true" aria-label="Share location" onClick={() => !shareBusy && setMode(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: '100%', maxWidth: 520, background: 'var(--pz-bg)', color: 'var(--pz-ink)', borderRadius: '20px 20px 0 0',
+            padding: '16px 16px 28px', borderTop: '1.5px solid var(--pz-line)',
+          }}>
+            <div className="pz-row" style={{ marginBottom: 10 }}>
+              <b className="pz-grow" style={{ fontSize: 17 }}>{mode === 'live' ? 'Share live location' : 'Share location'}</b>
+              <button className="pz-btn small" type="button" aria-label="Close" onClick={() => setMode(null)} disabled={shareBusy}><Icon name="close" /></button>
             </div>
+            {mode === 'menu' ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <button className="pz-btn block" type="button" disabled={shareBusy} onClick={() => shareLocation(false)}
+                  style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                  <span style={{ color: 'var(--pz-accent)', display: 'inline-flex' }}><Icon name="pin" /></span>
+                  <span><b>{shareBusy ? 'Finding you…' : 'Send your current location'}</b><span className="pz-note" style={{ display: 'block' }}>Posts where you are right now</span></span>
+                </button>
+                <button className="pz-btn block" type="button" disabled={shareBusy} onClick={() => setMode('live')}
+                  style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
+                  <span style={{ color: 'var(--pz-ok)', display: 'inline-flex' }}><Icon name="compass" /></span>
+                  <span><b>Share live location</b><span className="pz-note" style={{ display: 'block' }}>The group sees you move for a set time</span></span>
+                </button>
+                <label className="pz-label" htmlFor="pz-place" style={{ marginTop: 6 }}>Name this place (optional)</label>
+                <input id="pz-place" className="pz-input" placeholder="e.g. Sagar Highway Dhaba" value={placeName} onChange={(e) => setPlaceName(e.target.value)} />
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <p className="pz-note" style={{ margin: 0 }}>Keep Payanam open while sharing. You can stop any time from the message.</p>
+                {([[15, '15 minutes'], [60, '1 hour'], [480, '8 hours']] as const).map(([v, label]) => (
+                  <button key={v} type="button" role="radio" aria-checked={liveMinutes === v} className="pz-btn block"
+                    onClick={() => setLiveMinutes(v)}
+                    style={{ textAlign: 'left', borderColor: liveMinutes === v ? 'var(--pz-accent)' : undefined, fontWeight: liveMinutes === v ? 800 : 600 }}>
+                    {label}
+                  </button>
+                ))}
+                <button className="pz-btn primary block" type="button" disabled={shareBusy} onClick={() => shareLocation(true)}>
+                  {shareBusy ? 'Finding you…' : 'Start sharing'}
+                </button>
+                <button className="pz-btn block" type="button" disabled={shareBusy} onClick={() => setMode('menu')}>Back</button>
+              </div>
+            )}
           </div>
-        ) : (
-          <button className="pz-btn block" type="button" onClick={() => setSharing(true)} style={{ marginTop: 8 }}>Share my location</button>
-        )
+        </div>
       )}
 
       {conv.type === 'dm' && dm?.blocked && (
@@ -220,7 +259,7 @@ function Thread({
         <div className="pz-note">{dm.limit - dm.sentUnreplied} messages left before {conv.title} needs to reply.</div>
       )}
 
-      <Composer onSend={send} disabled={conv.type === 'dm' && !!dm?.blocked} />
+      <Composer onSend={send} disabled={conv.type === 'dm' && !!dm?.blocked} onAttach={conv.type === 'trip' ? () => setMode('menu') : undefined} />
 
       {conv.type === 'trip' && (
         <>
