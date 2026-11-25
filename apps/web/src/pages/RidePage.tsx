@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -77,6 +77,7 @@ import type { PinnedStopData } from '../components/PinStopModal';
 import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 import Icon, { iconSvg } from '../components/Icon';
+import { saveResumeRide, clearResumeRide } from '../utils/rideResume';
 import RideReadyModal from '../components/RideReadyModal';
 import {
   loadChecked, isReadyDone, saveReady, loadFuelState, saveFuelState, rangeLeftKm, FuelState,
@@ -488,16 +489,36 @@ export default function RidePage() {
 
   const userName = user?.fullName ?? user?.email ?? 'Rider';
 
-  // Load session
+  // Load session. A network failure retries instead of showing the ride as ended.
+  const location = useLocation();
   useEffect(() => {
     if (!sessionId) return;
-    rideService.getSessionById(sessionId)
-      .then((d) => {
-        if (d.session.status !== 'active') { setEnded(true); }
-        setSession(d.session);
-      })
-      .catch(() => setEnded(true))
-      .finally(() => setLoading(false));
+    let alive = true;
+    let tries = 0;
+    const load = () => {
+      rideService.getSessionById(sessionId)
+        .then((d) => {
+          if (!alive) return;
+          if (d.session.status !== 'active') { setEnded(true); clearResumeRide(); }
+          else {
+            saveResumeRide({ sessionId, tripId: d.session.trip_id, title: d.session.trips?.title });
+            if ((location.state as { resumed?: boolean } | null)?.resumed) {
+              setToast('Welcome back. Your ride was resumed where you left it.');
+              setTimeout(() => setToast(''), 4000);
+            }
+          }
+          setSession(d.session);
+          setLoading(false);
+        })
+        .catch((err: { response?: { status?: number } }) => {
+          if (!alive) return;
+          if (!err?.response && tries < 5) { tries += 1; setTimeout(load, 3000); return; }
+          setEnded(true);
+          setLoading(false);
+        });
+    };
+    load();
+    return () => { alive = false; };
   }, [sessionId]);
 
   // Feature 1A: Load itinerary proposals for current trip
@@ -1447,6 +1468,7 @@ export default function RidePage() {
     setEndingRide(true);
     try {
       await rideService.endRide(sessionId);
+      clearResumeRide();
       navigate(`/trips/${session?.trip_id}`, { replace: true });
     } finally { setEndingRide(false); }
   }, [sessionId, session, navigate]);
