@@ -25,20 +25,18 @@ function hashCode(phone: string, code: string): string {
     .digest('hex');
 }
 
+/**
+ * On-screen codes are the default: the API returns the code and the app shows it.
+ * Set OTP_DEV_MODE=false (and the TWILIO_* values) to send a real SMS instead.
+ */
 function otpDevMode(): boolean {
-  if (env.OTP_DEV_MODE) return env.OTP_DEV_MODE === 'true';
-  return env.NODE_ENV !== 'production';
+  return env.OTP_DEV_MODE !== 'false';
 }
 
 async function sendSms(phone: string, code: string): Promise<void> {
   const { TWILIO_ACCOUNT_SID: sid, TWILIO_AUTH_TOKEN: token, TWILIO_FROM_NUMBER: from } = env;
   if (!sid || !token || !from) {
-    // No SMS provider configured. Fine while OTP_DEV_MODE is on (the code is shown in the app).
-    if (!otpDevMode()) {
-      throw new AppError(503, 'SMS_NOT_CONFIGURED', 'SMS sign-in is not available right now.');
-    }
-    console.log(`[phone-otp] SMS provider not configured. Code for ${phone}: ${code}`);
-    return;
+    throw new AppError(503, 'SMS_NOT_CONFIGURED', 'SMS sign-in is not available right now.');
   }
   const body = new URLSearchParams({
     To: phone,
@@ -91,7 +89,7 @@ export async function requestPhoneCode(rawPhone: string): Promise<{ sent: true; 
   });
   if (error) throw new Error(`Failed to store code: ${error.message}`);
 
-  await sendSms(phone, code);
+  if (!otpDevMode()) await sendSms(phone, code);
   return otpDevMode() ? { sent: true, devCode: code } : { sent: true };
 }
 
