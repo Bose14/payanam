@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChatMessage } from '../services/api';
 
 const Z = 16;
@@ -95,21 +95,26 @@ export default function LocationBubble({
             {isLive ? `Sharing until ${until}, ${ago(meta.updatedAt, now)}` : 'Live location ended. Last known position shown.'}
           </div>
         )}
-        <div className="pz-row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <a className="pz-btn small" href={`https://www.google.com/maps?q=${meta.lat},${meta.lng}`} target="_blank" rel="noreferrer">Open in maps</a>
-          {m.mine && isLive && (
-            <button className="pz-btn small" type="button" onClick={onStop}>{sharingLive ? 'Stop sharing' : 'End'}</button>
-          )}
-        </div>
-        {!meta.live && (
-          meta.confirmed ? (
-            <span className="pz-pill ok">Confirmed. Added to the itinerary for everyone.</span>
-          ) : isLead ? (
-            <button className="pz-btn small" type="button" onClick={onConfirm}>Confirm as stop</button>
-          ) : (
-            <span className="pz-pill stale">Waiting for the captain to confirm</span>
-          )
-        )}
+        {(() => {
+          const btn: React.CSSProperties = {
+            flex: 1, minWidth: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            textAlign: 'center', boxSizing: 'border-box', height: 40, padding: '0 10px', whiteSpace: 'nowrap',
+          };
+          const canConfirm = !meta.live && !meta.confirmed && isLead;
+          return (
+            <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+              <a className="pz-btn small" style={btn} href={`https://www.google.com/maps?q=${meta.lat},${meta.lng}`} target="_blank" rel="noreferrer">Open in maps</a>
+              {m.mine && isLive && (
+                <button className="pz-btn small" style={btn} type="button" onClick={onStop}>{sharingLive ? 'Stop sharing' : 'End'}</button>
+              )}
+              {canConfirm && (
+                <button className="pz-btn small" style={btn} type="button" onClick={onConfirm}>Confirm as stop</button>
+              )}
+            </div>
+          );
+        })()}
+        {!meta.live && meta.confirmed && <span className="pz-pill ok">Confirmed. Added to the itinerary for everyone.</span>}
+        {!meta.live && !meta.confirmed && !isLead && <span className="pz-pill stale">Waiting for the captain to confirm</span>}
       </div>
     </div>
   );
