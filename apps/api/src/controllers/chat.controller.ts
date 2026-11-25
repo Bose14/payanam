@@ -7,6 +7,7 @@ const sendSchema = z.object({
   kind: z.enum(['text', 'location']).optional(),
   body: z.string().max(2000).optional(),
   place: z.string().max(120).optional(),
+  note: z.string().max(200).optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
   /** Live location: keep updating this message for this many minutes. */

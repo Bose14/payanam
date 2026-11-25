@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } from '../../services/api';
@@ -134,7 +135,7 @@ function Thread({
       const pos = await getPosition();
       const sent = await chatService.send(conv.key, {
         kind: 'location',
-        place: placeName.trim() || undefined,
+        note: placeName.trim() || undefined,
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         ...(live ? { liveMinutes } : {}),
@@ -204,40 +205,61 @@ function Thread({
 
       {error && <div className="pz-banner bad" role="alert">{error}</div>}
 
-      {conv.type === 'trip' && mode && (
+      {conv.type === 'trip' && mode && createPortal(
         <div role="dialog" aria-modal="true" aria-label="Share location" onClick={() => !shareBusy && setMode(null)}
-          style={{ position: 'fixed', inset: 0, zIndex: 3000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div onClick={(e) => e.stopPropagation()} style={{
             width: '100%', maxWidth: 520, background: 'var(--pz-bg)', color: 'var(--pz-ink)', borderRadius: '20px 20px 0 0',
-            padding: '16px 16px 28px', borderTop: '1.5px solid var(--pz-line)',
+            padding: '16px 16px calc(24px + env(safe-area-inset-bottom))', borderTop: '1.5px solid var(--pz-line)',
+            maxHeight: '90dvh', overflowY: 'auto',
           }}>
-            <div className="pz-row" style={{ marginBottom: 10 }}>
-              <b className="pz-grow" style={{ fontSize: 17 }}>{mode === 'live' ? 'Share live location' : 'Share location'}</b>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <b style={{ flex: 1, fontSize: 18 }}>{mode === 'live' ? 'Share live location' : 'Share location'}</b>
               <button className="pz-btn small" type="button" aria-label="Close" onClick={() => setMode(null)} disabled={shareBusy}><Icon name="close" /></button>
             </div>
             {mode === 'menu' ? (
-              <div style={{ display: 'grid', gap: 8 }}>
-                <button className="pz-btn block" type="button" disabled={shareBusy} onClick={() => shareLocation(false)}
-                  style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-                  <span style={{ color: 'var(--pz-accent)', display: 'inline-flex' }}><Icon name="pin" /></span>
-                  <span><b>{shareBusy ? 'Finding you…' : 'Send your current location'}</b><span className="pz-note" style={{ display: 'block' }}>Posts where you are right now</span></span>
-                </button>
-                <button className="pz-btn block" type="button" disabled={shareBusy} onClick={() => setMode('live')}
-                  style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px' }}>
-                  <span style={{ color: 'var(--pz-ok)', display: 'inline-flex' }}><Icon name="compass" /></span>
-                  <span><b>Share live location</b><span className="pz-note" style={{ display: 'block' }}>The group sees you move for a set time</span></span>
-                </button>
-                <label className="pz-label" htmlFor="pz-place" style={{ marginTop: 6 }}>Name this place (optional)</label>
-                <input id="pz-place" className="pz-input" placeholder="e.g. Sagar Highway Dhaba" value={placeName} onChange={(e) => setPlaceName(e.target.value)} />
-              </div>
+              <>
+                <label className="pz-label" htmlFor="pz-note" style={{ display: 'block', marginBottom: 6 }}>Add note (optional)</label>
+                <input id="pz-note" className="pz-input" style={{ width: '100%', boxSizing: 'border-box', marginBottom: 14 }}
+                  placeholder="e.g. Waiting at the dhaba" maxLength={200} value={placeName} onChange={(e) => setPlaceName(e.target.value)} />
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {([
+                    { id: 'now', icon: 'pin', color: 'var(--pz-accent)', title: shareBusy ? 'Finding you…' : 'Send current location', sub: 'Posts where you are right now' },
+                    { id: 'live', icon: 'compass', color: 'var(--pz-ok)', title: 'Share live location', sub: 'The group sees you move for a set time' },
+                  ] as const).map((o) => (
+                    <button key={o.id} type="button" disabled={shareBusy}
+                      onClick={() => (o.id === 'now' ? shareLocation(false) : setMode('live'))}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 14, width: '100%', textAlign: 'left',
+                        padding: '14px 16px', borderRadius: 14, cursor: 'pointer', color: 'var(--pz-ink)',
+                        background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', font: 'inherit',
+                      }}>
+                      <span style={{
+                        width: 40, height: 40, borderRadius: 20, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--pz-bg)', border: '1.5px solid var(--pz-line)', color: o.color,
+                      }}><Icon name={o.icon} /></span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15 }}>{o.title}</span>
+                        <span style={{ display: 'block', fontSize: 13, color: 'var(--pz-muted)', marginTop: 2 }}>{o.sub}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
             ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
+              <div style={{ display: 'grid', gap: 10 }}>
                 <p className="pz-note" style={{ margin: 0 }}>Keep Payanam open while sharing. You can stop any time from the message.</p>
                 {([[15, '15 minutes'], [60, '1 hour'], [480, '8 hours']] as const).map(([v, label]) => (
-                  <button key={v} type="button" role="radio" aria-checked={liveMinutes === v} className="pz-btn block"
+                  <button key={v} type="button" role="radio" aria-checked={liveMinutes === v}
                     onClick={() => setLiveMinutes(v)}
-                    style={{ textAlign: 'left', borderColor: liveMinutes === v ? 'var(--pz-accent)' : undefined, fontWeight: liveMinutes === v ? 800 : 600 }}>
-                    {label}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left',
+                      padding: '14px 16px', borderRadius: 14, cursor: 'pointer', font: 'inherit', color: 'var(--pz-ink)',
+                      background: 'var(--pz-surface)', fontWeight: liveMinutes === v ? 800 : 600,
+                      border: `1.5px solid ${liveMinutes === v ? 'var(--pz-accent)' : 'var(--pz-line)'}`,
+                    }}>
+                    <span>{label}</span>
+                    {liveMinutes === v && <span style={{ color: 'var(--pz-accent)', display: 'inline-flex' }}><Icon name="check" /></span>}
                   </button>
                 ))}
                 <button className="pz-btn primary block" type="button" disabled={shareBusy} onClick={() => shareLocation(true)}>
@@ -247,7 +269,8 @@ function Thread({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {conv.type === 'dm' && dm?.blocked && (
