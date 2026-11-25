@@ -78,6 +78,11 @@ function Thread({
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState('');
   const [renameBusy, setRenameBusy] = useState(false);
+  const [groupCanEdit, setGroupCanEdit] = useState(false);
+  useEffect(() => {
+    if (conv.type !== 'group') return;
+    chatService.group(conv.key.slice(6)).then((g) => setGroupCanEdit(g.canEdit ?? g.isAdmin)).catch(() => undefined);
+  }, [conv.key, conv.type]);
   useEffect(() => { setTitle(conv.title); }, [conv.title]);
   const saveName = async () => {
     const n = newName.trim();
@@ -85,8 +90,9 @@ function Thread({
     setRenameBusy(true);
     setError('');
     try {
-      const r = await chatService.renameTrip(conv.key, n);
-      setTitle(r.name);
+      if (conv.type === 'group') await chatService.updateGroup(conv.key.slice(6), { name: n });
+      else await chatService.renameTrip(conv.key, n);
+      setTitle(n);
       setRenaming(false);
       onRenamed();
     } catch (e) {
@@ -208,16 +214,24 @@ function Thread({
           )}
           <div className="pz-note">{kind}</div>
         </div>
-        {conv.type === 'trip' && (renaming ? (
+        {renaming ? (
           <>
             <button className="pz-btn small primary" type="button" onClick={saveName} disabled={renameBusy}>{renameBusy ? 'Saving…' : 'Save'}</button>
             <button className="pz-btn small" type="button" onClick={() => setRenaming(false)} disabled={renameBusy}>Cancel</button>
           </>
         ) : (
-          <button className="pz-btn small" type="button" onClick={() => { setNewName(title); setRenaming(true); }}>Rename</button>
-        ))}
-        {conv.type === 'group' && (
-          <button className="pz-btn small" type="button" onClick={() => onOpenGroup(conv.key.slice(6))}>Group page</button>
+          <>
+            {(conv.type === 'trip' || (conv.type === 'group' && groupCanEdit)) && (
+              <button className="pz-btn small" type="button" aria-label="Rename chat" title="Rename"
+                style={{ display: 'inline-flex', alignItems: 'center' }}
+                onClick={() => { setNewName(title); setRenaming(true); }}><Icon name="edit" /></button>
+            )}
+            {conv.type === 'group' && (
+              <button className="pz-btn small" type="button" aria-label="Group settings" title="Group settings"
+                style={{ display: 'inline-flex', alignItems: 'center' }}
+                onClick={() => onOpenGroup(conv.key.slice(6))}><Icon name="settings" /></button>
+            )}
+          </>
         )}
       </div>
 
