@@ -27,7 +27,7 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
         <div style={styles.unpinnedInfo} onClick={onPinNewStop}>
           <div>
             <h4 style={styles.stopName}>No target stop pinned</h4>
-            <p style={styles.stopSub}>Choose a waypoint so your group shares a target</p>
+            <p style={styles.stopSub}>{onPinNewStop ? 'Choose a waypoint so your group shares a target' : 'The captain will pin the next stop for the group'}</p>
           </div>
         </div>
 

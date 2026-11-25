@@ -1158,7 +1158,7 @@ export default function RidePage() {
   }, [sessionId, userName, user?.id]);
 
   const handlePinStop = useCallback(async (stop: PinnedStopData, addToItinerary?: boolean) => {
-    if (!sessionId || !session) return;
+    if (!sessionId || !session || session.started_by !== user?.id) return; // captain only
     setPinnedStop(stop);
     setRidersArrival({});
     playAlertChime('chime');
@@ -1195,10 +1195,10 @@ export default function RidePage() {
       messageType: 'stop_pin',
       userName,
     }).catch(() => null);
-  }, [sessionId, session, userName]);
+  }, [sessionId, session, userName, user?.id]);
 
   const handleClearPin = useCallback(async () => {
-    if (!sessionId) return;
+    if (!sessionId || session?.started_by !== user?.id) return; // captain only
     setPinnedStop(null);
     setRidersArrival({});
     channelRef.current?.send({
@@ -1208,7 +1208,7 @@ export default function RidePage() {
     });
     setToast('Target stop cleared');
     setTimeout(() => setToast(''), 2500);
-  }, [sessionId, userName]);
+  }, [sessionId, session?.started_by, user?.id, userName]);
 
   const handleToggleMyArrival = useCallback(async (isArrived: boolean) => {
     if (!sessionId || !user || !pinnedStop) return;
@@ -2140,6 +2140,12 @@ export default function RidePage() {
             }}>
               {tab === 'chat' ? 'Trip Chat' : tab === 'plan' ? 'Itinerary' : tab === 'discover' ? 'Discover' : tab === 'riders' ? 'Convoy Roster' : tab === 'nav' ? 'Directions' : tab === 'me' ? 'Settings' : 'Group Ride'}
             </h1>
+            {session && (
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', padding: '2px 8px', borderRadius: 6, flexShrink: 0,
+                color: isLead ? 'var(--pz-on-accent)' : 'var(--pz-muted)', background: isLead ? 'var(--pz-accent)' : 'var(--pz-line)' }}>
+                {isLead ? 'Captain' : 'Rider'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -2429,7 +2435,7 @@ export default function RidePage() {
             setNavTarget(target);
             setShowNavModal(true);
           }}
-          onChangePin={() => setShowPinModal(true)}
+          onChangePin={isLead ? () => setShowPinModal(true) : undefined}
           onClearPin={handleClearPin}
           isLeader={isLead}
         />
@@ -2977,7 +2983,7 @@ export default function RidePage() {
                 totalCount={ridersWithFreshness.length}
                 onOpenDetail={() => setShowStopDetailSheet(true)}
                 onOpenTellGroup={() => setShowTellGroupSheet(true)}
-                onPinNewStop={() => setShowPinModal(true)}
+                onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
               />
             </div>
           </div>
@@ -3001,7 +3007,7 @@ export default function RidePage() {
                 totalCount={ridersWithFreshness.length}
                 onOpenDetail={() => setShowStopDetailSheet(true)}
                 onOpenTellGroup={() => setShowTellGroupSheet(true)}
-                onPinNewStop={() => setShowPinModal(true)}
+                onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
               />
             </div>
           </div>
@@ -3083,7 +3089,7 @@ export default function RidePage() {
                     stop={stop}
                     index={idx}
                     isPinned={pinnedStop?.name === stop.place}
-                    onPinStop={(s) => {
+                    onPinStop={isLead ? (s) => {
                       if (s.lat && s.lng) {
                         handlePinStop({
                           id: s.id,
@@ -3099,7 +3105,7 @@ export default function RidePage() {
                         setToast(`Location coordinates not available for ${s.place}`);
                         setTimeout(() => setToast(''), 2500);
                       }
-                    }}
+                    } : undefined}
                     onOpenNavigation={(s) => {
                       if (s.lat && s.lng) {
                         setNavTarget({ name: s.place, lat: s.lat, lng: s.lng });
@@ -3112,6 +3118,7 @@ export default function RidePage() {
 
               {/* Action row: Add planned stop & Propose edit (Feature 1A) */}
               <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                {isLead && (
                 <button
                   type="button"
                   onClick={() => setShowPinModal(true)}
@@ -3133,6 +3140,7 @@ export default function RidePage() {
                 >
                   <span><Icon name="plus" /></span> Add planned stop
                 </button>
+                )}
 
                 <button
                   type="button"
@@ -3170,12 +3178,14 @@ export default function RidePage() {
             ))}
 
             {/* Feature 1A Step 2: Convoy Invitation Card (Link or Code) */}
+            {isLead && (
             <ConvoyInviteCard
               inviteCode={session?.trip_id?.slice(0, 6).toUpperCase() || 'BLR9X2'}
               tripTitle={session?.trips?.title}
               fromPlace={session?.trips?.from_place}
               toPlace={session?.trips?.to_place}
             />
+            )}
 
             {/* Feature 1B: Publish Itinerary Publicly Card */}
             {session?.trips && isLead && (
@@ -3468,10 +3478,10 @@ export default function RidePage() {
             </button>
             <button
               type="button"
-              onClick={() => setShowPinModal(true)}
+              onClick={() => (isLead ? setShowPinModal(true) : setShowProposeModal(true))}
               style={{ padding: '6px 12px', background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 14, color: 'var(--text-primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
-              Propose Stop
+              {isLead ? 'Pin Stop' : 'Propose Stop'}
             </button>
             <button
               type="button"
@@ -3778,10 +3788,10 @@ export default function RidePage() {
           setNavTarget(target);
           setShowNavModal(true);
         }}
-        onChangeStop={() => {
+        onChangeStop={isLead ? () => {
           setShowStopDetailSheet(false);
           setShowPinModal(true);
-        }}
+        } : undefined}
       />
 
       {/* Route-Cached Verified Amenities ("Nearby help", Mockup Screen 5) */}

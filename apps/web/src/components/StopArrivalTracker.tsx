@@ -22,7 +22,8 @@ interface StopArrivalTrackerProps {
   myAgeLabel?: string;
   onToggleMyArrival: (isArrived: boolean) => void;
   onOpenNavigation: (stop: { name: string; lat: number; lng: number }) => void;
-  onChangePin: () => void;
+  /** Captain only. Omit for riders. */
+  onChangePin?: () => void;
   onClearPin?: () => void;
   isLeader?: boolean;
 }
@@ -139,13 +140,15 @@ export default function StopArrivalTracker({
               Rider Status at this Stop:
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                onClick={onChangePin}
-                style={styles.linkBtn}
-              >
-                Change Stop
-              </button>
+              {onChangePin && (
+                <button
+                  type="button"
+                  onClick={onChangePin}
+                  style={styles.linkBtn}
+                >
+                  Change Stop
+                </button>
+              )}
               {isLeader && onClearPin && (
                 <button
                   type="button"
