@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme, ThemeMode } from '../../context/ThemeContext';
 import { authService } from '../../services/api';
+import PipSettingsCard from '../../components/PipSettingsCard';
 
 const MODES: Array<[ThemeMode, string]> = [['auto', 'Auto'], ['day', 'Light'], ['night', 'Dark']];
 
@@ -80,6 +81,9 @@ export default function MeTab() {
           <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}>{label}</button>
         ))}
       </div>
+
+      <div className="pz-label">Picture-in-Picture (PiP HUD)</div>
+      <PipSettingsCard style={{ marginBottom: 16 }} />
 
       <div className="pz-label">Privacy</div>
       <div className="pz-card">

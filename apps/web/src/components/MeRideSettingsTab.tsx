@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { backgroundTrackingEngine, BackgroundTrackingStatus } from '../utils/backgroundTracking';
 import Icon from './Icon';
+import PipSettingsCard from './PipSettingsCard';
 
 export interface MeRideSettingsTabProps {
   userName: string;
@@ -172,6 +173,14 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             </div>
           </div>
         )}
+
+        {/* SECTION: Picture-in-Picture (PiP HUD) Settings */}
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionTitle}>PICTURE-IN-PICTURE (PIP HUD)</span>
+          <span style={styles.sectionBadge}>60 FPS TELEMETRY</span>
+        </div>
+
+        <PipSettingsCard />
 
         {/* SECTION: Background Tracking (Feature P1 Foundation) */}
         <div style={styles.sectionHeader}>

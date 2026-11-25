@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { PinnedStopData } from './PinStopModal';
+import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
 
 export interface PipRiderData {
   userId: string;
@@ -67,7 +68,9 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 }) => {
   const [isPipActive, setIsPipActive] = useState(false);
   const [isFloatingInApp, setIsFloatingInApp] = useState(false);
-  const [hudDockPosition, setHudDockPosition] = useState<'top' | 'bottom'>('bottom');
+  const [hudDockPosition, setHudDockPosition] = useState<'top' | 'bottom'>(
+    () => getPipPreferences().dockPosition
+  );
   const [nativePipAvailable, setNativePipAvailable] = useState(false);
   const isSupported = true; // Always supported via Native OS PiP or Floating In-App HUD!
 
@@ -459,9 +462,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
     const canvas = canvasRef.current;
     const video = videoRef.current;
+    const prefs = getPipPreferences();
+    const forceInApp = prefs.preferredMode === 'in_app';
+    const forceNative = prefs.preferredMode === 'native';
 
-    // 3. Try Native OS PiP if available (Desktop & Android Chrome)
-    if (nativePipAvailable && canvas && video) {
+    // 3. Try Native OS PiP if available (Desktop & Android Chrome) unless in-app is forced
+    if (!forceInApp && (nativePipAvailable || forceNative) && canvas && video) {
       try {
         if (!streamRef.current) {
           const stream = canvas.captureStream(60);
@@ -484,6 +490,26 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     setIsPipActive(true);
     onPipStateChange?.(true);
   }, [isFloatingInApp, nativePipAvailable, onPipStateChange]);
+
+  // Handle Dock Position toggle & persist to preferences
+  const handleDockToggle = useCallback(() => {
+    setHudDockPosition((pos) => {
+      const next = pos === 'bottom' ? 'top' : 'bottom';
+      savePipPreferences({ dockPosition: next });
+      return next;
+    });
+  }, []);
+
+  // Auto-launch HUD if enabled in rider preferences
+  useEffect(() => {
+    const prefs = getPipPreferences();
+    if (prefs.autoOpenOnRide) {
+      const timer = setTimeout(() => {
+        togglePip();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [togglePip]);
 
   // Handle Native OS PiP event listeners
   useEffect(() => {
@@ -576,7 +602,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button
                 type="button"
-                onClick={() => setHudDockPosition((pos) => (pos === 'bottom' ? 'top' : 'bottom'))}
+                onClick={handleDockToggle}
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
                   border: '1px solid rgba(255, 255, 255, 0.15)',
