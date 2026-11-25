@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import React, { useState } from 'react';
 
 import { RIDER_STATUS_PRESETS } from '../utils/statusPresets';
@@ -13,12 +14,12 @@ interface PresetsTellGroupSheetProps {
 const RIDER_PRESETS = RIDER_STATUS_PRESETS;
 
 const CAPTAIN_PRESETS = [
-  { id: 'fuel_next_town', label: 'Fuel at next town', icon: '⛽' },
-  { id: 'gravel_ahead', label: 'Gravel ahead', icon: '⚠️' },
-  { id: 'slow_down', label: 'Slow down', icon: '🛑' },
-  { id: 'regroup_junction', label: 'Regroup at junction', icon: '🚨' },
-  { id: 'police_check', label: 'Police check ahead', icon: '👮' },
-  { id: 'change_plan', label: 'Change of plan', icon: '🔀' },
+  { id: 'fuel_next_town', label: 'Fuel at next town', icon: 'fuel' },
+  { id: 'gravel_ahead', label: 'Gravel ahead', icon: 'warning' },
+  { id: 'slow_down', label: 'Slow down', icon: 'stop' },
+  { id: 'regroup_junction', label: 'Regroup at junction', icon: 'alert' },
+  { id: 'police_check', label: 'Police check ahead', icon: 'user' },
+  { id: 'change_plan', label: 'Change of plan', icon: 'refresh' },
 ];
 
 export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
@@ -84,7 +85,7 @@ export const PresetsTellGroupSheet: React.FC<PresetsTellGroupSheetProps> = ({
                   borderColor: isSelected ? '#F0C23A' : '#2A2E35',
                 }}
               >
-                <span style={{ fontSize: 18, marginRight: 8, lineHeight: 1 }}>{p.icon}</span>
+                <span style={{ fontSize: 18, marginRight: 8, lineHeight: 1 }}><Icon name={p.icon} /></span>
                 <span style={styles.btnLabel}>{p.label}</span>
               </button>
             );

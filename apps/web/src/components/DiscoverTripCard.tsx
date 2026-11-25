@@ -1,5 +1,6 @@
 import React from 'react';
 import { PublishedTrip } from '../utils/publicItinerary';
+import Icon from './Icon';
 
 interface DiscoverTripCardProps {
   trip: PublishedTrip;
@@ -26,13 +27,13 @@ export default function DiscoverTripCard({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <h4 style={styles.title}>{trip.title}</h4>
             {trip.sourceCredit && (
-              <span style={styles.forkedBadge}>🍴 FORK</span>
+              <span style={styles.forkedBadge}>FORK</span>
             )}
           </div>
           <div style={styles.authorLine}>
             by <strong style={{ color: 'var(--text-primary)' }}>{trip.authorName}</strong> ·{' '}
             <span style={{ color: '#F0C23A', fontWeight: 800 }}>{trip.copiesCount} copies</span> ·{' '}
-            <span>{trip.rating.toFixed(1)} ★ from {trip.finishersCount} riders</span>
+            <span>{trip.rating.toFixed(1)} from {trip.finishersCount} riders</span>
           </div>
         </div>
 
@@ -50,10 +51,10 @@ export default function DiscoverTripCard({
       {/* Stops breakdown matching Mockup Screen 8 */}
       <div style={styles.stopsBreakdownRow}>
         <span style={styles.stopsSummaryLabel}>Stops:</span>
-        {fuel > 0 && <span style={styles.stopPill}>⛽ fuel {fuel}</span>}
-        {food > 0 && <span style={styles.stopPill}>🍽️ food {food}</span>}
-        {rest > 0 && <span style={styles.stopPill}>☕ rest {rest}</span>}
-        {scenic > 0 && <span style={styles.stopPill}>📸 scenic {scenic}</span>}
+        {fuel > 0 && <span style={styles.stopPill}>fuel {fuel}</span>}
+        {food > 0 && <span style={styles.stopPill}>food {food}</span>}
+        {rest > 0 && <span style={styles.stopPill}>rest {rest}</span>}
+        {scenic > 0 && <span style={styles.stopPill}>scenic {scenic}</span>}
         <span style={{ fontSize: 11, color: '#9D9C9A', marginLeft: 'auto' }}>
           {trip.stops?.length ?? 0} total waypoints
         </span>
@@ -82,7 +83,7 @@ export default function DiscoverTripCard({
           }}
           title="Create a copy of this itinerary in your trips, crediting the author"
         >
-          <span>{isCopied ? '✓' : '📋'}</span>
+          <span><Icon name={isCopied ? 'check' : 'list'} /></span>
           <span>{isCopied ? 'Copied to Trips' : 'Copy to my trips'}</span>
         </button>
 
@@ -92,7 +93,7 @@ export default function DiscoverTripCard({
           style={styles.btnSecondary}
           title="Preview stops and notes"
         >
-          <span>👁️</span>
+          <span><Icon name="eye" /></span>
           <span>View Stops</span>
         </button>
 
@@ -103,7 +104,7 @@ export default function DiscoverTripCard({
             style={styles.btnSecondary}
             title="Message group"
           >
-            <span>💬</span>
+            <span><Icon name="chat" /></span>
             <span>Message</span>
           </button>
         )}

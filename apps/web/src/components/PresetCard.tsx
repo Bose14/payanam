@@ -1,5 +1,6 @@
 import React from 'react';
 import { getPresetInfo, getDeliverySummary, DeliveryReceipt } from '../utils/statusPresets';
+import Icon from './Icon';
 
 export interface PresetCardProps {
   messageId: string;
@@ -36,7 +37,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
     }
   })();
 
-  const presetIcon = preset?.icon || '💬';
+  const presetIcon = preset?.icon || 'chat';
   const presetLabel = preset?.label || messageText;
   const accentColor = preset?.color || '#F0C23A';
   const bgColor = preset?.bgColor || 'rgba(240, 194, 58, 0.12)';
@@ -61,7 +62,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
               {isMe ? 'You' : senderName}
             </span>
             {isCaptain && (
-              <span style={styles.captainBadge}>👑 CAPTAIN</span>
+              <span style={styles.captainBadge}>CAPTAIN</span>
             )}
             <span style={styles.presetTag}>STATUS PRESET</span>
           </div>
@@ -74,7 +75,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
           backgroundColor: bgColor,
           borderColor,
         }}>
-          <span style={styles.presetIcon}>{presetIcon}</span>
+          <span style={styles.presetIcon}><Icon name={presetIcon} /></span>
           <div style={styles.presetTextWrap}>
             <span style={{ ...styles.presetLabel, color: accentColor }}>
               {presetLabel}
@@ -93,7 +94,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
                 ...styles.doubleCheck,
                 color: delivery.isAllDelivered ? '#10B981' : '#F0C23A',
               }}>
-                {delivery.isAllDelivered ? '✓✓' : '✓'}
+                {delivery.isAllDelivered ? <Icon name="check" /> : <Icon name="check" />}
               </span>
               <span style={styles.deliverySummaryText}>
                 {delivery.summaryText}
@@ -118,7 +119,7 @@ export const PresetCard: React.FC<PresetCardProps> = ({
                     title={hasReceived ? `Delivered to ${rider.userName}` : `Waiting for ${rider.userName}`}
                   >
                     <span style={styles.riderPillName}>{rider.userName}</span>
-                    <span style={styles.riderPillIcon}>{hasReceived ? '✓' : '⏳'}</span>
+                    <span style={styles.riderPillIcon}>{hasReceived ? <Icon name="check" /> : <Icon name="clock" />}</span>
                   </span>
                 );
               })}

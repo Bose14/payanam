@@ -8,7 +8,7 @@ This guide walks you through configuring Supabase for the Payanam application.
 2. Select your project: `kusebqvhwpcblfusazus`
 3. Go to **Settings** → **API**
 4. Copy the **Service Role** key (labeled `service_role` or `service_role_key`)
-   - ⚠️ Keep this secret! It has full database access.
+   - Keep this secret! It has full database access.
 5. Paste it in `apps/api/.env.local` as:
    ```
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
@@ -88,15 +88,15 @@ pnpm tsx apps/api/scripts/test-supabase.ts
 
 Expected output:
 ```
-✅ Successfully connected to Supabase!
-✅ Database schema verified
-✅ Ready to go!
+Successfully connected to Supabase!
+Database schema verified
+Ready to go!
 ```
 
 If you get an error, check:
-- ✓ Service Role Key is correct
-- ✓ Database tables exist (check Supabase dashboard)
-- ✓ Network connection to supabase.co
+- Service Role Key is correct
+- Database tables exist (check Supabase dashboard)
+- Network connection to supabase.co
 
 ## Step 6: Install Dependencies & Start
 

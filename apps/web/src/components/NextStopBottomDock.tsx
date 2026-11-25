@@ -1,5 +1,6 @@
 import React from 'react';
 import { PinnedStopData } from './PinStopModal';
+import Icon from './Icon';
 
 interface NextStopBottomDockProps {
   pinnedStop: PinnedStopData | null;
@@ -37,7 +38,7 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
               onClick={onPinNewStop}
               style={styles.btnPrimary}
             >
-              <span>📌</span>
+              <span><Icon name="pin" /></span>
               <span>Choose stop</span>
             </button>
           )}
@@ -46,7 +47,7 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
             onClick={onOpenTellGroup}
             style={styles.btnSecondary}
           >
-            <span>💬</span>
+            <span><Icon name="chat" /></span>
             <span>Tell group</span>
           </button>
         </div>

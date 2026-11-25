@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { backgroundTrackingEngine, BackgroundTrackingStatus } from '../utils/backgroundTracking';
+import Icon from './Icon';
 
 export interface MeRideSettingsTabProps {
   userName: string;
@@ -95,7 +96,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           <div style={styles.settingRow}>
             <div style={styles.settingTextWrap}>
               <div style={styles.settingLabelWrap}>
-                <span style={styles.settingIcon}>🔋</span>
+                <span style={styles.settingIcon}></span>
                 <span style={styles.settingTitle}>Battery saver</span>
               </div>
               <p style={styles.settingSub}>
@@ -131,8 +132,8 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           }}>
             <span style={{ color: batterySaver ? '#F0C23A' : '#9D9C9A', fontWeight: 700 }}>
               {batterySaver
-                ? '⚡ Active rate: 30s · The Ride tab shows a note that positions may be older.'
-                : '⚡ Standard rate: 10s · Real-time high accuracy telemetry.'}
+                ? 'Active rate: 30s · The Ride tab shows a note that positions may be older.'
+                : 'Standard rate: 10s · Real-time high accuracy telemetry.'}
             </span>
           </div>
         </div>
@@ -143,7 +144,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             <div style={styles.settingRow}>
               <div style={styles.settingTextWrap}>
                 <div style={styles.settingLabelWrap}>
-                  <span style={styles.settingIcon}>🔆</span>
+                  <span style={styles.settingIcon}><Icon name="sun" /></span>
                   <span style={styles.settingTitle}>Keep screen awake</span>
                 </div>
                 <p style={styles.settingSub}>
@@ -184,7 +185,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               ? '#10B981'
               : (trackingStatus.isPaused ? '#EF4444' : '#F0C23A'),
           }}>
-            {trackingStatus.isPaused ? '⚠️ PAUSED' : (trackingStatus.isTracking ? '● HEALTHY' : 'STANDBY')}
+            {trackingStatus.isPaused ? 'PAUSED' : (trackingStatus.isTracking ? '● HEALTHY' : 'STANDBY')}
           </span>
         </div>
 
@@ -192,7 +193,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
           {/* Header & Mode */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>🛰️</span>
+              <span style={{ fontSize: 18 }}><Icon name="signal" /></span>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
                   Reliability & Heartbeat
@@ -247,7 +248,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 12, fontWeight: 800, color: '#FCA5A5' }}>
-                  ⚠️ Tracking paused
+                  Tracking paused
                 </div>
                 <div style={{ fontSize: 10.5, color: '#FCA5A5', marginTop: 2 }}>
                   {trackingStatus.pauseReason || 'Positions are no longer being recorded.'}
@@ -342,7 +343,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 transition: 'background-color 0.2s ease',
               }}
             >
-              <span>{copiedDiag ? '✓' : '📋'}</span>
+              <span><Icon name={copiedDiag ? 'check' : 'list'} /></span>
               <span>{copiedDiag ? 'Diagnostics Copied!' : 'Copy Diagnostics Log'}</span>
             </button>
 
@@ -410,7 +411,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
             onClick={onReturnToRide}
             style={styles.primaryActionBtn}
           >
-            🗺️ Return to Ride Map
+            Return to Ride Map
           </button>
 
           {isCaptain && onEndRide && (
@@ -419,7 +420,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
               onClick={onEndRide}
               style={styles.dangerActionBtn}
             >
-              🏁 End Ride for Convoy
+              End Ride for Convoy
             </button>
           )}
         </div>

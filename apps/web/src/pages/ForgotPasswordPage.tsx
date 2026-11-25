@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { authService } from '../services/api';
 import { supabase } from '../lib/supabase';
 import AuthLayout from '../components/AuthLayout';
+import Icon from '../components/Icon';
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -56,7 +57,7 @@ function ForgotPasswordPage() {
       {error && (
         <div style={styles.errorBox}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-            <span style={{ fontSize: '16px' }}>⚠️</span>
+            <span style={{ fontSize: '16px' }}><Icon name="warning" /></span>
             <div style={{ flex: 1 }}>
               <div>{error}</div>
               {isUserNotFound && (
@@ -73,7 +74,7 @@ function ForgotPasswordPage() {
 
       {successInfo ? (
         <div style={styles.successBox}>
-          <div style={{ fontSize: '38px', marginBottom: '8px' }}>🔐</div>
+          <div style={{ fontSize: '38px', marginBottom: '8px' }}><Icon name="lock" /></div>
           <h3 style={styles.successTitle}>Password Reset Ready!</h3>
           <p style={styles.successMessage}>
             Password reset authorization has been generated for <strong>{email}</strong>.
@@ -102,7 +103,7 @@ function ForgotPasswordPage() {
           <div style={styles.field}>
             <label style={styles.label}>Email Address</label>
             <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}>✉️</span>
+              <span style={styles.inputIcon}><Icon name="mail" /></span>
               <input
                 type="email"
                 value={email}

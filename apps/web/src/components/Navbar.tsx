@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import MobileBottomNav from './MobileBottomNav';
 import JoinConvoyModal from './JoinConvoyModal';
 import { useInShell } from './shell/ShellContext';
+import Icon from './Icon';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -27,10 +28,10 @@ export default function Navbar() {
   // Mode button text and badge
   const modeLabel =
     mode === 'auto'
-      ? `⏱️ Auto (${theme === 'day' ? '☀️ Sun' : '🌙 Moon'})`
+      ? `Auto (${theme === 'day' ? 'Sun' : 'Moon'})`
       : mode === 'day'
-      ? '☀️ Sunlight'
-      : '🌙 Moon';
+      ? 'Sunlight'
+      : 'Moon';
 
   const modeTooltip =
     mode === 'auto'
@@ -48,7 +49,7 @@ export default function Navbar() {
         <div className="navbar-inner" style={styles.inner}>
           {/* Brand */}
           <Link to="/dashboard" style={styles.brand}>
-            <span style={styles.logoIcon}>🏍️</span>
+            <span style={styles.logoIcon}><Icon name="bike" /></span>
             <div>
               <span style={styles.brandTitle}>PAYANAM</span>
               <span className="navbar-brand-sub" style={styles.brandSub}>Touring & Convoy</span>
@@ -65,7 +66,7 @@ export default function Navbar() {
                 background: isActive('/dashboard') ? 'var(--accent-cyan-bg)' : 'transparent',
               }}
             >
-              🗺️ Dashboard
+              Dashboard
             </Link>
             <Link
               to="/trips/new"
@@ -75,13 +76,13 @@ export default function Navbar() {
                 background: isActive('/trips/new') ? 'var(--accent-cyan-bg)' : 'transparent',
               }}
             >
-              ✨ Plan Trip
+              Plan Trip
             </Link>
             <button
               onClick={() => setShowJoinModal(true)}
               style={styles.navBtnLink}
             >
-              🤝 Join Convoy
+              Join Convoy
             </button>
           </div>
 
@@ -100,7 +101,7 @@ export default function Navbar() {
               }}
             >
               <span className="desktop-theme-text">{modeLabel}</span>
-              <span className="mobile-theme-icon">{mode === 'auto' ? '⏱️' : mode === 'day' ? '☀️' : '🌙'}</span>
+              <span className="mobile-theme-icon"><Icon name={mode === 'auto' ? 'clock' : mode === 'day' ? 'sun' : 'moon'} /></span>
             </button>
 
             {/* Profile Avatar / Passport Link */}
@@ -116,7 +117,7 @@ export default function Navbar() {
               style={styles.logoutBtn}
               title="Sign out of Payanam"
             >
-              <span style={{ fontSize: 13 }}>🚪</span>
+              <span style={{ fontSize: 13 }}><Icon name="door" /></span>
               <span className="desktop-logout-text">Exit</span>
             </button>
           </div>

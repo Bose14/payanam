@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 export interface OfflineSignalBannerProps {
   isOnline: boolean;
@@ -27,7 +28,7 @@ export const OfflineSignalBanner: React.FC<OfflineSignalBannerProps> = ({
       <div style={styles.syncBanner}>
         <div style={styles.contentLeft}>
           <div style={styles.syncIconWrap}>
-            <span style={styles.syncSpinner}>🔄</span>
+            <span style={styles.syncSpinner}><Icon name="refresh" /></span>
           </div>
           <div style={styles.textWrap}>
             <div style={styles.syncTitle}>
@@ -50,7 +51,7 @@ export const OfflineSignalBanner: React.FC<OfflineSignalBannerProps> = ({
     return (
       <div style={styles.justSyncedBanner}>
         <div style={styles.contentLeft}>
-          <div style={styles.successIconWrap}>✓</div>
+          <div style={styles.successIconWrap}><Icon name="check" /></div>
           <div style={styles.textWrap}>
             <div style={styles.successTitle}>All positions synced</div>
             <div style={styles.syncSub}>Group map has caught up with your trail</div>
@@ -66,7 +67,7 @@ export const OfflineSignalBanner: React.FC<OfflineSignalBannerProps> = ({
     <div style={styles.noSignalBanner}>
       <div style={styles.contentLeft}>
         <div style={styles.warningIconWrap}>
-          📡
+
         </div>
         <div style={styles.textWrap}>
           <div style={styles.noSignalTitle}>

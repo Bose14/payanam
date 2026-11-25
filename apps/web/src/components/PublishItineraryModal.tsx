@@ -8,6 +8,7 @@ import {
   getPublishedTripBySourceId,
   PublishedTrip,
 } from '../utils/publicItinerary';
+import Icon from './Icon';
 
 interface StopItem {
   id?: string;
@@ -146,7 +147,7 @@ export default function PublishItineraryModal({
         {/* Modal Header */}
         <div style={styles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>🌐</span>
+            <span style={{ fontSize: 24 }}><Icon name="globe" /></span>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h3 style={styles.title}>Publish Itinerary Publicly</h3>
@@ -157,7 +158,7 @@ export default function PublishItineraryModal({
               <p style={styles.subtitle}>Feature 1B · Share with riders and let the community discover & copy your route</p>
             </div>
           </div>
-          <button onClick={onClose} style={styles.closeBtn} title="Close">✕</button>
+          <button onClick={onClose} style={styles.closeBtn} title="Close"><Icon name="close" /></button>
         </div>
 
         {/* Tab Switcher: Settings vs Preview */}
@@ -166,13 +167,13 @@ export default function PublishItineraryModal({
             onClick={() => setActiveTab('settings')}
             style={activeTab === 'settings' ? styles.tabActive : styles.tabInactive}
           >
-            <span>⚙️ 1. Choose What's Public</span>
+            <span>1. Choose What's Public</span>
           </button>
           <button
             onClick={() => setActiveTab('preview')}
             style={activeTab === 'preview' ? styles.tabActive : styles.tabInactive}
           >
-            <span>👁️ 2. Preview Before Publishing</span>
+            <span>2. Preview Before Publishing</span>
           </button>
         </div>
 
@@ -183,7 +184,7 @@ export default function PublishItineraryModal({
               {/* Privacy Shield Highlight (Rule 2) */}
               <div style={styles.privacyShieldCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 20 }}>🛡️</span>
+                  <span style={{ fontSize: 20 }}><Icon name="shield" /></span>
                   <span style={{ fontWeight: 800, fontSize: 13, color: '#10B981' }}>
                     PRIVACY PROTECTIONS ACTIVE
                   </span>
@@ -206,7 +207,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={styles.toggleTitle}>🗺️ Route & Coordinates</div>
+                      <div style={styles.toggleTitle}>Route & Coordinates</div>
                       <div style={styles.toggleDesc}>Waypoints, distance, and highway trace</div>
                     </div>
                   </label>
@@ -219,7 +220,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={styles.toggleTitle}>📅 Days & Schedule</div>
+                      <div style={styles.toggleTitle}>Days & Schedule</div>
                       <div style={styles.toggleDesc}>Multi-day plan breakdown ({trip.days} days)</div>
                     </div>
                   </label>
@@ -232,7 +233,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={styles.toggleTitle}>📍 Stops & Verified Waypoints</div>
+                      <div style={styles.toggleTitle}>Stops & Verified Waypoints</div>
                       <div style={styles.toggleDesc}>Fuel stations, food joints, viewpoints</div>
                     </div>
                   </label>
@@ -245,7 +246,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={styles.toggleTitle}>📝 Notes & Riding Tips</div>
+                      <div style={styles.toggleTitle}>Notes & Riding Tips</div>
                       <div style={styles.toggleDesc}>Road conditions, hairpin warnings, advice</div>
                     </div>
                   </label>
@@ -258,7 +259,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={styles.toggleTitle}>📸 Photos & Scenery</div>
+                      <div style={styles.toggleTitle}>Photos & Scenery</div>
                       <div style={styles.toggleDesc}>Show route scenic photographs</div>
                     </div>
                   </label>
@@ -278,7 +279,7 @@ export default function PublishItineraryModal({
                     />
                     <div>
                       <div style={{ ...styles.toggleTitle, color: '#10B981' }}>
-                        🔒 Hide Home / Starting Address
+                        Hide Home / Starting Address
                       </div>
                       <div style={styles.toggleDesc}>
                         Start point is generalized to city name; exact GPS is omitted.
@@ -294,7 +295,7 @@ export default function PublishItineraryModal({
                       style={styles.checkbox}
                     />
                     <div>
-                      <div style={styles.toggleTitle}>🏨 Hide Hotel & Night Stays</div>
+                      <div style={styles.toggleTitle}>Hide Hotel & Night Stays</div>
                       <div style={styles.toggleDesc}>Keep your private overnight accommodations hidden</div>
                     </div>
                   </label>
@@ -309,7 +310,7 @@ export default function PublishItineraryModal({
                       3. STOP PRIVACY (CLICK TO HIDE INDIVIDUAL STOPS)
                     </h4>
                     <span style={{ fontSize: 11, color: '#9D9C9A' }}>
-                      {hiddenCount > 0 ? `🛡️ ${hiddenCount} stops hidden` : 'All stops visible'}
+                      {hiddenCount > 0 ? `${hiddenCount} stops hidden` : 'All stops visible'}
                     </span>
                   </div>
 
@@ -332,7 +333,7 @@ export default function PublishItineraryModal({
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
                             <span style={{ fontSize: 16 }}>
-                              {stop.item_type === 'fuel_stop' ? '⛽' : stop.item_type === 'meal' ? '🍽️' : stop.item_type === 'stay' ? '🏨' : '📍'}
+                              <Icon name={stop.item_type === 'fuel_stop' ? 'fuel' : stop.item_type === 'meal' ? 'food' : stop.item_type === 'stay' ? 'bed' : 'pin'} />
                             </span>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -348,9 +349,9 @@ export default function PublishItineraryModal({
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             {isHidden ? (
-                              <span style={styles.hiddenPill}>🔒 Private</span>
+                              <span style={styles.hiddenPill}>Private</span>
                             ) : (
-                              <span style={styles.publicPill}>👁️ Public</span>
+                              <span style={styles.publicPill}>Public</span>
                             )}
                           </div>
                         </div>
@@ -379,7 +380,7 @@ export default function PublishItineraryModal({
             /* Step 3: Interactive Live Preview */
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={styles.previewNotice}>
-                <span>👁️</span>
+                <span><Icon name="eye" /></span>
                 <span>
                   This is exactly how riders in <strong>Discover</strong> will view your published itinerary before copying it.
                 </span>
@@ -393,7 +394,7 @@ export default function PublishItineraryModal({
                       {trip.title}
                     </h3>
                     <div style={{ fontSize: 12, color: '#F0C23A', fontWeight: 700, marginTop: 4 }}>
-                      by {user?.fullName || 'You'} · New Release · 5.0 ★
+                      by {user?.fullName || 'You'} · New Release · 5.0 rating
                     </div>
                   </div>
                   <span style={styles.previewTag}>PUBLIC ITINERARY</span>
@@ -407,7 +408,7 @@ export default function PublishItineraryModal({
 
                 {/* Privacy Badge */}
                 <div style={styles.sanitizedSummaryBar}>
-                  <span>🛡️</span>
+                  <span><Icon name="shield" /></span>
                   <span>
                     Privacy verified: Home address masked · {previewStops.length} public stops included
                     {hiddenCount > 0 && ` (${hiddenCount} private stops omitted)`}
@@ -439,7 +440,7 @@ export default function PublishItineraryModal({
 
                 {/* Source attribution preview */}
                 <div style={styles.previewAttributionNotice}>
-                  <span>ℹ️ When riders tap <strong>"Copy to my trips"</strong>, they get an editable draft that credits you as the original source:</span>
+                  <span>When riders tap <strong>"Copy to my trips"</strong>, they get an editable draft that credits you as the original source:</span>
                   <div style={{ marginTop: 4, fontStyle: 'italic', color: '#F0C23A' }}>
                     "Forked from @{user?.fullName || 'You'} ({trip.title})"
                   </div>
@@ -457,7 +458,7 @@ export default function PublishItineraryModal({
               style={styles.btnUnpublish}
               title="Remove from public Discover"
             >
-              🚫 Unpublish
+              Unpublish
             </button>
           )}
 
@@ -471,7 +472,7 @@ export default function PublishItineraryModal({
                 onClick={() => setActiveTab('preview')}
                 style={styles.btnPreview}
               >
-                <span>👁️</span> Preview Public Page
+                <span><Icon name="eye" /></span> Preview Public Page
               </button>
             ) : (
               <button
@@ -479,7 +480,7 @@ export default function PublishItineraryModal({
                 disabled={isSubmitting}
                 style={styles.btnPublishPrimary}
               >
-                <span>🌐</span>
+                <span><Icon name="globe" /></span>
                 {isSubmitting ? 'Publishing...' : currentlyPublished ? 'Update in Discover' : 'Publish to Discover'}
               </button>
             )}

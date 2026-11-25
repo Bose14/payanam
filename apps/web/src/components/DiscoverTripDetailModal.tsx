@@ -1,5 +1,6 @@
 import React from 'react';
 import { PublishedTrip } from '../utils/publicItinerary';
+import Icon from './Icon';
 
 interface DiscoverTripDetailModalProps {
   isOpen: boolean;
@@ -27,9 +28,9 @@ export default function DiscoverTripDetailModal({
         <div style={styles.header}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={styles.publicBadge}>🌐 DISCOVER ITINERARY</span>
+              <span style={styles.publicBadge}>DISCOVER ITINERARY</span>
               <span style={{ fontSize: 12, color: '#F0C23A', fontWeight: 800 }}>
-                {trip.rating.toFixed(1)} ★ ({trip.finishersCount} finishers)
+                {trip.rating.toFixed(1)} ({trip.finishersCount} finishers)
               </span>
             </div>
             <h3 style={styles.title}>{trip.title}</h3>
@@ -38,7 +39,7 @@ export default function DiscoverTripDetailModal({
               <span style={{ color: '#F0C23A' }}>{trip.copiesCount} riders copied</span>
             </div>
           </div>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}><Icon name="close" /></button>
         </div>
 
         {/* Tags bar */}
@@ -47,7 +48,7 @@ export default function DiscoverTripDetailModal({
             <span key={t} style={styles.tagChip}>{t}</span>
           ))}
           <span style={styles.routePill}>
-            {trip.fromPlace} ➔ {trip.toPlace} ({trip.days} Days)
+            {trip.fromPlace} to {trip.toPlace} ({trip.days} Days)
           </span>
         </div>
 
@@ -66,7 +67,7 @@ export default function DiscoverTripDetailModal({
 
           {/* Privacy Note */}
           <div style={styles.privacyNote}>
-            <span>🛡️</span>
+            <span><Icon name="shield" /></span>
             <span>
               <strong>Privacy protected:</strong> Exact home departure coordinate & private stays are sanitized.
             </span>
@@ -78,10 +79,10 @@ export default function DiscoverTripDetailModal({
               Waypoint Amenities Breakdown
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <div style={styles.amenityItem}><span>⛽ Fuel</span> <strong>{fuel}</strong></div>
-              <div style={styles.amenityItem}><span>🍽️ Food</span> <strong>{food}</strong></div>
-              <div style={styles.amenityItem}><span>☕ Rest</span> <strong>{rest}</strong></div>
-              <div style={styles.amenityItem}><span>📸 Scenic</span> <strong>{scenic}</strong></div>
+              <div style={styles.amenityItem}><span>Fuel</span> <strong>{fuel}</strong></div>
+              <div style={styles.amenityItem}><span>Food</span> <strong>{food}</strong></div>
+              <div style={styles.amenityItem}><span>Rest</span> <strong>{rest}</strong></div>
+              <div style={styles.amenityItem}><span>Scenic</span> <strong>{scenic}</strong></div>
             </div>
           </div>
 
@@ -110,7 +111,7 @@ export default function DiscoverTripDetailModal({
 
                     {stop.tips && (
                       <div style={styles.stopTipsBox}>
-                        <span>💡 Tip:</span> {stop.tips}
+                        <span>Tip:</span> {stop.tips}
                       </div>
                     )}
                   </div>
@@ -122,7 +123,7 @@ export default function DiscoverTripDetailModal({
           {/* Source Attribution Notice */}
           <div style={styles.sourceCreditBox}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#F0C23A', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🍴</span> Source Attribution Guarantee
+              <span><Icon name="food" /></span> Source Attribution Guarantee
             </div>
             <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9D9C9A', lineHeight: 1.4 }}>
               When you copy this itinerary, a draft trip is created under your account with full credit to{' '}
@@ -143,7 +144,7 @@ export default function DiscoverTripDetailModal({
               backgroundColor: isCopied ? '#10B981' : '#F0C23A',
             }}
           >
-            <span>{isCopied ? '✓' : '📋'}</span>
+            <span><Icon name={isCopied ? 'check' : 'list'} /></span>
             <span>{isCopied ? 'Copied to My Trips' : 'Copy to my trips'}</span>
           </button>
         </div>

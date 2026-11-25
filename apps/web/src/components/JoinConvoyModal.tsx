@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Icon from './Icon';
 
 interface JoinConvoyModalProps {
   isOpen: boolean;
@@ -58,13 +59,13 @@ export const JoinConvoyModal: React.FC<JoinConvoyModalProps> = ({
       <div style={styles.modalCard} onClick={e => e.stopPropagation()}>
         <div style={styles.modalHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>🔑</span>
+            <span style={{ fontSize: 24 }}><Icon name="lock" /></span>
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
               Join Convoy Expedition
             </h3>
           </div>
           <button onClick={onClose} style={styles.closeBtn} aria-label="Close modal">
-            ✕
+
           </button>
         </div>
 
@@ -91,7 +92,7 @@ export const JoinConvoyModal: React.FC<JoinConvoyModalProps> = ({
               title="Paste from clipboard"
               style={styles.pasteBtn}
             >
-              📋 Paste
+              Paste
             </button>
           </div>
 

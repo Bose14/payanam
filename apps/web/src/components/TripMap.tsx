@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import Icon from './Icon';
 
 // Fix default marker icons
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,7 +39,7 @@ export default function TripMap({ stops, fromPlace, toPlace }: TripMapProps) {
         background: 'linear-gradient(135deg, #1e3a5f10, #0f346015)',
         borderRadius: 12, border: '1px dashed #93c5fd',
       }}>
-        <div style={{ fontSize: 32 }}>🗺️</div>
+        <div style={{ fontSize: 32 }}><Icon name="map" /></div>
         <p style={{ color: '#374151', fontSize: 14, fontWeight: 500, margin: 0 }}>
           Map available for new trips with AI coordinates
         </p>
@@ -60,7 +61,7 @@ export default function TripMap({ stops, fromPlace, toPlace }: TripMapProps) {
 
   return (
     <MapContainer center={center} zoom={7} style={{ height: 380, borderRadius: 12, zIndex: 0 }}>
-      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap" />
+      <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
       <Polyline positions={positions} color="#3b82f6" weight={3} dashArray="6,4" />
       {validStops.map((stop, i) => {
         const color = TYPE_COLORS[stop.item_type ?? 'rest'] ?? '#6b7280';

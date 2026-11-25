@@ -1,4 +1,5 @@
 import React from 'react';
+import Icon from './Icon';
 
 interface TrackingPausedBannerProps {
   pauseReason?: string;
@@ -14,7 +15,7 @@ export default function TrackingPausedBanner({
   return (
     <div style={styles.banner}>
       <div style={styles.iconWrap}>
-        <span>⚠️</span>
+        <span><Icon name="warning" /></span>
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -33,7 +34,7 @@ export default function TrackingPausedBanner({
           style={styles.btnResume}
           title="Resume GPS tracking now"
         >
-          <span>▶️</span>
+          <span><Icon name="arrowRight" /></span>
           <span>Resume</span>
         </button>
 
@@ -44,7 +45,7 @@ export default function TrackingPausedBanner({
             style={styles.btnDiagnostics}
             title="Open background tracking diagnostics in Me tab"
           >
-            Diagnostics ➔
+            Diagnostics →
           </button>
         )}
       </div>

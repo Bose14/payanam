@@ -5,6 +5,7 @@ import {
   CAPTAIN_SENT_VIBRATION_PATTERN,
   CaptainAnnouncementPreset,
 } from '../utils/captainAnnouncement';
+import Icon from './Icon';
 
 export type AnnouncementPreset = CaptainAnnouncementPreset;
 export const ANNOUNCEMENT_PRESETS = CAPTAIN_ANNOUNCEMENT_PRESETS;
@@ -111,13 +112,13 @@ export default function CaptainAnnouncementModal({
 
         {/* Header */}
         <div style={styles.header}>
-          <div style={styles.iconDisc}>👑</div>
+          <div style={styles.iconDisc}><Icon name="crown" /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.pretitle}>CAPTAIN CONTROL</div>
             <h3 style={styles.title}>Broadcast Announcement</h3>
             <p style={styles.subtitle}>Alerts members with high-priority audio & distinct vibration</p>
           </div>
-          <button type="button" onClick={onClose} style={styles.closeBtn} title="Close">✕</button>
+          <button type="button" onClick={onClose} style={styles.closeBtn} title="Close"><Icon name="close" /></button>
         </div>
 
         {/* 6 Presets List matching Feature K */}
@@ -135,7 +136,7 @@ export default function CaptainAnnouncementModal({
                   backgroundColor: isSelected ? 'rgba(240, 194, 58, 0.12)' : '#111316',
                 }}
               >
-                <span style={styles.presetIcon}>{p.icon}</span>
+                <span style={styles.presetIcon}><Icon name={p.icon} /></span>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                   <div style={{
                     color: isSelected ? '#F0C23A' : 'var(--text-primary)',
@@ -149,7 +150,7 @@ export default function CaptainAnnouncementModal({
                   </div>
                 </div>
                 {isSelected && (
-                  <span style={styles.checkMark}>✓</span>
+                  <span style={styles.checkMark}><Icon name="check" /></span>
                 )}
               </button>
             );
@@ -173,7 +174,7 @@ export default function CaptainAnnouncementModal({
               }}
               title="Dictate short text line via speech"
             >
-              {isListening ? '🎙️ Listening...' : '🎤 Dictate'}
+              {isListening ? 'Listening...' : 'Dictate'}
             </button>
           </div>
 
@@ -211,7 +212,7 @@ export default function CaptainAnnouncementModal({
             disabled={sending}
             style={styles.btnBroadcast}
           >
-            {sending ? '⏳ Broadcasting...' : '📢 Broadcast Announcement'}
+            {sending ? 'Broadcasting...' : 'Broadcast Announcement'}
           </button>
         </div>
       </div>

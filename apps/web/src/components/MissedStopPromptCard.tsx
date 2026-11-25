@@ -1,5 +1,6 @@
 import React from 'react';
 import { PinnedStopData } from './PinStopModal';
+import Icon from './Icon';
 
 export interface MissedStopPromptCardProps {
   pinnedStop: PinnedStopData | null;
@@ -21,7 +22,7 @@ export const MissedStopPromptCard: React.FC<MissedStopPromptCardProps> = ({
       {/* Header Row */}
       <div style={styles.headerRow}>
         <div style={styles.headerLeft}>
-          <span style={styles.warningIcon}>⚠️</span>
+          <span style={styles.warningIcon}><Icon name="warning" /></span>
           <div>
             <span style={styles.pretitle}>MISSED STOP PROMPT</span>
             <h4 style={styles.title}>Did you stop here?</h4>
@@ -42,7 +43,7 @@ export const MissedStopPromptCard: React.FC<MissedStopPromptCardProps> = ({
           onClick={onConfirmStopped}
           style={styles.primaryBtn}
         >
-          ✓ Yes, I stopped here
+          Yes, I stopped here
         </button>
 
         <button

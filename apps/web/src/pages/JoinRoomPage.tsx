@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import Icon from '../components/Icon';
 
 interface TripPreview {
   id: string;
@@ -29,10 +30,10 @@ interface StopPreview {
 }
 
 const VEHICLE_ICONS: Record<string, string> = {
-  motorcycle: '🏍️',
-  scooter: '🛵',
-  car: '🚗',
-  bicycle: '🚲',
+  motorcycle: 'bike',
+  scooter: 'bike',
+  car: 'bike',
+  bicycle: 'bike',
 };
 
 type PageState = 'loading' | 'preview' | 'requesting' | 'pending' | 'approved' | 'rejected' | 'error' | 'owner';
@@ -116,7 +117,7 @@ export default function JoinRoomPage() {
             const destTripId = res.tripId ?? res.room?.trips?.id ?? res.room?.trip_id ?? tripId;
             setPageState('approved');
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-            showToastMsg('🎉 Request Approved! Opening convoy mission control...');
+            showToastMsg('Request Approved! Opening convoy mission control...');
             if (destTripId) {
               setTimeout(() => navigate(`/trips/${destTripId}`, { replace: true }), 1000);
             }
@@ -154,7 +155,7 @@ export default function JoinRoomPage() {
         else setPageState('approved');
       } else if (status === 'pending') {
         setPageState('pending');
-        showToastMsg('⚡ Request sent! Awaiting leader confirmation.');
+        showToastMsg('Request sent! Awaiting leader confirmation.');
       } else if (status === 'rejected') {
         setPageState('rejected');
       } else {
@@ -173,7 +174,7 @@ export default function JoinRoomPage() {
     if (!inviteCode) return;
     try {
       await navigator.clipboard.writeText(inviteCode);
-      showToastMsg('📋 Convoy code copied!');
+      showToastMsg('Convoy code copied!');
     } catch {
       showToastMsg('Failed to copy code');
     }
@@ -182,26 +183,26 @@ export default function JoinRoomPage() {
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showToastMsg('🔗 Invite link copied!');
+      showToastMsg('Invite link copied!');
     } catch {
       showToastMsg('Failed to copy link');
     }
   };
 
   const handleWhatsAppShare = () => {
-    const text = `🏍️ Join our motorcycle convoy on Payanam!\n\n🗺️ Route: ${preview?.from_place ?? 'Route'} ➔ ${preview?.to_place ?? 'Destination'} (${preview?.days ?? 1} Days)\n🎟️ Convoy Code: ${inviteCode}\n\nJoin our convoy here:\n${shareUrl}`;
+    const text = `Join our motorcycle convoy on Payanam!\n\nRoute: ${preview?.from_place ?? 'Route'} to ${preview?.to_place ?? 'Destination'} (${preview?.days ?? 1} Days)\nConvoy Code: ${inviteCode}\n\nJoin our convoy here:\n${shareUrl}`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
-  const vehicleIcon = VEHICLE_ICONS[preview?.bike_type?.toLowerCase() ?? 'motorcycle'] ?? '🏍️';
+  const vehicleIcon = VEHICLE_ICONS[preview?.bike_type?.toLowerCase() ?? 'motorcycle'] ?? 'bike';
 
   return (
     <div style={styles.page}>
       {user ? <Navbar /> : (
         <header style={styles.header}>
           <Link to="/" style={styles.brand}>
-            <span style={{ fontSize: 24 }}>🏍️</span>
+            <span style={{ fontSize: 24 }}><Icon name="bike" /></span>
             <span style={styles.brandTitle}>PAYANAM</span>
           </Link>
           <Link to={`/login?redirect=/join/${inviteCode}`} style={styles.loginBtn}>
@@ -221,7 +222,7 @@ export default function JoinRoomPage() {
         {/* Loading State */}
         {pageState === 'loading' && (
           <div className="responsive-card" style={styles.card}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}><Icon name="clock" /></div>
             <h2 style={styles.title}>Verifying Convoy Code...</h2>
             <p style={styles.subtitle}>Looking up expedition details, leader information, and route waypoints.</p>
           </div>
@@ -230,7 +231,7 @@ export default function JoinRoomPage() {
         {/* Error State */}
         {pageState === 'error' && (
           <div className="responsive-card" style={styles.card}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}><Icon name="close" /></div>
             <h2 style={styles.title}>Convoy Pass Not Found</h2>
             <p style={{ color: '#ef4444', fontSize: 15, margin: '8px 0 24px', lineHeight: 1.5, fontWeight: 700 }}>
               {errorMsg}
@@ -244,7 +245,7 @@ export default function JoinRoomPage() {
         {/* Convoy Leader / Owner State */}
         {pageState === 'owner' && (
           <div className="responsive-card" style={styles.card}>
-            <div style={{ fontSize: 52, marginBottom: 12 }}>👑</div>
+            <div style={{ fontSize: 52, marginBottom: 12 }}><Icon name="crown" /></div>
             <div style={styles.leadBadgeBig}>Convoy Leader</div>
             <h2 style={styles.title}>You are the Leader!</h2>
             <p style={styles.subtitle}>
@@ -253,10 +254,10 @@ export default function JoinRoomPage() {
             {tripId && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
                 <Link to={`/trips/${tripId}`} style={styles.btnPrimary}>
-                  Open Convoy Command Center ➔
+                  Open Convoy Command Center →
                 </Link>
                 <button onClick={handleCopyLink} style={styles.btnSecondary}>
-                  🔗 Copy Invite Link to Share
+                  Copy Invite Link to Share
                 </button>
               </div>
             )}
@@ -281,7 +282,7 @@ export default function JoinRoomPage() {
                 background: 'rgba(234, 88, 12, 0.1)',
                 border: '1px dashed var(--accent-gold)',
               }} />
-              <div style={{ fontSize: 44, zIndex: 1 }}>{vehicleIcon}</div>
+              <div style={{ fontSize: 44, zIndex: 1 }}><Icon name={vehicleIcon} size={44} /></div>
             </div>
 
             <div style={styles.pendingBadge}>● Live Sync • Waiting for Leader</div>
@@ -291,13 +292,13 @@ export default function JoinRoomPage() {
             </p>
 
             <div style={styles.infoNotice}>
-              <span style={{ fontSize: 16 }}>⚡</span>
+              <span style={{ fontSize: 16 }}><Icon name="bolt" /></span>
               <span><strong>Live automatic sync:</strong> This screen will instantly open the convoy the moment the leader hits Approve. No need to refresh!</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
               <button onClick={handleWhatsAppShare} style={styles.btnWhatsApp}>
-                <span>💬</span>
+                <span><Icon name="chat" /></span>
                 <span>Ping {leader?.fullName?.split(' ')[0] || 'Leader'} on WhatsApp</span>
               </button>
               <Link to="/dashboard" style={styles.btnSecondary}>
@@ -310,15 +311,15 @@ export default function JoinRoomPage() {
         {/* Approved State */}
         {pageState === 'approved' && (
           <div className="responsive-card" style={styles.card}>
-            <div style={{ fontSize: 52, marginBottom: 12 }}>🎉</div>
-            <div style={styles.approvedBadge}>✓ Convoy Co-Rider</div>
+            <div style={{ fontSize: 52, marginBottom: 12 }}><Icon name="spark" /></div>
+            <div style={styles.approvedBadge}>Convoy Co-Rider</div>
             <h2 style={styles.title}>You're in the Convoy!</h2>
             <p style={styles.subtitle}>
               You have official access to the live telemetry, GPS map, and expense splitting for <strong>{preview?.title}</strong>.
             </p>
             {tripId && (
               <Link to={`/trips/${tripId}`} style={styles.btnPrimary}>
-                Open Convoy Mission Control ➔
+                Open Convoy Mission Control →
               </Link>
             )}
           </div>
@@ -327,14 +328,14 @@ export default function JoinRoomPage() {
         {/* Rejected State */}
         {pageState === 'rejected' && (
           <div className="responsive-card" style={styles.card}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🚫</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}><Icon name="close" /></div>
             <h2 style={styles.title}>Join Request Declined</h2>
             <p style={styles.subtitle}>
               The convoy leader declined your request to join <strong>{preview?.title}</strong>.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
               <button onClick={handleRequestJoin} style={styles.btnPrimary}>
-                🔄 Request to Join Again
+                Request to Join Again
               </button>
               <Link to="/dashboard" style={styles.btnSecondary}>
                 Back to Dashboard
@@ -349,22 +350,22 @@ export default function JoinRoomPage() {
             {/* Top Pass Header */}
             <div style={styles.passHeader}>
               <div style={styles.inviteTag}>
-                <span>🎟️ CONVOY TRAVEL PASS</span>
+                <span>CONVOY TRAVEL PASS</span>
               </div>
               <div style={styles.codePill} onClick={handleCopyCode} title="Click to copy code">
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CODE:</span>
                 <span style={{ fontWeight: 900, letterSpacing: 1.5, color: 'var(--accent-gold)' }}>{inviteCode}</span>
-                <span style={{ fontSize: 12 }}>📋</span>
+                <span style={{ fontSize: 12 }}><Icon name="list" /></span>
               </div>
             </div>
 
-            <div style={{ fontSize: 42, margin: '14px 0 6px' }}>{vehicleIcon}</div>
+            <div style={{ fontSize: 42, margin: '14px 0 6px' }}><Icon name={vehicleIcon} size={44} /></div>
             <h2 style={styles.title}>{preview.title}</h2>
 
             {/* Route Visualizer Card */}
             <div style={styles.routeContainer}>
               <div style={styles.routePoint}>
-                <span style={{ color: '#10b981', fontSize: 16 }}>🟢</span>
+                <span style={{ color: '#10b981', fontSize: 16 }}><Icon name="dot" /></span>
                 <div>
                   <div style={styles.routeLabel}>Origin</div>
                   <div style={styles.routePlace}>{preview.from_place}</div>
@@ -373,11 +374,11 @@ export default function JoinRoomPage() {
 
               <div style={styles.routeConnector}>
                 <div style={styles.routeLine} />
-                <span style={styles.routeArrow}>➔</span>
+                <span style={styles.routeArrow}>→</span>
               </div>
 
               <div style={styles.routePoint}>
-                <span style={{ color: '#ef4444', fontSize: 16 }}>🏁</span>
+                <span style={{ color: '#ef4444', fontSize: 16 }}><Icon name="flag" /></span>
                 <div>
                   <div style={styles.routeLabel}>Destination</div>
                   <div style={styles.routePlace}>{preview.to_place}</div>
@@ -398,11 +399,11 @@ export default function JoinRoomPage() {
                 <div style={{ flex: 1, textAlign: 'left' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>{leader.fullName}</span>
-                    <span style={styles.leadBadge}>👑 Lead</span>
+                    <span style={styles.leadBadge}>Lead</span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {leader.bikeModel && <span>🏍️ {leader.bikeModel}</span>}
-                    {leader.city && <span>📍 {leader.city}</span>}
+                    {leader.bikeModel && <span>{leader.bikeModel}</span>}
+                    {leader.city && <span>{leader.city}</span>}
                   </div>
                 </div>
               </div>
@@ -416,7 +417,7 @@ export default function JoinRoomPage() {
               </div>
               <div style={styles.statBox}>
                 <span style={styles.statBoxLabel}>Convoy Strength</span>
-                <span style={styles.statBoxVal}>👥 {memberCount} {memberCount === 1 ? 'Rider' : 'Riders'}</span>
+                <span style={styles.statBoxVal}>{memberCount} {memberCount === 1 ? 'Rider' : 'Riders'}</span>
               </div>
               <div style={styles.statBox}>
                 <span style={styles.statBoxLabel}>Vehicle Type</span>
@@ -429,7 +430,7 @@ export default function JoinRoomPage() {
               <div style={styles.stopsSection}>
                 <div style={styles.stopsHeader}>
                   <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    📍 Planned Waypoints Preview
+                    Planned Waypoints Preview
                   </span>
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{stopsPreview.length} stops</span>
                 </div>
@@ -457,7 +458,7 @@ export default function JoinRoomPage() {
                     cursor: pageState === 'requesting' ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {pageState === 'requesting' ? '⏳ Requesting Entry...' : '✉️ Request to Join Convoy'}
+                  {pageState === 'requesting' ? 'Requesting Entry...' : 'Request to Join Convoy'}
                 </button>
               </div>
             ) : (
@@ -466,7 +467,7 @@ export default function JoinRoomPage() {
                   Sign in or create a free rider account to join this convoy:
                 </p>
                 <Link to={`/login?redirect=/join/${inviteCode}`} style={styles.btnPrimary}>
-                  Sign In to Join ➔
+                  Sign In to Join →
                 </Link>
               </div>
             )}
@@ -474,15 +475,15 @@ export default function JoinRoomPage() {
             {/* Quick Share Strip */}
             <div style={styles.shareStrip}>
               <button onClick={handleWhatsAppShare} style={styles.shareBtn} title="Share on WhatsApp">
-                <span>💬</span>
+                <span><Icon name="chat" /></span>
                 <span>WhatsApp</span>
               </button>
               <button onClick={() => setShowQrModal(true)} style={styles.shareBtn} title="View Scannable QR Pass">
-                <span>📱</span>
+                <span><Icon name="phone" /></span>
                 <span>QR Pass</span>
               </button>
               <button onClick={handleCopyLink} style={styles.shareBtn} title="Copy Link">
-                <span>🔗</span>
+                <span><Icon name="link" /></span>
                 <span>Copy Link</span>
               </button>
             </div>
@@ -497,13 +498,13 @@ export default function JoinRoomPage() {
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>
-                  🎟️ Convoy QR Pass
+                  Convoy QR Pass
                 </h3>
                 <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
                   Scan with any camera to open this convoy
                 </p>
               </div>
-              <button onClick={() => setShowQrModal(false)} style={styles.closeBtn}>✕</button>
+              <button onClick={() => setShowQrModal(false)} style={styles.closeBtn}><Icon name="close" /></button>
             </div>
 
             <div style={styles.qrContainer}>
@@ -521,7 +522,7 @@ export default function JoinRoomPage() {
 
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={handleCopyLink} style={styles.btnPrimary}>
-                📋 Copy Link
+                Copy Link
               </button>
               <button onClick={() => setShowQrModal(false)} style={styles.btnSecondary}>
                 Done

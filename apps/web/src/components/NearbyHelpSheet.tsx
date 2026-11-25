@@ -8,6 +8,7 @@ import {
   sortServicesByDistance,
 } from '../utils/nearbyServices';
 import AddNearbyServiceModal from './AddNearbyServiceModal';
+import Icon from './Icon';
 
 export type NearbyCategory = 'ALL' | 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY';
 
@@ -102,13 +103,13 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
   const handleConfirmOpen = (id: string, name: string) => {
     const updated = confirmServiceOpen(id, userName);
     setServices(updated);
-    showToast(`✓ Confirmed "${name}" is open! Verified timestamp updated.`);
+    showToast(`Confirmed "${name}" is open! Verified timestamp updated.`);
   };
 
   const handleReportClosed = (id: string, name: string) => {
     const updated = reportServiceClosed(id, userName);
     setServices(updated);
-    showToast(`⚠️ Reported "${name}" as closed. Alerting convoy riders.`);
+    showToast(`Reported "${name}" as closed. Alerting convoy riders.`);
   };
 
   const handlePinClick = (item?: NearbyServiceItem | null) => {
@@ -176,7 +177,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
           <div style={styles.filterRow}>
             {CATEGORIES.map((cat) => {
               const isActive = activeCategory === cat;
-              const icon = cat === 'FUEL' ? '⛽' : cat === 'REPAIR' ? '🔧' : cat === 'FOOD' ? '🍽️' : cat === 'REST' ? '☕' : cat === 'STAY' ? '🏨' : '🌟';
+              const icon = cat === 'FUEL' ? 'fuel' : cat === 'REPAIR' ? 'wrench' : cat === 'FOOD' ? 'food' : cat === 'REST' ? 'coffee' : cat === 'STAY' ? 'bed' : 'star';
               return (
                 <button
                   key={cat}
@@ -193,7 +194,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                     borderColor: isActive ? '#F0C23A' : '#2A2E35',
                   }}
                 >
-                  <span>{icon}</span>
+                  <span><Icon name={icon} /></span>
                   <span>{cat}</span>
                 </button>
               );
@@ -204,7 +205,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
           <div style={styles.listingsScroll}>
             {filteredItems.length === 0 ? (
               <div style={styles.emptyCard}>
-                <div style={{ fontSize: 28, marginBottom: 6 }}>📍</div>
+                <div style={{ fontSize: 28, marginBottom: 6 }}><Icon name="pin" /></div>
                 <div style={{ color: 'var(--text-primary)', fontWeight: 800, fontSize: 13 }}>
                   No {activeCategory} services found near this corridor
                 </div>
@@ -237,7 +238,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                       ...styles.itemCategoryBadge,
                       backgroundColor: item.category === 'FUEL' ? '#D97706' : item.category === 'REPAIR' ? '#2563EB' : item.category === 'FOOD' ? '#EA580C' : item.category === 'STAY' ? '#059669' : '#7C3AED',
                     }}>
-                      {item.category === 'FUEL' ? '⛽' : item.category === 'REPAIR' ? '🔧' : item.category === 'FOOD' ? '🍽️' : item.category === 'STAY' ? '🏨' : '☕'}
+                      <Icon name={item.category === 'FUEL' ? 'fuel' : item.category === 'REPAIR' ? 'wrench' : item.category === 'FOOD' ? 'food' : item.category === 'STAY' ? 'bed' : 'coffee'} />
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -245,9 +246,9 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                         <div style={styles.itemName}>{item.name}</div>
                         {/* Status badge */}
                         {item.isOpen ? (
-                          <span style={styles.openBadge}>🟢 OPEN</span>
+                          <span style={styles.openBadge}>OPEN</span>
                         ) : (
-                          <span style={styles.closedBadge}>⚠️ CLOSED</span>
+                          <span style={styles.closedBadge}>CLOSED</span>
                         )}
                       </div>
 
@@ -256,7 +257,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                       {/* Distance and Source + Last-Verified Stamp (Step 3) */}
                       <div style={styles.metaRow}>
                         <span style={styles.distanceBadge}>
-                          📍 {item.distanceKm} km away
+                          {item.distanceKm} km away
                         </span>
 
                         <span
@@ -288,7 +289,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                           style={styles.actionBtnSmall}
                           title="Navigate using external maps"
                         >
-                          <span>🧭</span> Navigate
+                          <span><Icon name="compass" /></span> Navigate
                         </button>
 
                         {item.phone && (
@@ -301,7 +302,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                             style={styles.actionBtnSmall}
                             title="Call ahead"
                           >
-                            <span>📞</span> Call
+                            <span><Icon name="phone" /></span> Call
                           </button>
                         )}
 
@@ -314,7 +315,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                           style={{ ...styles.actionBtnSmall, color: '#10B981' }}
                           title="Confirm open for convoy"
                         >
-                          <span>✓</span> Confirm open
+                          <span><Icon name="check" /></span> Confirm open
                         </button>
 
                         <button
@@ -326,7 +327,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                           style={{ ...styles.actionBtnSmall, color: '#EF4444' }}
                           title="Report closed"
                         >
-                          <span>⚠️</span> Report closed
+                          <span><Icon name="warning" /></span> Report closed
                         </button>
                       </div>
                     </div>
@@ -338,7 +339,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
 
           {/* Step 5: Offline cache note */}
           <div style={styles.cacheNote}>
-            <span style={{ fontSize: 13 }}>💾</span>
+            <span style={{ fontSize: 13 }}><Icon name="download" /></span>
             <span>Route corridor listings are cached before the ride. Fully accessible offline without signal.</span>
           </div>
 
@@ -350,7 +351,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                 onClick={() => handleNavigateClick(selectedItem)}
                 style={styles.btnPrimary}
               >
-                🧭 Navigate to {selectedItem.name.slice(0, 18)}
+                Navigate to {selectedItem.name.slice(0, 18)}
               </button>
               {onPinAsStop && (
                 <button
@@ -358,7 +359,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
                   onClick={() => handlePinClick(selectedItem)}
                   style={styles.btnSecondary}
                 >
-                  📌 Pin as itinerary stop
+                  Pin as itinerary stop
                 </button>
               )}
             </div>
@@ -375,7 +376,7 @@ export const NearbyHelpSheet: React.FC<NearbyHelpSheetProps> = ({
         onPlaceAdded={(added) => {
           setServices((prev) => [added, ...prev]);
           setSelectedId(added.id);
-          showToast(`✓ Added "${added.name}" to route corridor!`);
+          showToast(`Added "${added.name}" to route corridor!`);
         }}
       />
     </>

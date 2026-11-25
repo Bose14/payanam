@@ -260,7 +260,7 @@ export default function WelcomePage() {
         lineHeight: 1.4,
       }}
     >
-      ⚠️ {err}
+      {err}
     </div>
   );
 

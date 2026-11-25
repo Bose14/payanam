@@ -8,6 +8,7 @@ import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
 import NavigationAppModal from '../components/NavigationAppModal';
 import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
+import Icon from '../components/Icon';
 import {
   ItineraryProposalCard,
   ProposeEditModal,
@@ -23,12 +24,12 @@ import {
 } from '../components';
 
 const typeIcons: Record<string, string> = {
-  fuel_stop: '⛽',
-  stay: '🏨',
-  attraction: '📍',
-  meal: '🍽️',
-  rest: '☕',
-  stop: '📌',
+  fuel_stop: 'fuel',
+  stay: 'bed',
+  attraction: 'pin',
+  meal: 'food',
+  rest: 'coffee',
+  stop: 'pin',
 };
 
 const TYPE_COLORS: Record<string, { color: string; bg: string }> = {
@@ -221,7 +222,7 @@ export default function TripDetailPage() {
       description: data.description,
     });
     setProposals((prev) => [newProp, ...prev]);
-    setToast('✓ Proposal submitted to Captain!');
+    setToast('Proposal submitted to Captain!');
     setTimeout(() => setToast(''), 3000);
   };
 
@@ -231,7 +232,7 @@ export default function TripDetailPage() {
     setProposals((prev) =>
       prev.map((p) => (p.id === prop.id ? { ...p, status: 'accepted', resolvedBy: user?.fullName || 'Captain' } : p))
     );
-    setToast(`✓ Approved proposal from ${prop.proposerName}`);
+    setToast(`Approved proposal from ${prop.proposerName}`);
     setTimeout(() => setToast(''), 3000);
   };
 
@@ -255,7 +256,7 @@ export default function TripDetailPage() {
     try {
       await tripService.updateTripStatus(id, newStatus);
       setTrip((prev) => (prev ? { ...prev, status: newStatus } : null));
-      showToast(newStatus === 'completed' ? '🏆 Expedition marked as completed!' : 'Trip reopened for planning');
+      showToast(newStatus === 'completed' ? 'Expedition marked as completed!' : 'Trip reopened for planning');
     } catch {
       showToast('Failed to update trip status');
     }
@@ -306,7 +307,7 @@ export default function TripDetailPage() {
               playNotificationSound();
               const newest = reqs[reqs.length - 1];
               const name = newest?.users?.full_name || 'A rider';
-              showToast(`🔔 ${name} requested to join your convoy!`);
+              showToast(`${name} requested to join your convoy!`);
             }
             return reqs;
           });
@@ -324,7 +325,7 @@ export default function TripDetailPage() {
       setSaveStatus('saved');
     } catch {
       setSaveStatus('unsaved');
-      showToast('❌ Auto-save failed');
+      showToast('Auto-save failed');
     }
   }, []);
 
@@ -347,7 +348,7 @@ export default function TripDetailPage() {
     if (!shareUrl) return;
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
-      showToast('✅ Invite link copied to clipboard!');
+      showToast('Invite link copied to clipboard!');
       setTimeout(() => setCopied(false), 2500);
     });
   };
@@ -356,7 +357,7 @@ export default function TripDetailPage() {
     if (!inviteCode) return;
     try {
       await navigator.clipboard.writeText(inviteCode);
-      showToast('📋 Convoy code copied!');
+      showToast('Convoy code copied!');
     } catch {
       showToast('Failed to copy code');
     }
@@ -364,7 +365,7 @@ export default function TripDetailPage() {
 
   const handleWhatsAppShare = () => {
     if (!inviteCode || !trip || !shareUrl) return;
-    const text = `🏍️ Join our motorcycle convoy on Payanam!\n\n🗺️ Route: ${trip.from_place} ➔ ${trip.to_place} (${trip.days} Days)\n🎟️ Convoy Code: ${inviteCode}\n\nJoin our live convoy here:\n${shareUrl}`;
+    const text = `Join our motorcycle convoy on Payanam!\n\nRoute: ${trip.from_place} to ${trip.to_place} (${trip.days} Days)\nConvoy Code: ${inviteCode}\n\nJoin our live convoy here:\n${shareUrl}`;
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -391,9 +392,9 @@ export default function TripDetailPage() {
     try {
       await tripService.removeMember(id, memberId);
       setApprovedMembers(prev => prev.filter(m => m.id !== memberId));
-      showToast(`✓ Removed ${memberName} from convoy`);
+      showToast(`Removed ${memberName} from convoy`);
     } catch {
-      showToast('❌ Failed to remove member');
+      showToast('Failed to remove member');
     } finally {
       setRemovingMemberId(null);
     }
@@ -408,12 +409,12 @@ export default function TripDetailPage() {
       if (action === 'approved') {
         const approved = pendingRequests.find(m => m.id === memberId);
         if (approved) setApprovedMembers(prev => [...prev, approved]);
-        showToast('✅ Member approved');
+        showToast('Member approved');
       } else {
-        showToast('✕ Request declined');
+        showToast('Request declined');
       }
     } catch {
-      showToast('❌ Action failed');
+      showToast('Action failed');
     } finally {
       setRespondingId(null);
     }
@@ -481,7 +482,7 @@ export default function TripDetailPage() {
   if (loading) {
     return (
       <div style={styles.centerPage}>
-        <div style={{ fontSize: 44, marginBottom: 12 }}>⏳</div>
+        <div style={{ fontSize: 44, marginBottom: 12 }}><Icon name="clock" /></div>
         <p style={{ color: 'var(--text-secondary)', fontSize: 16, fontWeight: 700 }}>
           Loading expedition itinerary & convoy data...
         </p>
@@ -492,7 +493,7 @@ export default function TripDetailPage() {
   if (error || !trip) {
     return (
       <div style={styles.centerPage}>
-        <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
+        <div style={{ fontSize: 44, marginBottom: 12 }}><Icon name="warning" /></div>
         <p style={{ color: '#ef4444', fontSize: 16, marginBottom: 16, fontWeight: 700 }}>{error || 'Trip not found'}</p>
         <Link to="/dashboard" style={styles.btnSecondary}>← Back to Dashboard</Link>
       </div>
@@ -515,7 +516,7 @@ export default function TripDetailPage() {
         {trip?.isOwner && pendingRequests.length > 0 && (
           <div style={styles.topPendingBanner}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flex: 1 }}>
-              <span style={{ fontSize: 24 }}>🚨</span>
+              <span style={{ fontSize: 24 }}><Icon name="alert" /></span>
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontWeight: 800, fontSize: 14, color: '#f59e0b' }}>
                   {pendingRequests.length} {pendingRequests.length === 1 ? 'Rider' : 'Riders'} Waiting to Join Convoy!
@@ -534,7 +535,7 @@ export default function TripDetailPage() {
                 disabled={!!respondingId}
                 style={styles.btnApprove}
               >
-                {respondingId === pendingRequests[0]?.id ? '⏳ Approving...' : `✓ Approve ${pendingRequests[0]?.users?.full_name?.split(' ')[0] || 'Rider'}`}
+                {respondingId === pendingRequests[0]?.id ? 'Approving...' : `Approve ${pendingRequests[0]?.users?.full_name?.split(' ')[0] || 'Rider'}`}
               </button>
               <button
                 onClick={() => {
@@ -554,10 +555,10 @@ export default function TripDetailPage() {
           <div style={{ flex: 1, minWidth: 'min(100%, 280px)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
               <span style={styles.tripBadge}>
-                🏍️ {trip.bike_type}
+                {trip.bike_type}
               </span>
               <span style={styles.tripBadge}>
-                📅 {trip.days} Days
+                {trip.days} Days
               </span>
               {trip?.isOwner && (
                 <span style={{
@@ -565,7 +566,7 @@ export default function TripDetailPage() {
                   fontWeight: 700,
                   color: saveStatus === 'saved' ? '#34d399' : saveStatus === 'saving' ? '#fbbf24' : '#f87171',
                 }}>
-                  {saveStatus === 'saved' ? '✓ Auto-Saved' : saveStatus === 'saving' ? '⏳ Saving...' : '● Unsaved changes'}
+                  {saveStatus === 'saved' ? 'Auto-Saved' : saveStatus === 'saving' ? 'Saving...' : '● Unsaved changes'}
                 </span>
               )}
             </div>
@@ -573,7 +574,7 @@ export default function TripDetailPage() {
             <h1 style={styles.heroTitle}>{trip.title}</h1>
             <p style={styles.heroRoute}>
               <span style={{ color: 'var(--accent-green, #10b981)' }}>● {trip.from_place}</span>
-              <span style={{ margin: '0 8px', color: 'var(--accent-gold, #f59e0b)' }}>➔</span>
+              <span style={{ margin: '0 8px', color: 'var(--accent-gold, #f59e0b)' }}>→</span>
               <span style={{ color: 'var(--pz-bad, #ef4444)' }}>● {trip.to_place}</span>
             </p>
           </div>
@@ -588,7 +589,7 @@ export default function TripDetailPage() {
                 }}
                 style={styles.btnActiveRide}
               >
-                <span>🟢</span>
+                <span><Icon name="dot" /></span>
                 <span>Join Live Convoy</span>
               </button>
             ) : trip?.isOwner ? (
@@ -608,14 +609,14 @@ export default function TripDetailPage() {
                 disabled={startingRide}
                 style={styles.btnStartRide}
               >
-                <span>🏍️</span>
+                <span><Icon name="bike" /></span>
                 <span>{startingRide ? 'Launching...' : 'Start Live Convoy'}</span>
               </button>
             ) : null}
 
             {shareUrl && trip?.isOwner && (
               <button onClick={handleCopy} style={styles.btnShare}>
-                <span>🔗</span>
+                <span><Icon name="link" /></span>
                 <span>{copied ? 'Copied!' : 'Share Convoy Link'}</span>
               </button>
             )}
@@ -630,7 +631,7 @@ export default function TripDetailPage() {
                 }}
                 title="Feature 1B: Publish itinerary publicly to Discover"
               >
-                <span>🌐</span>
+                <span><Icon name="globe" /></span>
                 <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish Itinerary'}</span>
               </button>
             )}
@@ -642,11 +643,11 @@ export default function TripDetailPage() {
           <div style={styles.convoyPassCard}>
             <div style={styles.passTopRow}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={styles.passTicketBadge}>🎟️ CONVOY TRAVEL PASS</span>
+                <span style={styles.passTicketBadge}>CONVOY TRAVEL PASS</span>
                 <div style={styles.passCodePill} onClick={handleCopyCode} title="Click to copy invite code">
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>CODE:</span>
                   <span style={{ fontWeight: 900, letterSpacing: 2, color: 'var(--accent-gold)', fontSize: 15 }}>{inviteCode}</span>
-                  <span style={{ fontSize: 12 }}>📋</span>
+                  <span style={{ fontSize: 12 }}><Icon name="list" /></span>
                 </div>
               </div>
               <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -656,23 +657,23 @@ export default function TripDetailPage() {
 
             <div style={styles.passActionsRow}>
               <button onClick={handleWhatsAppShare} style={styles.passBtnWhatsApp}>
-                <span>💬</span>
+                <span><Icon name="chat" /></span>
                 <span>WhatsApp Share</span>
               </button>
               <button onClick={() => setShowQrModal(true)} style={styles.passBtnAction}>
-                <span>📱</span>
+                <span><Icon name="phone" /></span>
                 <span>QR Boarding Pass</span>
               </button>
               <button onClick={handleCopy} style={styles.passBtnAction}>
-                <span>🔗</span>
-                <span>{copied ? '✅ Link Copied' : 'Copy Link'}</span>
+                <span><Icon name="link" /></span>
+                <span>{copied ? 'Link Copied' : 'Copy Link'}</span>
               </button>
               <button onClick={() => setShowNearbyHelp(true)} style={styles.passBtnAction} title="Verified fuel, repair, food & rest along route">
-                <span>🛠️</span>
+                <span><Icon name="wrench" /></span>
                 <span>Nearby Help</span>
               </button>
               <button onClick={handleNativeShare} style={styles.passBtnAction}>
-                <span>↗️</span>
+                <span><Icon name="arrowRight" /></span>
                 <span>Share</span>
               </button>
               {trip?.isOwner && (
@@ -685,7 +686,7 @@ export default function TripDetailPage() {
                   }}
                   title="Feature 1B: Publish itinerary publicly to Discover"
                 >
-                  <span>🌐</span>
+                  <span><Icon name="globe" /></span>
                   <span>{isTripPublished(trip.id) ? 'Public in Discover' : 'Publish'}</span>
                 </button>
               )}
@@ -698,7 +699,7 @@ export default function TripDetailPage() {
                 }}
                 title="Feature 2: Share trip completion milestones"
               >
-                <span>🏆</span>
+                <span><Icon name="trophy" /></span>
                 <span>Milestones</span>
               </button>
               {trip?.isOwner && (
@@ -711,7 +712,7 @@ export default function TripDetailPage() {
                   }}
                   title={trip.status === 'completed' ? 'Reopen expedition for planning' : 'Mark expedition as completed'}
                 >
-                  <span>{trip.status === 'completed' ? '✓' : '🏁'}</span>
+                  <span><Icon name={trip.status === 'completed' ? 'check' : 'flag'} /></span>
                   <span>{trip.status === 'completed' ? 'Completed' : 'Finish Trip'}</span>
                 </button>
               )}
@@ -735,13 +736,13 @@ export default function TripDetailPage() {
         <div style={styles.ridersCard}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>👥</span>
+              <span><Icon name="users" /></span>
               <span>Convoy Roster ({approvedMembers.length + 1} Riders)</span>
             </h3>
             {trip?.isOwner ? (
-              <span style={styles.leadPill}>👑 You are Convoy Leader</span>
+              <span style={styles.leadPill}>You are Convoy Leader</span>
             ) : (
-              <span style={styles.coRiderPill}>🏍️ You are Co-Rider</span>
+              <span style={styles.coRiderPill}>You are Co-Rider</span>
             )}
           </div>
 
@@ -749,7 +750,7 @@ export default function TripDetailPage() {
           {trip?.isOwner && pendingRequests.length > 0 && (
             <div id="pending-requests-section" style={{ marginBottom: 20 }}>
               <p style={styles.subHeadingAmber}>
-                🔔 Pending Join Requests ({pendingRequests.length})
+                Pending Join Requests ({pendingRequests.length})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {pendingRequests.map(m => (
@@ -760,13 +761,13 @@ export default function TripDetailPage() {
                           {m.users?.full_name ?? 'Rider'}
                         </span>
                         {m.profile?.blood_group && (
-                          <span style={styles.bloodBadge}>🩸 {m.profile.blood_group}</span>
+                          <span style={styles.bloodBadge}>{m.profile.blood_group}</span>
                         )}
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <span>{m.users?.email}</span>
-                        {m.profile?.bike_model && <span>• 🏍️ {m.profile.bike_model}</span>}
-                        {m.profile?.city && <span>• 📍 {m.profile.city}</span>}
+                        {m.profile?.bike_model && <span>• {m.profile.bike_model}</span>}
+                        {m.profile?.city && <span>• {m.profile.city}</span>}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -775,14 +776,14 @@ export default function TripDetailPage() {
                         disabled={respondingId === m.id}
                         style={styles.btnApprove}
                       >
-                        ✓ Approve
+                        Approve
                       </button>
                       <button
                         onClick={() => handleRespond(m.id, 'rejected')}
                         disabled={respondingId === m.id}
                         style={styles.btnDecline}
                       >
-                        ✕ Decline
+                        Decline
                       </button>
                     </div>
                   </div>
@@ -796,13 +797,13 @@ export default function TripDetailPage() {
             {/* Pinned Convoy Leader Card */}
             <div style={styles.rosterCard}>
               <div style={styles.rosterCardHeader}>
-                <div style={styles.leaderAvatarCircle}>👑</div>
+                <div style={styles.leaderAvatarCircle}><Icon name="crown" /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
                       {trip?.isOwner ? (user?.fullName || 'You') : 'Convoy Leader'}
                     </span>
-                    <span style={styles.leadBadge}>👑 Lead</span>
+                    <span style={styles.leadBadge}>Lead</span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
                     Trip Organizer & Route Commander
@@ -824,7 +825,7 @@ export default function TripDetailPage() {
                         <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>
                           {m.users?.full_name ?? 'Co-Rider'}
                         </span>
-                        <span style={styles.coRiderBadge}>🏍️ Rider</span>
+                        <span style={styles.coRiderBadge}>Rider</span>
                       </div>
                       {trip?.isOwner && (
                         <button
@@ -833,22 +834,22 @@ export default function TripDetailPage() {
                           style={styles.btnRemoveRider}
                           title="Remove rider from convoy"
                         >
-                          {removingMemberId === m.id ? 'Removing...' : '✕ Kick'}
+                          {removingMemberId === m.id ? 'Removing...' : 'Kick'}
                         </button>
                       )}
                     </div>
 
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {m.profile?.bike_model && <span>🏍️ {m.profile.bike_model}</span>}
+                      {m.profile?.bike_model && <span>{m.profile.bike_model}</span>}
                       {m.profile?.bike_reg_no && <span style={styles.plateBadge}>{m.profile.bike_reg_no}</span>}
-                      {m.profile?.city && <span>📍 {m.profile.city}</span>}
+                      {m.profile?.city && <span>{m.profile.city}</span>}
                     </div>
 
                     {/* Safety details: Blood group & Emergency Call */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       {m.profile?.blood_group && (
                         <span style={styles.bloodBadge}>
-                          🩸 {m.profile.blood_group}
+                          {m.profile.blood_group}
                         </span>
                       )}
                       {m.profile?.emergency_contact_phone && (
@@ -857,7 +858,7 @@ export default function TripDetailPage() {
                           style={styles.emergencyCallBtn}
                           title="Call emergency contact"
                         >
-                          📞 SOS: {m.profile.emergency_contact_phone}
+                          SOS: {m.profile.emergency_contact_phone}
                           {m.profile.emergency_contact_relation ? ` (${m.profile.emergency_contact_relation})` : ''}
                         </a>
                       )}
@@ -870,7 +871,7 @@ export default function TripDetailPage() {
 
           {approvedMembers.length === 0 && (
             <div style={styles.emptyRosterNotice}>
-              <span>ℹ️</span>
+              <span><Icon name="info" /></span>
               <span>No co-riders have joined yet. Share the Convoy Travel Pass above to invite fellow riders!</span>
             </div>
           )}
@@ -879,7 +880,7 @@ export default function TripDetailPage() {
         {/* Co-rider view note */}
         {!trip?.isOwner && (
           <div style={styles.coRiderNotice}>
-            <span>👀</span>
+            <span></span>
             <span>You are viewing this trip as a confirmed co-rider. The convoy leader manages the route waypoints.</span>
           </div>
         )}
@@ -888,7 +889,7 @@ export default function TripDetailPage() {
         <div style={styles.mapFrame}>
           <div style={styles.mapHeader}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>🗺️</span>
+              <span style={{ fontSize: 18 }}><Icon name="map" /></span>
               <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>Route & GPS Waypoint Map</span>
             </div>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -930,7 +931,7 @@ export default function TripDetailPage() {
                   gap: 5,
                 }}
               >
-                <span>💡</span> Propose Itinerary Edit
+                <span><Icon name="bulb" /></span> Propose Itinerary Edit
               </button>
               {trip?.isOwner && (
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Changes auto-save automatically</span>
@@ -950,6 +951,12 @@ export default function TripDetailPage() {
                   onDecline={handleDeclineProposal}
                 />
               ))}
+            </div>
+          )}
+
+          {trip?.isOwner && Object.values(groupedByDay).every(d => !d || d.length === 0) && (
+            <div style={{ padding: '14px 16px', marginBottom: 12, borderRadius: 12, border: '1px dashed var(--border-color, #3A3F47)', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
+              Your plan is empty. Open a day below and use Add Waypoint to search for places and add them one by one.
             </div>
           )}
 
@@ -993,7 +1000,7 @@ export default function TripDetailPage() {
                                 {/* Left icon column */}
                                 <div style={styles.timelineIconCol}>
                                   <div style={{ ...styles.stopIconCircle, background: badge.bg, color: badge.color }}>
-                                    {typeIcons[stop.item_type] ?? '📌'}
+                                    <Icon name={typeIcons[stop.item_type] ?? 'pin'} />
                                   </div>
                                   {idx < dayStops.length - 1 && <div style={styles.timelineConnector} />}
                                 </div>
@@ -1042,7 +1049,7 @@ export default function TripDetailPage() {
                                       }}
                                       title="Open in Maps"
                                     >
-                                      🧭 Nav
+                                      Nav
                                     </button>
                                     {trip?.isOwner && (
                                       <button
@@ -1050,7 +1057,7 @@ export default function TripDetailPage() {
                                         style={styles.btnRemoveStop}
                                         title="Remove stop"
                                       >
-                                        ✕
+
                                       </button>
                                     )}
                                   </div>
@@ -1060,13 +1067,13 @@ export default function TripDetailPage() {
                                   )}
 
                                   <div style={styles.stopMetaRow}>
-                                    {stop.estimated_km > 0 && <span>🛣️ ~{stop.estimated_km} km</span>}
-                                    {stop.duration_hours > 0 && <span>⏱️ ~{stop.duration_hours} hr</span>}
+                                    {stop.estimated_km > 0 && <span>~{stop.estimated_km} km</span>}
+                                    {stop.duration_hours > 0 && <span>~{stop.duration_hours} hr</span>}
                                   </div>
 
                                   {stop.tips && (
                                     <div style={styles.tipsBox}>
-                                      <span style={{ fontSize: 14 }}>💡</span>
+                                      <span style={{ fontSize: 14 }}><Icon name="bulb" /></span>
                                       <span style={{ fontSize: 12, color: 'var(--accent-gold)' }}>{stop.tips}</span>
                                     </div>
                                   )}
@@ -1098,11 +1105,11 @@ export default function TripDetailPage() {
                                     onChange={e => setAddForm(f => ({ ...f, item_type: e.target.value }))}
                                     style={styles.selectInput}
                                   >
-                                    <option value="fuel_stop">⛽ Fuel Stop</option>
-                                    <option value="meal">🍽️ Food / Dhaba</option>
-                                    <option value="attraction">📍 Attraction / Scenic</option>
-                                    <option value="rest">☕ Tea / Rest Break</option>
-                                    <option value="stay">🏨 Night Stay</option>
+                                    <option value="fuel_stop">Fuel Stop</option>
+                                    <option value="meal">Food / Dhaba</option>
+                                    <option value="attraction">Attraction / Scenic</option>
+                                    <option value="rest">Tea / Rest Break</option>
+                                    <option value="stay">Night Stay</option>
                                   </select>
                                   <input
                                     type="text"
@@ -1164,13 +1171,13 @@ export default function TripDetailPage() {
             <div style={styles.modalHeader}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>
-                  🎟️ Convoy Boarding Pass
+                  Convoy Boarding Pass
                 </h3>
                 <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {trip.from_place} ➔ {trip.to_place} ({trip.days}d)
+                  {trip.from_place} to {trip.to_place} ({trip.days}d)
                 </p>
               </div>
-              <button onClick={() => setShowQrModal(false)} style={styles.closeBtn}>✕</button>
+              <button onClick={() => setShowQrModal(false)} style={styles.closeBtn}><Icon name="close" /></button>
             </div>
 
             <div style={styles.qrContainer}>
@@ -1192,7 +1199,7 @@ export default function TripDetailPage() {
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleCopy} style={styles.btnPrimaryModal}>
-                {copied ? '✅ Link Copied' : '📋 Copy Link'}
+                {copied ? 'Link Copied' : 'Copy Link'}
               </button>
               <button onClick={() => setShowQrModal(false)} style={styles.btnSecondaryModal}>
                 Done
@@ -1228,7 +1235,7 @@ export default function TripDetailPage() {
               lat: item.lat,
               lng: item.lng,
             });
-            showToast(`✓ Added ${item.name} to itinerary!`);
+            showToast(`Added ${item.name} to itinerary!`);
             // reload trip data
             tripService.getTripById(trip.id).then((data) => {
               setTrip(data.trip);
@@ -1256,7 +1263,7 @@ export default function TripDetailPage() {
           stops={stops}
           user={user}
           onPublishedSuccess={(published) => {
-            setToast(`✓ Published "${published.title}" publicly in Discover!`);
+            setToast(`Published "${published.title}" publicly in Discover!`);
             setTimeout(() => setToast(''), 3500);
           }}
           onUnpublishedSuccess={() => {

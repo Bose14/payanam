@@ -44,8 +44,8 @@ pnpm tsx apps/api/scripts/test-supabase.ts
 
 Expected output:
 ```
-✅ All checks passed!
-✅ Supabase is properly configured
+All checks passed!
+Supabase is properly configured
 ```
 
 ## Step 5: Run Application (1 min)
@@ -67,29 +67,29 @@ Open in browser:
    - Password: `TestPassword123!`
    - Full Name: `Test User`
 4. Click **Sign up**
-5. You're logged in! 🎉
+5. You're logged in! 
 
 ## Troubleshooting
 
-### ❌ "Service Role Key error"
+### "Service Role Key error"
 - Copy the entire key (should be long, 200+ characters)
 - No spaces before/after
 - Refresh the Supabase page and try again
 
-### ❌ "Table does not exist"
+### "Table does not exist"
 - Run the SQL from `docs/DATABASE_SETUP.sql` again
 - Check Supabase SQL Editor for errors
 
-### ❌ "Connection refused"
+### "Connection refused"
 - Make sure `pnpm dev` is running
 - Check terminal for any errors
 
 ## Next Steps
 
-- ✅ Read full setup guide: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
-- ✅ View API documentation: [API.md](./docs/API.md)
-- ✅ Deploy to GitHub: See [DEPLOYMENT.md](./docs/DEPLOYMENT.md) (coming soon)
-- ✅ Learn architecture: See [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+- Read full setup guide: [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
+- View API documentation: [API.md](./docs/API.md)
+- Deploy to GitHub: See [DEPLOYMENT.md](./docs/DEPLOYMENT.md) (coming soon)
+- Learn architecture: See [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 ## File Locations
 
@@ -97,11 +97,11 @@ Open in browser:
 payanam/
 ├── apps/
 │   ├── web/                # Frontend
-│   │   └── .env.local      # ✅ Already configured
+│   │   └── .env.local      # Already configured
 │   └── api/                # Backend
-│       └── .env.local      # ⚠️ Update SERVICE_ROLE_KEY here
+│       └── .env.local      # Update SERVICE_ROLE_KEY here
 ├── docs/
-│   ├── DATABASE_SETUP.sql  # ✅ Run this in Supabase
+│   ├── DATABASE_SETUP.sql  # Run this in Supabase
 │   └── API.md             # API endpoints reference
 └── SUPABASE_SETUP.md      # Full setup guide
 ```
