@@ -392,6 +392,21 @@ export interface ChatGroup {
   isAdmin: boolean;
   members: Array<{ userId: string; name: string; role: string; you: boolean }>;
   requests: Array<{ userId: string; name: string }>;
+  description: string;
+  region: string;
+  requireApproval: boolean;
+  membersCanEdit: boolean;
+  onlyAdminsPost: boolean;
+  canEdit: boolean;
+}
+
+export interface GroupSettingsPatch {
+  name?: string;
+  description?: string;
+  region?: string;
+  requireApproval?: boolean;
+  membersCanEdit?: boolean;
+  onlyAdminsPost?: boolean;
 }
 
 export const chatService = {
@@ -419,6 +434,18 @@ export const chatService = {
   joinGroup: async (code: string): Promise<{ status: 'member' | 'pending'; groupId: string; name: string }> =>
     (await api.post('/api/chat/groups/join', { code })).data.data,
   group: async (id: string): Promise<ChatGroup> => (await api.get(`/api/chat/groups/${id}`)).data.data,
+  renameTrip: async (key: string, name: string): Promise<{ name: string }> =>
+    (await api.put('/api/chat/rename', { name }, { params: { key } })).data.data,
+  updateGroup: async (id: string, patch: GroupSettingsPatch) =>
+    (await api.put(`/api/chat/groups/${id}`, patch)).data.data,
+  setMemberRole: async (id: string, userId: string, role: 'admin' | 'member') =>
+    (await api.put(`/api/chat/groups/${id}/members/${userId}/role`, { role })).data.data,
+  removeMember: async (id: string, userId: string) =>
+    (await api.delete(`/api/chat/groups/${id}/members/${userId}`)).data.data,
+  leaveGroup: async (id: string): Promise<{ closed: boolean }> =>
+    (await api.post(`/api/chat/groups/${id}/leave`, {})).data.data,
+  resetInviteCode: async (id: string): Promise<{ inviteCode: string }> =>
+    (await api.post(`/api/chat/groups/${id}/reset-code`, {})).data.data,
   respondToGroupRequest: async (groupId: string, userId: string, action: 'accept' | 'decline') =>
     (await api.put(`/api/chat/groups/${groupId}/requests/${userId}`, { action })).data.data,
 };

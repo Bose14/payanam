@@ -129,6 +129,10 @@ export interface SendInput {
 
 export async function sendMessage(key: string, userId: string, input: SendInput) {
   const auth = await authorize(key, userId);
+  if (auth.type === 'group' && !auth.isLead) {
+    const { data: g } = await getDatabase().from('chat_groups').select('only_admins_post').eq('id', auth.id).maybeSingle();
+    if (g?.only_admins_post) throw new ForbiddenError('Only admins can post in this group');
+  }
   const kind = input.kind === 'location' ? 'location' : 'text';
   let body = (input.body ?? '').trim();
   let meta: Record<string, unknown> | null = null;
@@ -260,21 +264,27 @@ export async function listConversations(userId: string) {
 
   const tripData = await getUserTrips(userId);
   const trips = (tripData as Array<{ id: string; title: string; from_place: string; to_place: string }>) ?? [];
+  const tripIds = trips.map((t) => t.id);
+  const chatNames: Record<string, string> = {};
+  if (tripIds.length) {
+    const { data: cn } = await db.from('trips').select('id, chat_name').in('id', tripIds);
+    (cn ?? []).forEach((r) => { if (r.chat_name) chatNames[r.id as string] = r.chat_name as string; });
+  }
   trips.forEach((t) =>
     out.push({
-      key: `trip:${t.id}`, type: 'trip', title: t.title,
+      key: `trip:${t.id}`, type: 'trip', title: chatNames[t.id] ?? t.title,
       subtitle: `${t.from_place} to ${t.to_place}`, lastMessage: null, lastAt: null, unread: 0,
     }),
   );
 
   const { data: memberships } = await db
     .from('chat_group_members')
-    .select('group_id, chat_groups(id, name)')
+    .select('group_id, chat_groups(id, name, region)')
     .eq('user_id', userId)
     .eq('status', 'member');
   (memberships ?? []).forEach((m) => {
-    const g = (m as unknown as { chat_groups: { id: string; name: string } | null }).chat_groups;
-    if (g) out.push({ key: `group:${g.id}`, type: 'group', title: g.name, subtitle: 'Group', lastMessage: null, lastAt: null, unread: 0 });
+    const g = (m as unknown as { chat_groups: { id: string; name: string; region: string | null } | null }).chat_groups;
+    if (g) out.push({ key: `group:${g.id}`, type: 'group', title: g.name, subtitle: g.region ? `Group, ${g.region}` : 'Group', lastMessage: null, lastAt: null, unread: 0 });
   });
 
   // Direct messages: every dm thread this user is in.
@@ -393,13 +403,18 @@ export async function createGroup(userId: string, rawName: string) {
 export async function requestToJoinGroup(userId: string, rawCode: string) {
   const code = rawCode.trim().toUpperCase();
   const db = getDatabase();
-  const { data: group } = await db.from('chat_groups').select('id, name').eq('invite_code', code).maybeSingle();
+  const { data: group } = await db.from('chat_groups').select('id, name, require_approval').eq('invite_code', code).maybeSingle();
   if (!group) throw new NotFoundError('Group with that code');
   const { data: existing } = await db.from('chat_group_members').select('status').eq('group_id', group.id).eq('user_id', userId).maybeSingle();
   if (existing?.status === 'member') return { status: 'member' as const, groupId: group.id, name: group.name };
   if (!existing) {
-    const { error } = await db.from('chat_group_members').insert({ group_id: group.id, user_id: userId, role: 'member', status: 'pending' });
+    const open = group.require_approval === false;
+    const { error } = await db.from('chat_group_members').insert({
+      group_id: group.id, user_id: userId, role: 'member', status: open ? 'member' : 'pending',
+      ...(open ? { joined_at: new Date().toISOString() } : {}),
+    });
     if (error) throw new Error(`Failed to send request: ${error.message}`);
+    if (open) return { status: 'member' as const, groupId: group.id, name: group.name };
   }
   return { status: 'pending' as const, groupId: group.id, name: group.name };
 }
@@ -416,7 +431,12 @@ export async function getGroup(userId: string, groupId: string) {
   const requests = auth.isLead
     ? (rows ?? []).filter((r) => r.status === 'pending').map((r) => ({ userId: r.user_id as string, name: names[r.user_id] }))
     : [];
-  return { id: group.id as string, name: group.name as string, inviteCode: group.invite_code as string, isAdmin: auth.isLead, members, requests };
+  return {
+    id: group.id as string, name: group.name as string, inviteCode: group.invite_code as string, isAdmin: auth.isLead, members, requests,
+    description: (group.description as string) ?? '', region: (group.region as string) ?? '',
+    requireApproval: group.require_approval !== false, membersCanEdit: !!group.members_can_edit, onlyAdminsPost: !!group.only_admins_post,
+    canEdit: auth.isLead || !!group.members_can_edit,
+  };
 }
 
 export async function respondToGroupRequest(adminId: string, groupId: string, memberId: string, action: 'accept' | 'decline') {
@@ -433,4 +453,112 @@ export async function respondToGroupRequest(adminId: string, groupId: string, me
     if (error) throw new Error(error.message);
   }
   return { ok: true };
+}
+
+// ----------------------------- rename and group settings -----------------------------
+
+/** Trip chats: any rider on the trip can rename the chat (the trip itself is not renamed). */
+export async function renameTripChat(key: string, userId: string, rawName: string) {
+  const auth = await authorize(key, userId);
+  if (auth.type !== 'trip') throw new ValidationError('Not a trip chat');
+  const name = rawName.trim();
+  if (name.length < 2 || name.length > 100) throw new ValidationError('Name must be 2 to 100 characters');
+  const { error } = await getDatabase().from('trips').update({ chat_name: name }).eq('id', auth.id);
+  if (error) throw new Error(error.message);
+  return { name };
+}
+
+export interface GroupSettingsPatch {
+  name?: string; description?: string; region?: string;
+  requireApproval?: boolean; membersCanEdit?: boolean; onlyAdminsPost?: boolean;
+}
+
+export async function updateGroupSettings(userId: string, groupId: string, patch: GroupSettingsPatch) {
+  const auth = await authorize(`group:${groupId}`, userId);
+  const db = getDatabase();
+  const { data: group } = await db.from('chat_groups').select('members_can_edit').eq('id', groupId).maybeSingle();
+  if (!group) throw new NotFoundError('Group');
+  const canEdit = auth.isLead || !!group.members_can_edit;
+  const update: Record<string, unknown> = {};
+
+  if (patch.name !== undefined || patch.description !== undefined || patch.region !== undefined) {
+    if (!canEdit) throw new ForbiddenError('Only admins can edit this group');
+    if (patch.name !== undefined) {
+      const n = patch.name.trim();
+      if (n.length < 2 || n.length > 100) throw new ValidationError('Group name must be 2 to 100 characters');
+      update.name = n;
+    }
+    if (patch.description !== undefined) update.description = patch.description.trim().slice(0, 500) || null;
+    if (patch.region !== undefined) update.region = patch.region.trim().slice(0, 80) || null;
+  }
+  if (patch.requireApproval !== undefined || patch.membersCanEdit !== undefined || patch.onlyAdminsPost !== undefined) {
+    if (!auth.isLead) throw new ForbiddenError('Only admins can change group settings');
+    if (patch.requireApproval !== undefined) update.require_approval = patch.requireApproval;
+    if (patch.membersCanEdit !== undefined) update.members_can_edit = patch.membersCanEdit;
+    if (patch.onlyAdminsPost !== undefined) update.only_admins_post = patch.onlyAdminsPost;
+  }
+  if (Object.keys(update).length === 0) return { ok: true };
+  const { error } = await db.from('chat_groups').update(update).eq('id', groupId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+async function adminCount(groupId: string): Promise<number> {
+  const { count } = await getDatabase().from('chat_group_members')
+    .select('user_id', { count: 'exact', head: true }).eq('group_id', groupId).eq('status', 'member').eq('role', 'admin');
+  return count ?? 0;
+}
+
+export async function setMemberRole(adminId: string, groupId: string, memberId: string, role: 'admin' | 'member') {
+  const auth = await authorize(`group:${groupId}`, adminId);
+  if (!auth.isLead) throw new ForbiddenError('Only admins can change roles');
+  if (role === 'member' && memberId === adminId && (await adminCount(groupId)) <= 1) {
+    throw new ValidationError('Make someone else admin first');
+  }
+  const { error } = await getDatabase().from('chat_group_members').update({ role })
+    .eq('group_id', groupId).eq('user_id', memberId).eq('status', 'member');
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+export async function removeMember(adminId: string, groupId: string, memberId: string) {
+  const auth = await authorize(`group:${groupId}`, adminId);
+  if (!auth.isLead) throw new ForbiddenError('Only admins can remove members');
+  if (memberId === adminId) throw new ValidationError('Use Leave group to leave');
+  const { error } = await getDatabase().from('chat_group_members').delete().eq('group_id', groupId).eq('user_id', memberId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+export async function leaveGroup(userId: string, groupId: string) {
+  const auth = await authorize(`group:${groupId}`, userId);
+  const db = getDatabase();
+  if (auth.isLead && (await adminCount(groupId)) <= 1) {
+    // Hand the group to the longest-standing member, or close it if nobody is left.
+    const { data: others } = await db.from('chat_group_members').select('user_id, joined_at')
+      .eq('group_id', groupId).eq('status', 'member').neq('user_id', userId).order('joined_at', { ascending: true }).limit(1);
+    if (others && others.length > 0) {
+      await db.from('chat_group_members').update({ role: 'admin' }).eq('group_id', groupId).eq('user_id', others[0].user_id);
+    } else {
+      await db.from('chat_group_members').delete().eq('group_id', groupId);
+      await db.from('chat_groups').delete().eq('id', groupId);
+      return { ok: true, closed: true };
+    }
+  }
+  await db.from('chat_group_members').delete().eq('group_id', groupId).eq('user_id', userId);
+  return { ok: true, closed: false };
+}
+
+export async function resetInviteCode(adminId: string, groupId: string) {
+  const auth = await authorize(`group:${groupId}`, adminId);
+  if (!auth.isLead) throw new ForbiddenError('Only admins can change the invite code');
+  const db = getDatabase();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const code = newInviteCode();
+    const { error } = await db.from('chat_groups').update({ invite_code: code }).eq('id', groupId);
+    if (error?.code === '23505') continue;
+    if (error) throw new Error(error.message);
+    return { inviteCode: code };
+  }
+  throw new Error('Could not create a unique invite code');
 }
