@@ -158,7 +158,7 @@ function Thread({
   return (
     <>
       <div className="pz-row">
-        <button className="pz-btn small" type="button" onClick={onBack}>← Chats</button>
+        <button className="pz-btn small" type="button" onClick={onBack} aria-label="Back to chats" title="Back to chats">←</button>
         <div className="pz-grow">
           <b>{conv.title}</b>
           <div className="pz-note">{kind}</div>
