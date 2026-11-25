@@ -175,27 +175,29 @@ export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, sty
           <div style={styles.guideBox}>
             <div style={styles.guideHeader}>
               <span style={styles.badgeGold}>
-                ● 60 FPS In-App Cockpit Active
+                ● iOS Picture-in-Picture & Cockpit
               </span>
               <span style={{ fontSize: 11, color: '#9D9C9A', fontWeight: 600 }}>iOS 14+</span>
             </div>
 
             <p style={{ margin: '0 0 8px', fontSize: 12, color: '#E5E7EB', lineHeight: 1.45 }}>
-              Apple's iOS Safari restricts web apps from popping out live canvas streams to the iOS home screen.
-              Payanam automatically activates the <b>Floating In-App Ribbon</b>:
+              To use Picture-in-Picture on iPhone while minimizing Safari or using Google Maps:
             </p>
 
-            <ul style={styles.stepList}>
+            <ol style={styles.stepList}>
               <li>
-                <b>Floating Glass Cockpit:</b> Displays live speed, ahead/behind rider spacing, and micro convoy rail right on your ride screen.
+                <b>Enable iOS System Setting:</b> Open iPhone <i>Settings</i> ➔ <i>General</i> ➔ <i>Picture in Picture</i> ➔ Turn <b>ON "Start PiP Automatically"</b>.
               </li>
               <li>
-                <b>Dock Controls:</b> Use <b>Dock Top</b> or <b>Dock Bottom</b> to place it out of the way of your route.
+                <b>Tap the PiP HUD button:</b> In Payanam, tap the <b>[📺 PiP HUD]</b> button directly.
               </li>
               <li>
-                <b>Pro Tip:</b> Tap Safari's <b>Share (↑)</b> ➔ <b>Add to Home Screen</b> to install Payanam for a dedicated, fullscreen app experience.
+                <b>Swipe Up to Minimize:</b> Swipe up from the bottom of your iPhone to go to the Home screen or switch to Google Maps. The PiP window continues floating over your other apps!
               </li>
-            </ul>
+              <li>
+                <b>In-App Cockpit Fallback:</b> On iOS versions where Apple restricts canvas streams to OS-level PiP, Payanam automatically switches to the <b>60 FPS In-App Floating Ribbon</b> with <b>Dock Top</b> and <b>Dock Bottom</b> controls.
+              </li>
+            </ol>
           </div>
         )}
 
