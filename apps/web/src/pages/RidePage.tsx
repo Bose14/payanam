@@ -2146,6 +2146,15 @@ export default function RidePage() {
         {/* Right: Subtitle & Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {/* Quick Nearby Help */}
+          {tab === 'map' && (
+            <OfflineSignalBanner
+              isOnline={queueState.isOnline}
+              pendingCount={queueState.pendingCount}
+              isSyncing={queueState.isSyncing}
+              justSynced={justSynced}
+              onForceSync={syncPendingBatch}
+            />
+          )}
           <button
             type="button"
             onClick={() => setShowNearbyHelp(true)}
@@ -2438,15 +2447,6 @@ export default function RidePage() {
           onOpenMeSettings={() => setTab('me')}
         />
       )}
-
-      {/* Feature B: Offline Position Queue Ride Banner ("No signal. Your position is saved and will sync.") */}
-      <OfflineSignalBanner
-        isOnline={queueState.isOnline}
-        pendingCount={queueState.pendingCount}
-        isSyncing={queueState.isSyncing}
-        justSynced={justSynced}
-        onForceSync={syncPendingBatch}
-      />
 
       {/* Feature C: Route-deviation alert card */}
       <RouteDeviationCard
