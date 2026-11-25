@@ -1,3 +1,4 @@
+import { getResumeRide } from '../../utils/rideResume';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { rideService } from '../../services/api';
@@ -11,6 +12,7 @@ export default function RideTab() {
   const [starting, setStarting] = useState<string | null>(null);
   const [startError, setStartError] = useState('');
 
+  const resume = getResumeRide();
   const live = items.filter((t) => t.sessionId);
   const startable = items.filter((t) => !t.sessionId && t.isOwner && t.status !== 'completed');
 
@@ -42,7 +44,7 @@ export default function RideTab() {
           <div className="pz-h2" style={{ marginTop: 10 }}>{t.title}</div>
           <div className="pz-note">{t.from_place} → {t.to_place} · {t.days} {t.days === 1 ? 'day' : 'days'}</div>
           <div className="pz-row" style={{ marginTop: 12 }}>
-            <Link className="pz-btn small primary" to={`/ride/${t.sessionId}`}>Open live ride</Link>
+            <Link className="pz-btn small primary" to={`/ride/${t.sessionId}`}>{resume?.sessionId === t.sessionId ? 'Resume ride' : 'Open live ride'}</Link>
             <Link className="pz-btn small" to={`/chat?trip=${t.id}`}>Trip chat</Link>
           </div>
         </div>
