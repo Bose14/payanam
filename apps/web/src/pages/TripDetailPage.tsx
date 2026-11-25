@@ -669,21 +669,21 @@ export default function TripDetailPage() {
         {inviteCode && (
           <div style={styles.toolsCard}>
             <div style={styles.toolsTitle}>Trip tools</div>
-            <div style={styles.tileGrid4}>
-              <button onClick={() => setShowNearbyHelp(true)} style={styles.tile}>
+            <div style={styles.toolsGrid}>
+              <button onClick={() => setShowNearbyHelp(true)} style={styles.toolTile}>
                 <Icon name="pin" /><span>Nearby help</span>
               </button>
-              <button onClick={() => setShowMilestoneModal(true)} style={styles.tile}>
+              <button onClick={() => setShowMilestoneModal(true)} style={styles.toolTile}>
                 <Icon name="trophy" /><span>Milestones</span>
               </button>
               {trip?.isOwner && (
-                <button onClick={() => setShowPublishModal(true)} style={{ ...styles.tile, color: isTripPublished(trip.id) ? 'var(--pz-ok)' : undefined }}>
-                  <Icon name="globe" /><span>{isTripPublished(trip.id) ? 'Public' : 'Publish'}</span>
+                <button onClick={() => setShowPublishModal(true)} style={{ ...styles.toolTile, color: isTripPublished(trip.id) ? 'var(--pz-ok)' : undefined }} title={isTripPublished(trip.id) ? 'Published in Discover. Tap to manage' : 'Publish this trip in Discover'}>
+                  <Icon name="globe" /><span>{isTripPublished(trip.id) ? 'Published' : 'Publish'}</span>
                 </button>
               )}
               {trip?.isOwner && (
-                <button onClick={handleToggleTripStatus} style={{ ...styles.tile, color: trip.status === 'completed' ? 'var(--pz-ok)' : undefined }}>
-                  <Icon name={trip.status === 'completed' ? 'check' : 'flag'} /><span>{trip.status === 'completed' ? 'Reopen' : 'Finish'}</span>
+                <button onClick={handleToggleTripStatus} style={{ ...styles.toolTile, color: trip.status === 'completed' ? 'var(--pz-ok)' : undefined }}>
+                  <Icon name={trip.status === 'completed' ? 'check' : 'flag'} /><span>{trip.status === 'completed' ? 'Reopen trip' : 'Finish trip'}</span>
                 </button>
               )}
             </div>
@@ -1403,8 +1403,8 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 16,
     boxShadow: 'var(--card-shadow)',
   },
-  passHeadRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 },
-  passHintSmall: { fontSize: 12, color: 'var(--pz-muted, var(--text-secondary))' },
+  passHeadRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  passHintSmall: { fontSize: 12, whiteSpace: 'nowrap', color: 'var(--pz-muted, var(--text-secondary))' },
   passCodeBox: {
     flex: 1, minWidth: 0, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
     padding: '0 14px', cursor: 'pointer', font: 'inherit',
@@ -1427,6 +1427,13 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 4px', minHeight: 60, cursor: 'pointer', font: 'inherit', fontSize: 12, fontWeight: 700,
     background: 'var(--pz-bg, var(--bg-subtle))', border: '1px solid var(--pz-line, var(--border-card))', borderRadius: 12,
     color: 'var(--pz-ink, var(--text-primary))', textAlign: 'center', lineHeight: 1.1,
+  },
+  toolsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
+  toolTile: {
+    display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 10, minHeight: 48, padding: '10px 12px',
+    cursor: 'pointer', font: 'inherit', fontSize: 14, fontWeight: 700, textAlign: 'left',
+    background: 'var(--pz-bg, var(--bg-subtle))', border: '1px solid var(--pz-line, var(--border-card))', borderRadius: 12,
+    color: 'var(--pz-ink, var(--text-primary))',
   },
   tileWhatsApp: { background: '#25D366', borderColor: '#25D366', color: '#ffffff', fontWeight: 800 },
   toolsCard: {
