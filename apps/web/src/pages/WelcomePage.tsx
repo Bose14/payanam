@@ -104,6 +104,10 @@ export default function WelcomePage() {
     setBusy(true);
     try {
       const res = await authService.requestPhoneCode(phone);
+      if (!res.devCode) {
+        setErr('The server did not return a code. Update the API to the latest version and try again.');
+        return;
+      }
       setDevCode(res.devCode);
       setOtp('');
       setStep('otp');
@@ -316,7 +320,7 @@ export default function WelcomePage() {
             <p className="pz-note">Sent to {maskPhone(phone)}.</p>
             {devCode && (
               <div className="pz-banner warn" role="status" style={{ marginTop: 12 }}>
-                <div className="pz-note" style={{ marginBottom: 6 }}>Your code (shown here because SMS is not set up yet)</div>
+                <div className="pz-note" style={{ marginBottom: 6 }}>Your code (shown here instead of an SMS)</div>
                 <div className="pz-row" style={{ justifyContent: 'space-between' }}>
                   <span className="pz-mono" style={{ fontSize: 24, fontWeight: 700, letterSpacing: '0.2em' }}>{devCode}</span>
                   <span className="pz-row">
