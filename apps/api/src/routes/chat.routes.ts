@@ -20,6 +20,8 @@ router.post('/messages/:messageId/stop-live', c.stopLive);
 router.post('/groups', c.createGroup);
 router.post('/groups/join', c.joinGroup);
 router.put('/rename', c.renameTrip);
+router.put('/mark', c.markRead);
+router.post('/read-all', c.readAll);
 router.get('/groups/:id', c.getGroup);
 router.put('/groups/:id', c.updateGroup);
 router.post('/groups/:id/leave', c.leaveGroup);

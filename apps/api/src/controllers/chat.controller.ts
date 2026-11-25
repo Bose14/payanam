@@ -71,3 +71,8 @@ export const leaveGroup = wrap(async (req, res) =>
   sendSuccess(res, await chat.leaveGroup(req.userId!, uuidSchema.parse(req.params.id))));
 export const resetCode = wrap(async (req, res) =>
   sendSuccess(res, await chat.resetInviteCode(req.userId!, uuidSchema.parse(req.params.id))));
+
+export const markRead = wrap(async (req, res) =>
+  sendSuccess(res, await chat.markConversation(req.userId!, String(req.query.key), z.object({ unread: z.boolean() }).parse(req.body).unread)));
+export const readAll = wrap(async (req, res) =>
+  sendSuccess(res, await chat.markAllRead(req.userId!)));

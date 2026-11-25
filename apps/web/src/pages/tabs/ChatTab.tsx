@@ -7,7 +7,7 @@ import Icon from '../../components/Icon';
 import LocationBubble from '../../components/LocationBubble';
 import { startLiveShare, stopLiveShare, isSharingLive, activeShares, onLiveSharesChange } from '../../utils/liveShare';
 
-type Filter = 'All' | 'Trips' | 'Groups' | 'Direct';
+type Filter = 'All' | 'Unread' | 'Trips' | 'Groups' | 'Direct';
 
 
 function clock(iso: string): string {
@@ -555,6 +555,69 @@ function GroupPage({ id, onBack }: { id: string; onBack: () => void }) {
 
 /* ------------------------------------ list view ------------------------------------ */
 
+function listTime(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  if (diff <= 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return d.toLocaleDateString([], { weekday: 'short' });
+  return d.toLocaleDateString([], { day: '2-digit', month: 'short' });
+}
+
+/** One row of the chat list: unread count, bold text and accent time when there is something new. */
+function ConvRow({ c, onOpen, onMenu }: { c: ChatConversation; onOpen: () => void; onMenu: () => void }) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+  const unread = c.unread > 0;
+  const dot = unread && c.markedUnread && c.unread === 1;
+  const preview = c.lastMessage
+    ? (c.type !== 'dm' && c.lastSender ? `${c.lastSender}: ${c.lastMessage}` : c.lastMessage)
+    : c.subtitle;
+  const clear = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; };
+  return (
+    <button
+      type="button"
+      onClick={() => { if (longPressed.current) { longPressed.current = false; return; } onOpen(); }}
+      onContextMenu={(e) => { e.preventDefault(); onMenu(); }}
+      onTouchStart={() => { longPressed.current = false; clear(); timer.current = setTimeout(() => { longPressed.current = true; onMenu(); }, 500); }}
+      onTouchEnd={clear}
+      onTouchMove={clear}
+      onTouchCancel={clear}
+      aria-label={`${c.title}${unread ? `, ${dot ? 'marked unread' : `${c.unread} unread`}` : ''}`}
+      style={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer', boxSizing: 'border-box', WebkitTouchCallout: 'none', userSelect: 'none' }}
+    >
+      <div className="pz-row-item" style={{ alignItems: 'center' }}>
+        <div className="pz-av" aria-hidden="true">{c.title.charAt(0).toUpperCase()}</div>
+        <div className="pz-grow" style={{ minWidth: 0 }}>
+          <b style={{ display: 'block', fontWeight: unread ? 800 : 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.title}</b>
+          <div className="pz-note" style={{
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            color: unread ? 'var(--pz-ink)' : undefined, fontWeight: unread ? 700 : undefined,
+          }}>{preview}</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0, minWidth: 44 }}>
+          <span style={{ fontSize: 12, fontWeight: unread ? 800 : 500, color: unread ? 'var(--pz-accent)' : 'var(--pz-muted)' }}>{listTime(c.lastAt)}</span>
+          {unread ? (
+            dot ? (
+              <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 6, background: 'var(--pz-accent)' }} />
+            ) : (
+              <span aria-hidden="true" style={{
+                minWidth: 22, height: 22, padding: '0 6px', boxSizing: 'border-box', borderRadius: 11, background: 'var(--pz-accent)', color: 'var(--pz-on-accent)',
+                fontSize: 12, fontWeight: 800, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}>{c.unread > 99 ? '99+' : c.unread}</span>
+            )
+          ) : <span style={{ height: 22 }} />}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+
+
 export default function ChatTab() {
   const [params, setParams] = useSearchParams();
   const [convs, setConvs] = useState<ChatConversation[]>([]);
@@ -563,6 +626,7 @@ export default function ChatTab() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<Filter>('All');
   const [query, setQuery] = useState('');
+  const [menuFor, setMenuFor] = useState<ChatConversation | null>(null);
   const [groupName, setGroupName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [notice, setNotice] = useState('');
@@ -627,6 +691,18 @@ export default function ChatTab() {
     }
   };
 
+  const setUnread = async (c: ChatConversation, unread: boolean) => {
+    setMenuFor(null);
+    setConvs((prev) => prev.map((x) => (x.key === c.key ? { ...x, unread: unread ? Math.max(1, x.unread) : 0, markedUnread: unread } : x)));
+    try { await chatService.mark(c.key, unread); } catch (e) { setError(apiMessage(e, 'Could not update the chat.')); }
+    await load();
+  };
+  const markAll = async () => {
+    setConvs((prev) => prev.map((x) => ({ ...x, unread: 0, markedUnread: false })));
+    try { await chatService.readAll(); } catch (e) { setError(apiMessage(e, 'Could not mark chats as read.')); }
+    await load();
+  };
+
   if (groupId) return <GroupPage id={groupId} onBack={() => setParams({ c: `group:${groupId}` })} />;
 
   const open = convs.find((c) => c.key === openKey) ??
@@ -650,17 +726,20 @@ export default function ChatTab() {
 
   const q = query.trim().toLowerCase();
   const rows = convs.filter((c) =>
-    (filter === 'All' || (filter === 'Trips' && c.type === 'trip') || (filter === 'Groups' && c.type === 'group') || (filter === 'Direct' && c.type === 'dm')) &&
+    (filter === 'All' || (filter === 'Unread' && c.unread > 0) || (filter === 'Trips' && c.type === 'trip') || (filter === 'Groups' && c.type === 'group') || (filter === 'Direct' && c.type === 'dm')) &&
     (!q || `${c.title} ${c.subtitle} ${c.lastMessage ?? ''}`.toLowerCase().includes(q)));
   const startable = contacts.filter((p) => !convs.some((c) => c.key === p.key) &&
     (!q || `${p.name} ${p.city ?? ''}`.toLowerCase().includes(q)));
-  const tag = (t: ChatConversation['type']) => (t === 'trip' ? 'Trips' : t === 'group' ? 'Groups' : 'Direct');
+  const totalUnread = convs.reduce((n, c) => n + c.unread, 0);
 
   return (
     <>
-      <h1 className="pz-h1">Chat</h1>
+      <div className="pz-row" style={{ alignItems: 'center' }}>
+        <h1 className="pz-h1 pz-grow" style={{ margin: 0 }}>Chat</h1>
+        {totalUnread > 0 && <button className="pz-btn small" type="button" onClick={markAll}>Mark all read</button>}
+      </div>
 
-      <div style={{ position: 'relative', marginBottom: 12 }}>
+      <div style={{ position: 'relative', margin: '12px 0' }}>
         <span aria-hidden="true" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--pz-muted)', display: 'inline-flex', pointerEvents: 'none' }}>
           <Icon name="search" />
         </span>
@@ -683,10 +762,30 @@ export default function ChatTab() {
       </div>
 
       <div className="pz-chips">
-        {(['All', 'Trips', 'Groups', 'Direct'] as Filter[]).map((f) => (
-          <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>{f}</button>
+        {(['All', 'Unread', 'Trips', 'Groups', 'Direct'] as Filter[]).map((f) => (
+          <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+            {f}{f === 'Unread' && totalUnread > 0 ? ` ${totalUnread > 99 ? '99+' : totalUnread}` : ''}
+          </button>
         ))}
       </div>
+
+      {menuFor && createPortal(
+        <div role="dialog" aria-modal="true" aria-label="Chat options" onClick={() => setMenuFor(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 100000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: '100%', maxWidth: 520, background: 'var(--pz-bg)', color: 'var(--pz-ink)', borderRadius: '20px 20px 0 0',
+            padding: '16px 16px calc(24px + env(safe-area-inset-bottom))', borderTop: '1.5px solid var(--pz-line)', display: 'grid', gap: 10,
+          }}>
+            <b style={{ fontSize: 17, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{menuFor.title}</b>
+            <button className="pz-btn block" type="button" onClick={() => setUnread(menuFor, menuFor.unread === 0)}>
+              {menuFor.unread > 0 ? 'Mark as read' : 'Mark as unread'}
+            </button>
+            <button className="pz-btn block" type="button" onClick={() => { const k = menuFor.key; setMenuFor(null); setParams({ c: k }); }}>Open chat</button>
+            <button className="pz-btn block" type="button" onClick={() => setMenuFor(null)}>Cancel</button>
+          </div>
+        </div>,
+        document.body,
+      )}
 
       {error && <div className="pz-banner bad" role="alert">{error}</div>}
       {notice && <div className="pz-banner ok" role="status">{notice}</div>}
@@ -694,24 +793,7 @@ export default function ChatTab() {
 
       <div className="pz-card">
         {rows.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setParams({ c: c.key })}
-            style={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer', boxSizing: 'border-box' }}
-          >
-            <div className="pz-row-item">
-              <div className="pz-av" aria-hidden="true">{c.title.charAt(0).toUpperCase()}</div>
-              <div className="pz-grow">
-                <b>{c.title}</b>
-                <div className="pz-note" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {c.lastMessage ?? c.subtitle}
-                </div>
-              </div>
-              {c.unread > 0 && <span className="pz-pill bad">{c.unread}</span>}
-              <span className="pz-tag">{tag(c.type)}</span>
-            </div>
-          </button>
+          <ConvRow key={c.key} c={c} onOpen={() => setParams({ c: c.key })} onMenu={() => setMenuFor(c)} />
         ))}
         {!loading && !rows.length && <p className="pz-note">{q ? `No chats match "${query.trim()}".` : 'Nothing here yet.'}</p>}
       </div>
