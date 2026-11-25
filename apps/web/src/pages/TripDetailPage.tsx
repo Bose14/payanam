@@ -9,6 +9,7 @@ import Navbar from '../components/Navbar';
 import NavigationAppModal from '../components/NavigationAppModal';
 import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
 import Icon from '../components/Icon';
+import { apiMessage } from '../utils/apiMessage';
 import {
   ItineraryProposalCard,
   ProposeEditModal,
@@ -67,6 +68,7 @@ interface Trip {
   itinerary: Stop[];
   rooms?: Array<{ id: string; invite_code: string }>;
   isOwner?: boolean;
+  max_members?: number | null;
 }
 
 interface MemberProfile {
@@ -413,8 +415,8 @@ export default function TripDetailPage() {
       } else {
         showToast('Request declined');
       }
-    } catch {
-      showToast('Action failed');
+    } catch (err) {
+      showToast(apiMessage(err, 'Action failed'));
     } finally {
       setRespondingId(null);
     }
@@ -811,6 +813,12 @@ export default function TripDetailPage() {
                 </div>
               </div>
             </div>
+
+            {trip?.max_members ? (
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', margin: '0 0 8px' }}>
+                {approvedMembers.length + 1} of {trip.max_members} riders{approvedMembers.length + 1 >= trip.max_members ? ' (trip is full)' : ''}
+              </div>
+            ) : null}
 
             {/* Approved Co-riders */}
             {approvedMembers.map(m => (

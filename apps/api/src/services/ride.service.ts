@@ -1,5 +1,7 @@
 import { getDatabase } from '../config/database';
 import { ForbiddenError } from '../utils/errors';
+import { getTripMemberIds } from './trip.service';
+import { sendPush } from './push.service';
 
 export async function startRide(tripId: string, userId: string) {
   const db = getDatabase();
@@ -212,7 +214,32 @@ export async function sendMessage(
     .insert({ session_id: sessionId, user_id: userId, user_name: userName, message, message_type: messageType })
     .select().single();
   if (error) throw new Error(error.message);
+  void notifyRide(sessionId, userId, userName, message, messageType);
   return data;
+}
+
+const RIDE_PUSH_TITLES: Record<string, string> = {
+  sos: 'SOS from a rider',
+  announcement: 'Captain announcement',
+  stop_pin: 'Next stop set',
+};
+
+/** Urgent ride events reach riders even when the app is closed. */
+async function notifyRide(sessionId: string, senderId: string, senderName: string, message: string, type: string) {
+  const title = RIDE_PUSH_TITLES[type];
+  if (!title) return;
+  try {
+    const { data: session } = await getDatabase().from('ride_sessions').select('trip_id').eq('id', sessionId).single();
+    if (!session) return;
+    const members = (await getTripMemberIds(session.trip_id as string)).filter((id) => id !== senderId);
+    await sendPush(members, {
+      title: type === 'sos' ? `SOS: ${senderName}` : title,
+      body: message.slice(0, 140),
+      url: `/ride/${sessionId}`,
+      tag: `ride:${sessionId}:${type}`,
+      urgent: type === 'sos',
+    });
+  } catch { /* ignore */ }
 }
 
 export async function getMessages(sessionId: string, since?: string) {
@@ -222,4 +249,41 @@ export async function getMessages(sessionId: string, since?: string) {
   if (since) query = query.gt('created_at', since);
   const { data } = await query;
   return data ?? [];
+}
+
+const MISSING_AFTER_MS = 5 * 60 * 1000;
+const alerted = new Map<string, number>(); // `${sessionId}:${userId}` -> time alerted
+
+/**
+ * Looks for riders on an active ride whose last position is older than five minutes and tells the captain once.
+ * Alerts again only after the rider has reported in and gone quiet a second time.
+ */
+export async function checkMissingRiders() {
+  const db = getDatabase();
+  const { data: sessions } = await db.from('ride_sessions').select('id, trip_id, started_by').eq('status', 'active');
+  const now = Date.now();
+  for (const s of sessions ?? []) {
+    const { data: locs } = await db.from('rider_locations')
+      .select('user_id, user_name, updated_at').eq('session_id', s.id);
+    const lines: string[] = [];
+    for (const l of locs ?? []) {
+      if (l.user_id === s.started_by) continue;
+      const k = `${s.id}:${l.user_id}`;
+      const age = now - new Date(l.updated_at as string).getTime();
+      if (age >= MISSING_AFTER_MS) {
+        if (!alerted.has(k)) { alerted.set(k, now); lines.push((l.user_name as string) || 'A rider'); }
+      } else {
+        alerted.delete(k);
+      }
+    }
+    if (lines.length > 0) {
+      await sendPush([s.started_by as string], {
+        title: lines.length === 1 ? `${lines[0]} may be missing` : `${lines.length} riders may be missing`,
+        body: `${lines.join(', ')} ${lines.length === 1 ? 'has' : 'have'} not shared a position for 5 minutes.`,
+        url: `/ride/${s.id}`,
+        tag: `missing:${s.id}`,
+        urgent: true,
+      });
+    }
+  }
 }

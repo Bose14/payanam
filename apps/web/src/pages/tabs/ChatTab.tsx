@@ -1,27 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChatConversation, ChatGroup, ChatMessage, chatService, tripService } from '../../services/api';
+import { apiMessage } from '../../utils/apiMessage';
 import Icon from '../../components/Icon';
 
 type Filter = 'All' | 'Trips' | 'Groups' | 'Direct';
 
-function apiMessage(err: unknown, fallback: string): string {
-  const e = err as {
-    response?: {
-      data?: {
-        message?: string;
-        error?: { message?: string } | string;
-      };
-    };
-    message?: string;
-  };
-  const data = e?.response?.data;
-  if (typeof data?.message === 'string') return data.message;
-  if (typeof data?.error === 'object' && typeof data?.error?.message === 'string') return data.error.message;
-  if (typeof data?.error === 'string') return data.error;
-  if (typeof e?.message === 'string' && !e.message.startsWith('Request failed')) return e.message;
-  return fallback;
-}
 
 function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

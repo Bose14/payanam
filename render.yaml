@@ -8,3 +8,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Web push. Generate once with: npx web-push generate-vapid-keys
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:support@payanam.app

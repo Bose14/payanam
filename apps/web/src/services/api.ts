@@ -131,6 +131,7 @@ export const tripService = {
     to_lat?: number | null;
     to_lng?: number | null;
     itinerary_mode?: 'ai' | 'manual';
+    max_members?: number;
   }) => {
     const response = await api.post('/api/trips', data);
     return response.data.data;
@@ -230,6 +231,15 @@ export const tripService = {
     custom_splits?: Array<{ user_id: string; amount: number }>;
   }) => {
     const response = await api.post(`/api/trips/${tripId}/expenses`, data);
+    return response.data.data;
+  },
+
+  updateExpense: async (tripId: string, expenseId: string, data: {
+    title: string; amount: number; category: string; paid_by: string;
+    split_type: 'equal' | 'custom'; split_among?: string[];
+    custom_splits?: Array<{ user_id: string; amount: number }>;
+  }) => {
+    const response = await api.put(`/api/trips/${tripId}/expenses/${expenseId}`, data);
     return response.data.data;
   },
 

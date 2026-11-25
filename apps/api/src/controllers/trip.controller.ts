@@ -30,7 +30,13 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       bike_type = 'motorcycle', trip_type = 'one_way', preferences = '',
       from_lat = null, from_lng = null, to_lat = null, to_lng = null,
       itinerary_mode = 'ai',
+      max_members,
     } = req.body;
+
+    const maxMembers = Number(max_members);
+    if (!Number.isInteger(maxMembers) || maxMembers < 2 || maxMembers > 100) {
+      return sendError(res, 'Enter the number of riders in the group (2 to 100)', 400, 'VALIDATION_ERROR');
+    }
 
     if (itinerary_mode !== 'ai' && itinerary_mode !== 'manual') {
       return sendError(res, "itinerary_mode must be 'ai' or 'manual'", 400, 'VALIDATION_ERROR');
@@ -55,6 +61,7 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       bike_type,
       trip_type,
       preferences,
+      max_members: maxMembers,
     });
     console.log('[createTrip] trip created:', trip.id);
 
