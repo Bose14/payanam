@@ -316,7 +316,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 40, height: 40, borderRadius: 999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
     backgroundColor: 'var(--pz-bg)', border: '1px solid var(--pz-line)', color: 'var(--pz-ink)', fontSize: 18,
   },
-  toastBar: { backgroundColor: 'var(--pz-ok)', color: '#fff', padding: '8px 16px', fontSize: 12, fontWeight: 800, textAlign: 'center' },
+  toastBar: { backgroundColor: 'var(--pz-ok)', color: 'var(--pz-on-ok)', padding: '8px 16px', fontSize: 12, fontWeight: 800, textAlign: 'center' },
   filterRow: { display: 'flex', gap: 8, padding: '0 16px 12px', overflowX: 'auto', flexShrink: 0, scrollbarWidth: 'none' },
   filterPill: {
     padding: '8px 14px', borderRadius: 999, fontSize: 13, fontWeight: 800, cursor: 'pointer', border: '1px solid',

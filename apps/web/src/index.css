@@ -138,7 +138,21 @@ button {
   cursor: pointer;
   border: none;
   font-family: inherit;
+  /* Buttons do not inherit text color by default; on Android dark mode they came out black. */
+  color: inherit;
 }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-wrap: break-word;
+}
+
+:root[data-theme='night'] { color-scheme: dark; }
+:root[data-theme='day'] { color-scheme: light; }
 
 input,
 textarea,

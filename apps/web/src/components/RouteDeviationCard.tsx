@@ -243,7 +243,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: '8px 12px',
     backgroundColor: 'var(--pz-ok)',
-    color: '#FFFFFF',
+    color: 'var(--pz-on-ok)',
     border: 'none',
     borderRadius: 12,
     fontSize: 12,
