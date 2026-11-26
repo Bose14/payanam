@@ -580,8 +580,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           ...(isFloatingInApp
             ? {
                 ...(hudDockPosition === 'bottom'
-                  ? { bottom: 'calc(65px + env(safe-area-inset-bottom, 0px))' }
-                  : { top: 'calc(65px + env(safe-area-inset-top, 0px))' }),
+                  ? { bottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }
+                  : { top: 'calc(118px + env(safe-area-inset-top, 0px))' }),
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 'min(94vw, 420px)',
