@@ -107,9 +107,12 @@ export async function getTripByIdHandler(req: Request, res: Response, next: Next
 
 export async function updateItineraryHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const { stops } = req.body;
+    const { stops, days } = req.body;
     if (!Array.isArray(stops)) return sendError(res, 'stops array required', 400, 'VALIDATION_ERROR');
-    await updateItinerary(req.params.id, req.userId!, stops);
+    if (days !== undefined && (typeof days !== 'number' || !Number.isFinite(days) || days < 1)) {
+      return sendError(res, 'days must be a positive number', 400, 'VALIDATION_ERROR');
+    }
+    await updateItinerary(req.params.id, req.userId!, stops, days);
     return sendSuccess(res, { message: 'Itinerary updated' });
   } catch (err) { next(err); }
 }

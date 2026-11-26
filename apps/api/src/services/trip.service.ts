@@ -1107,11 +1107,18 @@ export async function updateItinerary(tripId: string, userId: string, stops: Arr
   id?: string; day_number: number; order_index: number; place: string; description?: string;
   item_type?: string; estimated_km?: number; duration_hours?: number; tips?: string;
   lat?: number; lng?: number;
-}>) {
+}>, days?: number) {
   const db = getDatabase();
   const auth = await assertUserTripMembership(tripId, userId);
   if (auth.status !== 'approved') throw new Error('Not authorized');
   if (!auth.isOwner) throw new ForbiddenError('Only the captain can change the itinerary');
+
+  if (days !== undefined) {
+    const lastStopDay = stops.reduce((m, s) => Math.max(m, s.day_number || 1), 1);
+    const safeDays = Math.min(Math.max(Math.floor(days), lastStopDay, 1), 30);
+    const { error: dayErr } = await db.from('trips').update({ days: safeDays }).eq('id', tripId);
+    if (dayErr) throw new Error(dayErr.message);
+  }
 
   await db.from('itinerary_items').delete().eq('trip_id', tripId);
   if (stops.length > 0) {

@@ -187,8 +187,8 @@ export const tripService = {
     return response.data.data;
   },
 
-  updateItinerary: async (tripId: string, stops: unknown[]) => {
-    const response = await api.put(`/api/trips/${tripId}/itinerary`, { stops });
+  updateItinerary: async (tripId: string, stops: unknown[], days?: number) => {
+    const response = await api.put(`/api/trips/${tripId}/itinerary`, days === undefined ? { stops } : { stops, days });
     return response.data;
   },
 
