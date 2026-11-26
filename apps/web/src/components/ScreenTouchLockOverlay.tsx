@@ -13,9 +13,6 @@ export interface ScreenTouchLockOverlayProps {
 export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
   isLocked,
   onUnlock,
-  currentSpeedKmh,
-  pinnedStopName,
-  distToPinnedStopKm,
 }) => {
   const [holdProgress, setHoldProgress] = useState(0); // 0 to 100
   const [showHint, setShowHint] = useState(false);
@@ -91,7 +88,7 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
         setShowHint(true);
         triggerHaptic(15);
         if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-        hintTimeoutRef.current = window.setTimeout(() => setShowHint(false), 2600);
+        hintTimeoutRef.current = window.setTimeout(() => setShowHint(false), 2400);
       }
 
       setHoldProgress(0);
@@ -108,7 +105,7 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
       setShowHint(true);
       triggerHaptic(12);
       if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-      hintTimeoutRef.current = window.setTimeout(() => setShowHint(false), 2400);
+      hintTimeoutRef.current = window.setTimeout(() => setShowHint(false), 2000);
     },
     [triggerHaptic]
   );
@@ -123,15 +120,15 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
   if (!isLocked) return null;
 
   // SVG Circular Gauge
-  const size = 78;
-  const strokeWidth = 4;
+  const size = 62;
+  const strokeWidth = 3.5;
   const radius = (size - strokeWidth * 2) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (holdProgress / 100) * circumference;
 
   return (
     <aside
-      aria-label="Screen touch lock overlay"
+      aria-label="Screen touch lock active: touch input is blocked"
       onTouchStart={handleGhostTouch}
       onTouchMove={handleGhostTouch}
       onTouchEnd={handleGhostTouch}
@@ -141,173 +138,102 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        backgroundColor: 'rgba(5, 8, 16, 0.22)',
-        backdropFilter: 'blur(1px)',
-        WebkitBackdropFilter: 'blur(1px)',
+        backgroundColor: 'transparent', // 100% transparent: every piece of ride data & map is completely visible
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: 'calc(14px + env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)) 16px',
+        alignItems: 'center',
+        padding: 'calc(10px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px',
         touchAction: 'none',
         userSelect: 'none',
         WebkitUserSelect: 'none',
-        pointerEvents: 'auto',
+        pointerEvents: 'auto', // intercepts all touches across the entire screen
+        boxSizing: 'border-box',
       }}
     >
-      {/* Viewfinder HUD Corner Brackets to give visual confirmation of locked HUD mode */}
-      <div style={{ position: 'absolute', top: 12, left: 12, width: 22, height: 22, borderTop: '2px solid rgba(240, 194, 58, 0.7)', borderLeft: '2px solid rgba(240, 194, 58, 0.7)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', top: 12, right: 12, width: 22, height: 22, borderTop: '2px solid rgba(240, 194, 58, 0.7)', borderRight: '2px solid rgba(240, 194, 58, 0.7)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: 12, left: 12, width: 22, height: 22, borderBottom: '2px solid rgba(240, 194, 58, 0.7)', borderLeft: '2px solid rgba(240, 194, 58, 0.7)', pointerEvents: 'none' }} />
-      <div style={{ position: 'absolute', bottom: 12, right: 12, width: 22, height: 22, borderBottom: '2px solid rgba(240, 194, 58, 0.7)', borderRight: '2px solid rgba(240, 194, 58, 0.7)', pointerEvents: 'none' }} />
+      {/* Subtle HUD Corner Brackets to give visual indicator that screen is locked */}
+      <div style={{ position: 'absolute', top: 8, left: 8, width: 16, height: 16, borderTop: '2px solid rgba(240, 194, 58, 0.6)', borderLeft: '2px solid rgba(240, 194, 58, 0.6)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: 8, right: 8, width: 16, height: 16, borderTop: '2px solid rgba(240, 194, 58, 0.6)', borderRight: '2px solid rgba(240, 194, 58, 0.6)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: 8, left: 8, width: 16, height: 16, borderBottom: '2px solid rgba(240, 194, 58, 0.6)', borderLeft: '2px solid rgba(240, 194, 58, 0.6)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: 8, right: 8, width: 16, height: 16, borderBottom: '2px solid rgba(240, 194, 58, 0.6)', borderRight: '2px solid rgba(240, 194, 58, 0.6)', pointerEvents: 'none' }} />
 
-      {/* TOP STATUS BAR: Glanceable Live Telemetry & Lock Confirmation */}
+      {/* TOP COMPACT LOCK BADGE: Minimal floating pill, leaves 100% of the screen data visible */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          backgroundColor: 'rgba(10, 13, 18, 0.85)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          border: '1.2px solid var(--pz-accent, #F0C23A)',
+          borderRadius: 20,
+          padding: '4px 12px',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5), 0 0 8px rgba(240, 194, 58, 0.2)',
+          pointerEvents: 'none',
+          color: '#FFFFFF',
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: 0.5,
+        }}
+      >
+        <span style={{ color: 'var(--pz-accent, #F0C23A)', display: 'flex', alignItems: 'center', fontSize: 12 }}>
+          <Icon name="lock" />
+        </span>
+        <span style={{ textTransform: 'uppercase', color: 'var(--pz-accent, #F0C23A)' }}>
+          Touch Locked
+        </span>
+        <span style={{ color: 'rgba(255, 255, 255, 0.4)', margin: '0 2px' }}>·</span>
+        <span style={{ fontSize: 10, color: 'rgba(255, 255, 255, 0.85)' }}>
+          All data live
+        </span>
+      </div>
+
+      {/* TRANSIENT TOAST: Pops up ONLY when an accidental touch occurs, auto-fades in 2s */}
+      <div
+        style={{
+          pointerEvents: 'none',
+          transition: 'all 0.18s ease',
+          opacity: showHint || isPressing ? 1 : 0,
+          transform: showHint || isPressing ? 'scale(1) translateY(0)' : 'scale(0.95) translateY(6px)',
+          marginBottom: 12,
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: 'rgba(15, 18, 24, 0.92)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            border: '1.5px solid var(--pz-warn, #F59E0B)',
+            borderRadius: 14,
+            padding: '8px 16px',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            maxWidth: 300,
+            textAlign: 'center',
+          }}
+        >
+          <span style={{ fontSize: 16 }}>🔒</span>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: '#FFFFFF' }}>
+            {isPressing
+              ? `Unlocking... ${holdProgress}%`
+              : 'Touch blocked · Hold lock button below to unlock'}
+          </div>
+        </div>
+      </div>
+
+      {/* BOTTOM UNLOCK BUTTON: Sleek, non-intrusive 62px disc positioned above bottom edge */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 6,
-          width: '100%',
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: 'rgba(17, 19, 22, 0.92)',
-            border: '1.5px solid var(--pz-accent, #F0C23A)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(240, 194, 58, 0.25)',
-            borderRadius: 999,
-            padding: '6px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            color: '#FFFFFF',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13, color: 'var(--pz-accent, #F0C23A)', display: 'flex', alignItems: 'center' }}>
-              <Icon name="lock" />
-            </span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 900,
-                letterSpacing: 0.8,
-                textTransform: 'uppercase',
-                color: 'var(--pz-accent, #F0C23A)',
-              }}
-            >
-              Touch Locked
-            </span>
-          </div>
-
-          <div style={{ width: 1, height: 14, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
-
-          {/* Speedometer */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-            <span style={{ fontSize: 14, fontWeight: 900, color: '#FFFFFF' }}>
-              {Math.round(currentSpeedKmh || 0)}
-            </span>
-            <span style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--pz-muted, #9D9C9A)' }}>
-              KM/H
-            </span>
-          </div>
-
-          <div style={{ width: 1, height: 14, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
-
-          {/* GPS Live Dot */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: '50%',
-                backgroundColor: 'var(--pz-ok, #10B981)',
-                boxShadow: '0 0 8px var(--pz-ok, #10B981)',
-              }}
-            />
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--pz-ok, #10B981)' }}>
-              GPS LIVE
-            </span>
-          </div>
-        </div>
-
-        {/* Pinned next stop info if active */}
-        {pinnedStopName && (
-          <div
-            style={{
-              backgroundColor: 'rgba(17, 19, 22, 0.85)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: 20,
-              padding: '3px 10px',
-              fontSize: 10.5,
-              fontWeight: 700,
-              color: 'var(--pz-ink, #FFFFFF)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <span>📌</span>
-            <span>{pinnedStopName}</span>
-            {distToPinnedStopKm != null && (
-              <span style={{ color: 'var(--pz-accent, #F0C23A)' }}>
-                · {distToPinnedStopKm.toFixed(1)} km
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* CENTER HINT NOTIFICATION: Pops up when accidental pouch/ghost touches occur */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          pointerEvents: 'none',
-          transition: 'all 0.2s ease',
-          opacity: showHint || isPressing ? 1 : 0,
-          transform: showHint || isPressing ? 'scale(1)' : 'scale(0.95)',
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: 'rgba(17, 19, 22, 0.94)',
-            border: '1.5px solid var(--pz-warn, #F59E0B)',
-            borderRadius: 16,
-            padding: '10px 18px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            maxWidth: 320,
-            textAlign: 'center',
-          }}
-        >
-          <span style={{ fontSize: 18, color: 'var(--pz-warn, #F59E0B)' }}>🛡️</span>
-          <div>
-            <div style={{ fontSize: 12.5, fontWeight: 900, color: '#FFFFFF' }}>
-              Pouch Ghost Touches Blocked
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--pz-muted, #9D9C9A)', marginTop: 2 }}>
-              {isPressing
-                ? `Hold steady... ${holdProgress}%`
-                : 'Press & hold the lock disc below for 1s to unlock'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* BOTTOM UNLOCK CONTROL: Glove & Pouch-Friendly Big Disc Button */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 10,
-          width: '100%',
+          pointerEvents: 'auto',
         }}
       >
         <div
@@ -330,8 +256,8 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
             cursor: 'pointer',
             touchAction: 'none',
             pointerEvents: 'auto',
-            transform: isPressing ? 'scale(1.06)' : 'scale(1)',
-            transition: 'transform 0.15s ease',
+            transform: isPressing ? 'scale(1.08)' : 'scale(1)',
+            transition: 'transform 0.12s ease',
           }}
         >
           {/* Circular SVG Gauge Track & Fill */}
@@ -352,7 +278,7 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke="rgba(255, 255, 255, 0.15)"
+              stroke="rgba(255, 255, 255, 0.2)"
               strokeWidth={strokeWidth}
               fill="transparent"
             />
@@ -368,7 +294,7 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
               strokeLinecap="round"
               fill="transparent"
               style={{
-                transition: isPressing ? 'stroke-dashoffset 0.03s linear' : 'stroke-dashoffset 0.2s ease',
+                transition: isPressing ? 'stroke-dashoffset 0.03s linear' : 'stroke-dashoffset 0.18s ease',
               }}
             />
           </svg>
@@ -376,19 +302,21 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
           {/* Central Button Disc */}
           <div
             style={{
-              width: size - 14,
-              height: size - 14,
+              width: size - 12,
+              height: size - 12,
               borderRadius: '50%',
-              backgroundColor: isPressing ? 'var(--pz-warn-bg, rgba(240, 194, 58, 0.25))' : 'rgba(27, 30, 35, 0.95)',
+              backgroundColor: isPressing ? 'var(--pz-warn-bg, rgba(240, 194, 58, 0.25))' : 'rgba(15, 18, 24, 0.9)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               border: '1.5px solid var(--pz-accent, #F0C23A)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 22,
+              fontSize: 20,
               color: 'var(--pz-accent, #F0C23A)',
               boxShadow: isPressing
-                ? '0 0 20px rgba(240, 194, 58, 0.5)'
-                : '0 4px 16px rgba(0, 0, 0, 0.6)',
+                ? '0 0 18px rgba(240, 194, 58, 0.6)'
+                : '0 4px 14px rgba(0, 0, 0, 0.6)',
               pointerEvents: 'none',
             }}
           >
@@ -399,15 +327,18 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
         {/* Caption */}
         <div
           style={{
-            fontSize: 11.5,
+            fontSize: 10.5,
             fontWeight: 800,
             letterSpacing: 0.4,
             color: isPressing ? 'var(--pz-accent, #F0C23A)' : 'rgba(255, 255, 255, 0.85)',
-            textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+            textShadow: '0 2px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8)',
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            padding: '2px 8px',
+            borderRadius: 10,
             pointerEvents: 'none',
           }}
         >
-          {isPressing ? `Unlocking... ${holdProgress}%` : 'Hold 1.2s to Unlock'}
+          {isPressing ? `Hold steady (${holdProgress}%)` : 'Hold to unlock'}
         </div>
       </div>
     </aside>
