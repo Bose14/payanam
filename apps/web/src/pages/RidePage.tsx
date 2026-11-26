@@ -2317,22 +2317,32 @@ export default function RidePage() {
         </div>
       </div>
 
-      {/* Missing rider alert (captain only, ride map tab only) */}
-      {isLead && tab === 'map' && missingRiders.filter((r) => !dismissedMissing.includes(r.userId)).map((r) => (
-        <div key={r.userId} role="alert" style={{
-          margin: '4px 12px 2px', padding: '10px 12px', borderRadius: 14, flexShrink: 0,
-          background: 'var(--pz-bad-bg, var(--pz-surface))', border: '1.5px solid var(--pz-bad)',
-          display: 'flex', alignItems: 'center', gap: 10,
-        }}>
-          <span style={{ color: 'var(--pz-bad)', display: 'inline-flex' }}><Icon name="warning" /></span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--pz-ink)' }}>{r.userName} may be missing</div>
-            <div style={{ fontSize: 12, color: 'var(--pz-muted)' }}>Last position {r.freshness.ageLabel}. Check on them before moving on.</div>
+      {/* Alerts stack: capped in height so the map always keeps its room */}
+      <div style={{ flexShrink: 0, maxHeight: tab === 'map' ? '30vh' : undefined, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      {/* Missing rider alert (captain only, ride map tab only), grouped into one row */}
+      {isLead && tab === 'map' && (() => {
+        const list = missingRiders.filter((r) => !dismissedMissing.includes(r.userId));
+        if (list.length === 0) return null;
+        const names = list.length === 1 ? list[0].userName : list.length === 2 ? `${list[0].userName} and ${list[1].userName}` : `${list[0].userName} and ${list.length - 1} others`;
+        return (
+          <div role="alert" style={{
+            margin: '4px 12px 4px', padding: '8px 10px 8px 12px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10,
+            background: 'var(--pz-surface)', border: '1px solid var(--pz-line)', borderLeft: '4px solid var(--pz-bad)',
+          }}>
+            <span style={{ color: 'var(--pz-bad)', display: 'inline-flex', fontSize: 18 }}><Icon name="warning" /></span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--pz-ink)', overflowWrap: 'anywhere' }}>{names} may be missing</div>
+              <div style={{ fontSize: 12, color: 'var(--pz-muted)' }}>Last seen {list[0].freshness.ageLabel}</div>
+            </div>
+            <button type="button" className="pz-btn small" onClick={() => handleFocusRider(list[0])}>Locate</button>
+            <button type="button" onClick={() => setDismissedMissing((p) => [...p, ...list.map((r) => r.userId)])}
+              aria-label="Dismiss" title="Dismiss"
+              style={{ width: 32, height: 32, borderRadius: 999, border: '1px solid var(--pz-line)', background: 'var(--pz-bg)', color: 'var(--pz-ink)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="close" />
+            </button>
           </div>
-          <button type="button" className="pz-btn small" onClick={() => handleFocusRider(r)}>Locate</button>
-          <button type="button" className="pz-btn small" onClick={() => setDismissedMissing((p) => [...p, r.userId])}>Dismiss</button>
-        </div>
-      ))}
+        );
+      })()}
 
       {/* Fuel range chip (ride map tab only) */}
       {tab === 'map' && fuelState && (() => {
@@ -2341,7 +2351,7 @@ export default function RidePage() {
         const low = left < 40;
         return (
           <button type="button" onClick={() => setReadyStep('fuel')} style={{
-            margin: '4px 12px 2px', padding: '8px 12px', borderRadius: 14, flexShrink: 0, cursor: 'pointer', textAlign: 'left',
+            margin: '4px 12px 4px', padding: '8px 12px', borderRadius: 12, flexShrink: 0, cursor: 'pointer', textAlign: 'left', width: 'calc(100% - 24px)',
             display: 'flex', alignItems: 'center', gap: 10, color: 'var(--pz-ink)',
             background: 'var(--pz-surface)', border: `1.5px solid ${low ? 'var(--pz-bad)' : short ? 'var(--pz-warn)' : 'var(--pz-line)'}`,
           }}>
@@ -2355,8 +2365,8 @@ export default function RidePage() {
         );
       })()}
       {tab === 'map' && !fuelState && (
-        <button type="button" onClick={() => setReadyStep('fuel')} className="pz-btn small" style={{ margin: '4px 12px 2px', alignSelf: 'flex-start' }}>
-          Set fuel range
+        <button type="button" onClick={() => setReadyStep('fuel')} className="pz-btn small" style={{ margin: '4px 12px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="fuel" /> Set fuel range
         </button>
       )}
 
@@ -2416,19 +2426,6 @@ export default function RidePage() {
             </span>
           </div>
 
-          <span style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: 'var(--pz-muted)',
-            backgroundColor: 'var(--pz-bg)',
-            border: '1px solid var(--pz-line)',
-            padding: '2px 8px',
-            borderRadius: 999,
-            flexShrink: 0,
-            whiteSpace: 'nowrap',
-          }}>
-            Day 2 · 62 km to go
-          </span>
         </div>
       )}
 
@@ -2460,12 +2457,12 @@ export default function RidePage() {
       {/* Feature K: Captain Announcement Alert Card (Members see the announcement as an alert) */}
       {activeAnnouncement && (
         <div style={{
-          margin: '0 16px 8px 16px',
-          padding: '12px 14px',
-          borderRadius: 18,
+          margin: '4px 12px 6px',
+          padding: '8px 10px 8px 12px',
+          borderRadius: 12,
           backgroundColor: 'var(--pz-surface)',
-          border: activeAnnouncement.urgency === 'high' ? '1.5px solid var(--pz-bad)' : '1.5px solid var(--pz-accent)',
-          boxShadow: activeAnnouncement.urgency === 'high' ? '0 4px 20px var(--pz-bad-bg)' : '0 4px 20px var(--pz-warn-bg)',
+          border: '1px solid var(--pz-line)',
+          borderLeft: activeAnnouncement.urgency === 'high' ? '4px solid var(--pz-bad)' : '4px solid var(--pz-accent)',
           display: 'flex',
           alignItems: 'center',
           gap: 12,
@@ -2635,6 +2632,8 @@ export default function RidePage() {
         />
       )}
 
+      </div>
+
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
         flex: tab === 'map' ? 1 : 0,
@@ -2673,8 +2672,8 @@ export default function RidePage() {
 
         {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
         <div className="warm-map-container" style={{
-          flex: splitView ? '0 0 clamp(160px, 28vh, 220px)' : '1 1 auto',
-          height: splitView ? 'clamp(160px, 28vh, 220px)' : '100%',
+          flex: splitView ? '0 0 clamp(240px, 42vh, 400px)' : '1 1 auto',
+          height: splitView ? 'clamp(240px, 42vh, 400px)' : '100%',
           minHeight: 0,
           margin: splitView ? '0 12px 6px' : '0',
           borderRadius: splitView ? 18 : 0,
@@ -2805,10 +2804,10 @@ export default function RidePage() {
                 style={{
                   backgroundColor: 'rgba(27, 30, 35, 0.88)',
                   backdropFilter: 'blur(10px)',
-                  border: '1px solid var(--pz-line, var(--pz-line))',
-                  color: 'var(--text-primary)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  color: '#FFFFFF',
                   borderRadius: 20,
-                  padding: '5px 12px',
+                  padding: '7px 14px',
                   fontSize: 11,
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -2819,7 +2818,7 @@ export default function RidePage() {
                 }}
                 title="Toggle split roster and map view"
               >
-                <span>{splitView ? 'Full Map' : 'Map + Roster'}</span>
+                <Icon name="map" /><span>{splitView ? 'Full map' : 'Map + riders'}</span>
               </button>
 
               <button
@@ -2829,9 +2828,9 @@ export default function RidePage() {
                   backgroundColor: showServicePins ? 'var(--pz-warn-bg)' : 'rgba(27, 30, 35, 0.88)',
                   backdropFilter: 'blur(10px)',
                   border: showServicePins ? '1.5px solid var(--pz-accent, var(--pz-accent))' : '1px solid var(--pz-line, var(--pz-line))',
-                  color: showServicePins ? 'var(--pz-accent, var(--pz-accent))' : 'var(--pz-muted, var(--pz-muted))',
+                  color: showServicePins ? 'var(--pz-accent, var(--pz-accent))' : '#FFFFFF',
                   borderRadius: 20,
-                  padding: '5px 10px',
+                  padding: '7px 12px',
                   fontSize: 11,
                   fontWeight: 800,
                   cursor: 'pointer',
@@ -2843,7 +2842,7 @@ export default function RidePage() {
                 title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
               >
                 <span><Icon name="wrench" /></span>
-                <span>Services {showServicePins ? 'ON' : 'OFF'}</span>
+                <span>Services</span>
               </button>
 
               {/* 60 FPS Picture-in-Picture Convoy Floating HUD */}
