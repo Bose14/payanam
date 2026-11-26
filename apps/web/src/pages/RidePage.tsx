@@ -27,7 +27,6 @@ import {
   MissedStopPromptCard,
   ArrivalOfferBanner,
   PresetCard,
-  TripChatWhatsAppBanner,
   ChatLocationCard,
   ShareLocationModal,
   ItineraryStopItem,
@@ -3340,13 +3339,6 @@ export default function RidePage() {
       {/* Chat panel (Mockup Screen 4: Trip chat with Location Cards & WhatsApp Link) */}
       {tab === 'chat' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--pz-bg)' }}>
-          {/* Feature H2 Step 4: Chat stays trip-only banner */}
-          <div style={{ padding: '10px 16px 0' }}>
-            <TripChatWhatsAppBanner
-              tripTitle={session?.trips?.title}
-            />
-          </div>
-
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
               <div style={{ textAlign: 'center', marginTop: 40 }}>
@@ -3432,12 +3424,12 @@ export default function RidePage() {
                     maxWidth: '88%',
                     padding: '12px 16px',
                     borderRadius: 20,
-                    background: isMe ? '#22262D' : 'var(--pz-surface)',
-                    color: 'var(--text-primary)',
+                    background: isMe ? 'var(--pz-warn-bg)' : 'var(--pz-surface)',
+                    color: 'var(--pz-ink)',
                     border: isMe ? '1.5px solid var(--pz-accent)' : '1.5px solid var(--pz-line)',
                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
                   }}>
-                    <div style={{ fontSize: 14, lineHeight: 1.4 }}>{m.message}</div>
+                    {m.message_type !== 'location_share' && m.message_type !== 'stop_pin' && <div style={{ fontSize: 14, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{m.message}</div>}
 
                     {/* Feature H2: Reusable Embedded Location Card with Captain 'Confirm as stop' & 'FROM CHAT' link */}
                     {hasStopMention && (
@@ -3593,7 +3585,7 @@ export default function RidePage() {
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-              placeholder="Trip updates only (WhatsApp for casual chat)..."
+              placeholder="Type a message..."
               style={{ flex: 1, background: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', borderRadius: 24, padding: '11px 18px', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
             />
             <button
