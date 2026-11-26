@@ -1,6 +1,7 @@
 import { TripMilestoneSummary, MilestoneCardCustomization, BACKDROP_PRESETS } from './tripMilestones';
 
 export type StoryFormat = 'story' | 'post';
+export type StoryBackground = 'photo' | 'map';
 
 export const STORY_SIZES: Record<StoryFormat, { w: number; h: number; label: string }> = {
   story: { w: 1080, h: 1920, label: 'Story 9:16' },
@@ -15,6 +16,9 @@ export interface StoryOptions {
   /** Planned route as lat/lng points. Drawn as a line only, with no map and no coordinates. */
   route?: Array<[number, number]>;
   showRoute: boolean;
+  /** 'map' draws a street map behind the route; it needs mapView from buildMapBackdrop. */
+  background?: StoryBackground;
+  mapView?: MapBackdrop | null;
 }
 
 export function loadImageFile(file: File): Promise<HTMLImageElement> {
@@ -25,16 +29,6 @@ export function loadImageFile(file: File): Promise<HTMLImageElement> {
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read that photo')); };
     img.src = url;
   });
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
@@ -95,14 +89,122 @@ function drawRoute(ctx: CanvasRenderingContext2D, route: Array<[number, number]>
     ctx.beginPath();
     pts.forEach((p, i) => { const q = proj(p); if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); });
   };
-  path(); ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 16; ctx.stroke();
-  path(); ctx.strokeStyle = accent; ctx.lineWidth = 9; ctx.shadowColor = accent; ctx.shadowBlur = 24; ctx.stroke();
-  ctx.shadowBlur = 0;
+  path(); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 15; ctx.stroke();
+  path(); ctx.strokeStyle = accent; ctx.lineWidth = 9; ctx.stroke();
   const a = proj(pts[0]);
   const b = proj(pts[pts.length - 1]);
-  ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = accent; ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.arc(a.x, a.y, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#EF4444'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 5;
+  ctx.fillStyle = '#22C55E'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(a.x, a.y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = accent; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(b.x, b.y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+const TILE = 256;
+const lonToX = (lon: number, z: number) => ((lon + 180) / 360) * TILE * 2 ** z;
+const latToY = (lat: number, z: number) => {
+  const r = (lat * Math.PI) / 180;
+  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * TILE * 2 ** z;
+};
+
+export interface MapBackdrop {
+  canvas: HTMLCanvasElement;
+  project: (lat: number, lng: number) => { x: number; y: number };
+}
+
+/** The part of the picture where the route is fitted when a map is the background. */
+function mapArea(format: StoryFormat) {
+  const { w, h } = STORY_SIZES[format];
+  const top = format === 'story' ? 340 : 300;
+  const bottom = format === 'story' ? 560 : 500;
+  return { x: 64, y: top, w: w - 128, h: h - top - bottom };
+}
+
+const TILE_URLS = [
+  (z: number, x: number, y: number) => `https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`,
+  (z: number, x: number, y: number) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
+];
+
+function loadTile(z: number, x: number, y: number): Promise<HTMLImageElement | null> {
+  const attempt = (n: number): Promise<HTMLImageElement | null> =>
+    new Promise((resolve) => {
+      if (n >= TILE_URLS.length) { resolve(null); return; }
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const timer = window.setTimeout(() => { img.src = ''; resolve(attempt(n + 1)); }, 8000);
+      img.onload = () => { window.clearTimeout(timer); resolve(img); };
+      img.onerror = () => { window.clearTimeout(timer); resolve(attempt(n + 1)); };
+      img.src = TILE_URLS[n](z, x, y);
+    });
+  return attempt(0);
+}
+
+/** Builds a street map picture with the route fitted inside it. Returns null if no map tiles could load. */
+export async function buildMapBackdrop(route: Array<[number, number]>, format: StoryFormat): Promise<MapBackdrop | null> {
+  if (route.length < 2) return null;
+  const { w, h } = STORY_SIZES[format];
+  const area = mapArea(format);
+  const pts = thin(route);
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [la, ln] of pts) {
+    minLat = Math.min(minLat, la); maxLat = Math.max(maxLat, la);
+    minLng = Math.min(minLng, ln); maxLng = Math.max(maxLng, ln);
+  }
+  let zf = 16;
+  for (; zf > 2; zf -= 0.25) {
+    const sx = lonToX(maxLng, zf) - lonToX(minLng, zf);
+    const sy = latToY(minLat, zf) - latToY(maxLat, zf);
+    if (sx <= area.w * 0.88 && sy <= area.h * 0.88) break;
+  }
+  const Z = Math.max(2, Math.min(16, Math.round(zf)));
+  const T = TILE * 2 ** (zf - Z); // size a tile is drawn at
+  const cx = (lonToX(minLng, zf) + lonToX(maxLng, zf)) / 2;
+  const cy = (latToY(minLat, zf) + latToY(maxLat, zf)) / 2;
+  const tx = area.x + area.w / 2;
+  const ty = area.y + area.h / 2;
+  const originX = cx - tx; // world x (at zoom zf) shown at canvas x = 0
+  const originY = cy - ty;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#0F1316';
+  ctx.fillRect(0, 0, w, h);
+
+  const n = 2 ** Z;
+  const i0 = Math.floor(originX / T), i1 = Math.floor((originX + w) / T);
+  const j0 = Math.max(0, Math.floor(originY / T)), j1 = Math.min(n - 1, Math.floor((originY + h) / T));
+  const jobs: Array<Promise<void>> = [];
+  let loaded = 0;
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      jobs.push(loadTile(Z, ((i % n) + n) % n, j).then((img) => {
+        if (!img) return;
+        loaded++;
+        ctx.drawImage(img, i * T - originX, j * T - originY, T + 0.5, T + 0.5);
+      }));
+    }
+  }
+  await Promise.all(jobs);
+  if (loaded === 0) return null;
+  return { canvas, project: (lat, lng) => ({ x: lonToX(lng, zf) - originX, y: latToY(lat, zf) - originY }) };
+}
+
+function drawRouteOnMap(ctx: CanvasRenderingContext2D, route: Array<[number, number]>, view: MapBackdrop, accent: string) {
+  const pts = thin(route).map(([la, ln]) => view.project(la, ln));
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const path = () => { ctx.beginPath(); pts.forEach((q, i) => (i === 0 ? ctx.moveTo(q.x, q.y) : ctx.lineTo(q.x, q.y))); };
+  path(); ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 22; ctx.stroke();
+  path(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 16; ctx.stroke();
+  path(); ctx.strokeStyle = accent; ctx.lineWidth = 10; ctx.stroke();
+  const a = pts[0], b = pts[pts.length - 1];
+  ctx.lineWidth = 6;
+  ctx.fillStyle = '#22C55E'; ctx.strokeStyle = '#FFFFFF';
+  ctx.beginPath(); ctx.arc(a.x, a.y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#EF4444';
   ctx.beginPath(); ctx.arc(b.x, b.y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
@@ -119,8 +221,11 @@ export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
   const pad = 64;
   const F = "Manrope, Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-  // Backdrop: the rider's photo (cover fit), or the chosen theme colours when there is no photo.
-  if (o.photo) {
+  const mapMode = o.background === 'map' && !!o.mapView;
+  // Backdrop: a street map, the rider's photo (cover fit), or the chosen theme colours.
+  if (mapMode && o.mapView) {
+    ctx.drawImage(o.mapView.canvas, 0, 0);
+  } else if (o.photo) {
     const ir = o.photo.width / o.photo.height;
     const cr = w / h;
     let sw = o.photo.width, sh = o.photo.height, sx = 0, sy = 0;
@@ -132,119 +237,133 @@ export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
     g.addColorStop(0, stops[0]); g.addColorStop(1, stops[stops.length - 1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   }
-  // Soft shading at the top and bottom keeps text readable on any photo.
-  const top = ctx.createLinearGradient(0, 0, 0, h * 0.28);
-  top.addColorStop(0, 'rgba(0,0,0,0.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = top; ctx.fillRect(0, 0, w, h * 0.28);
-  const bottom = ctx.createLinearGradient(0, h * 0.55, 0, h);
-  bottom.addColorStop(0, 'rgba(0,0,0,0)'); bottom.addColorStop(1, 'rgba(0,0,0,0.78)');
-  ctx.fillStyle = bottom; ctx.fillRect(0, h * 0.55, w, h * 0.45);
+  // Shading: darker at the top for the title and at the bottom for the numbers.
+  const top = ctx.createLinearGradient(0, 0, 0, h * 0.34);
+  top.addColorStop(0, 'rgba(0,0,0,0.62)'); top.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = top; ctx.fillRect(0, 0, w, h * 0.34);
+  const bottom = ctx.createLinearGradient(0, h * 0.42, 0, h);
+  bottom.addColorStop(0, 'rgba(0,0,0,0)'); bottom.addColorStop(1, 'rgba(0,0,0,0.82)');
+  ctx.fillStyle = bottom; ctx.fillRect(0, h * 0.42, w, h * 0.58);
 
-  // Top bar: brand and date.
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 46px ${F}`;
-  ctx.textAlign = 'left';
-  ctx.fillText('PAYANAM', pad, pad + 46);
-  ctx.font = `700 30px ${F}`;
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.textAlign = 'right';
-  ctx.fillText(o.summary.completedAt, w - pad, pad + 44);
-  ctx.textAlign = 'left';
-
-  // Expedition pill.
-  const pill = 'EXPEDITION COMPLETED';
-  ctx.font = `900 28px ${F}`;
-  const pw = ctx.measureText(pill).width + 56;
-  roundRect(ctx, pad, pad + 86, pw, 62, 31);
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
-  ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.stroke();
-  ctx.fillStyle = accent;
-  ctx.fillText(pill, pad + 28, pad + 86 + 42);
-
-  // Measure the panel first so it always fits its text.
   const c = o.customization;
-  const iw = w - pad * 2 - 80;
-  ctx.font = `900 56px ${F}`;
-  const titleLines = wrapLines(ctx, `${o.summary.fromPlace} → ${o.summary.toPlace}`, iw, 2);
-  const names = o.summary.sanitizedStopsList.filter(Boolean);
-  ctx.font = `600 29px ${F}`;
-  const nameLines = names.length > 1 ? wrapLines(ctx, names.join(' → '), iw, 2) : [];
-  const stats: Array<[string, string]> = [];
-  if (c.showDistance) stats.push([String(o.summary.totalDistanceKm), 'KM']);
-  if (c.showDays) stats.push([String(o.summary.daysCount), o.summary.daysCount === 1 ? 'DAY' : 'DAYS']);
-  if (c.showStops) stats.push([String(o.summary.stopsClearedCount), 'STOPS']);
-  if (c.showRiders && o.summary.coRidersCount > 1) stats.push([String(o.summary.coRidersCount), 'RIDERS']);
-  const bikeText = c.showBikeModel && o.summary.bikeModel ? o.summary.bikeModel : '';
-  ctx.font = `italic 600 30px ${F}`;
-  const noteLines = c.customNote ? wrapLines(ctx, `“${c.customNote}”`, iw, 2) : [];
-  const panelH = 40 + 36 + titleLines.length * 62 + (nameLines.length ? 14 + nameLines.length * 40 : 0)
-    + 36 + (stats.length ? 130 : 0) + (bikeText ? 62 : 0)
-    + (noteLines.length ? (bikeText ? 52 : 62) + (noteLines.length - 1) * 40 + 20 : 0) + 40;
-  const panelY = h - pad - panelH;
+  const isStory = o.format === 'story';
+  const shadow = () => { ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; };
+  const noShadow = () => { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
 
-  // Route line floats over the photo, like a map overlay.
-  if (o.showRoute && o.route && o.route.length > 1) {
-    const box = o.format === 'story'
-      ? { x: w * 0.45, y: pad + 200, w: w * 0.48, h: panelY - pad - 240 }
-      : { x: w * 0.5, y: pad + 190, w: w * 0.43, h: panelY - pad - 230 };
-    drawRoute(ctx, o.route, box, accent);
-  }
-
-  // Glass panel with the route names and the numbers.
-  const px = pad, pwid = w - pad * 2;
-  roundRect(ctx, px, panelY, pwid, panelH, 36);
-  ctx.fillStyle = 'rgba(8,10,12,0.62)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 2; ctx.stroke();
-
-  const ix = px + 40;
-  let y = panelY + 40;
-  ctx.fillStyle = accent;
-  ctx.fillRect(ix, y + 6, 44, 8);
+  // Top left: ride name and date. Top right: brand.
+  shadow();
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 56px ${F}`;
-  y += 36;
-  for (const l of titleLines) { y += 62; ctx.fillText(l, ix, y); }
+  ctx.font = `800 ${isStory ? 60 : 54}px ${F}`;
+  const titleLines = wrapLines(ctx, `${o.summary.fromPlace} → ${o.summary.toPlace}`, w - pad * 2, 2);
+  let ty = pad + 56;
+  for (const l of titleLines) { ctx.fillText(l, pad, ty); ty += isStory ? 68 : 62; }
+  ctx.font = `600 30px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(o.summary.completedAt, pad, ty + 4);
 
-  if (nameLines.length) {
-    ctx.font = `600 29px ${F}`;
-    ctx.fillStyle = 'rgba(255,255,255,0.78)';
-    y += 14;
-    for (const l of nameLines) { y += 40; ctx.fillText(l, ix, y); }
-  }
+  // Numbers: label above a big value, stacked at the bottom left.
+  type Stat = { label: string; value: string; unit?: string };
+  const stats: Stat[] = [];
+  if (c.showDistance) stats.push({ label: 'Distance', value: String(o.summary.totalDistanceKm), unit: 'km' });
+  if (c.showDays) stats.push({ label: o.summary.daysCount === 1 ? 'Day' : 'Days', value: String(o.summary.daysCount) });
+  if (c.showStops) stats.push({ label: 'Stops', value: String(o.summary.stopsClearedCount) });
+  if (c.showRiders && o.summary.coRidersCount > 1) stats.push({ label: 'Riders', value: String(o.summary.coRidersCount) });
+  const bike = c.showBikeModel && o.summary.bikeModel && !/^(motorcycle|bike|scooter)$/i.test(o.summary.bikeModel.trim()) ? o.summary.bikeModel : '';
+  const valueSize = isStory ? 120 : 92;
+  const labelSize = isStory ? 32 : 28;
+  const rowH = valueSize + labelSize + (isStory ? 30 : 22);
 
-  y += 36;
-  if (stats.length) {
-    const gap = 16;
-    const bw = (iw - gap * (stats.length - 1)) / stats.length;
-    stats.forEach(([v, l], i) => {
-      const bx = ix + i * (bw + gap);
-      roundRect(ctx, bx, y, bw, 130, 22);
-      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = i === 0 ? accent : '#FFFFFF';
-      ctx.font = `900 58px ${F}`;
-      ctx.fillText(v, bx + bw / 2, y + 68);
-      ctx.fillStyle = 'rgba(255,255,255,0.72)';
-      ctx.font = `800 24px ${F}`;
-      ctx.fillText(l, bx + bw / 2, y + 108);
+  ctx.font = `italic 600 32px ${F}`;
+  const noteLines = c.customNote ? wrapLines(ctx, `“${c.customNote}”`, w - pad * 2, 2) : [];
+  const footerY = h - pad;
+  const noteH = noteLines.length ? noteLines.length * 42 + 30 : 0;
+  const bikeH = bike ? 50 : 0;
+  const blockBottom = footerY - 80 - noteH - bikeH;
+  const blockTop = blockBottom - stats.length * rowH;
+
+  if (mapMode) {
+    // The distance column is wider because its number plus unit is the longest.
+    const weights = stats.map((st) => (st.unit ? 1.6 : 1));
+    const totalW = weights.reduce((a, b) => a + b, 0) || 1;
+    const colX: number[] = [];
+    let acc = pad;
+    weights.forEach((wt) => { colX.push(acc); acc += ((w - pad * 2) * wt) / totalW; });
+    const mValue = isStory ? 88 : 72;
+    const mLabel = isStory ? 28 : 24;
+    shadow();
+    stats.forEach((st, i) => {
+      const x0 = colX[i];
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = `600 ${mLabel}px ${F}`;
+      ctx.fillText(st.label, x0, blockBottom - mValue - 14);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `800 ${mValue}px ${F}`;
+      ctx.fillText(st.value, x0, blockBottom - 8);
+      if (st.unit) {
+        const vw = ctx.measureText(st.value).width;
+        ctx.font = `700 ${Math.round(mValue * 0.4)}px ${F}`;
+        ctx.fillText(st.unit, x0 + vw + 8, blockBottom - 8);
+      }
     });
-    ctx.textAlign = 'left';
-    y += 130;
+    noShadow();
+    if (o.showRoute && o.route && o.route.length > 1 && o.mapView) drawRouteOnMap(ctx, o.route, o.mapView, accent);
+  } else {
+    stats.forEach((st, i) => {
+      const y0 = blockTop + i * rowH;
+      shadow();
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.font = `600 ${labelSize}px ${F}`;
+      ctx.fillText(st.label, pad, y0 + labelSize);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `800 ${valueSize}px ${F}`;
+      ctx.fillText(st.value, pad, y0 + labelSize + valueSize - 8);
+      if (st.unit) {
+        const vw = ctx.measureText(st.value).width;
+        ctx.font = `700 ${Math.round(valueSize * 0.4)}px ${F}`;
+        ctx.fillText(st.unit, pad + vw + 12, y0 + labelSize + valueSize - 8);
+      }
+    });
+
+    // Route line sits to the right of the numbers, like the map on a Strava share.
+    if (o.showRoute && o.route && o.route.length > 1 && stats.length) {
+      noShadow();
+      const bw = isStory ? 440 : 400;
+      const bh = Math.min(stats.length * rowH, isStory ? 640 : 480);
+      drawRoute(ctx, o.route, { x: w - pad - bw, y: blockBottom - bh - 10, w: bw, h: bh }, accent);
+    }
+
   }
 
-  if (bikeText) {
-    y += 62;
-    ctx.font = `800 30px ${F}`;
+  let y = blockBottom + 20;
+  shadow();
+  if (bike) {
+    y += 34;
     ctx.fillStyle = accent;
-    ctx.fillText(bikeText, ix, y);
+    ctx.font = `800 32px ${F}`;
+    ctx.fillText(bike, pad, y);
+    y += 16;
   }
   if (noteLines.length) {
-    ctx.font = `italic 600 30px ${F}`;
     ctx.fillStyle = '#FFFFFF';
-    y += bikeText ? 52 : 62;
-    for (const l of noteLines) { ctx.fillText(l, ix, y); y += 40; }
+    ctx.font = `italic 600 32px ${F}`;
+    y += 44;
+    for (const l of noteLines) { ctx.fillText(l, pad, y); y += 42; }
   }
+
+  // Footer brand line.
+  noShadow();
+  ctx.fillStyle = accent;
+  ctx.fillRect(pad, footerY - 8, 56, 8);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = `900 28px ${F}`;
+  ctx.fillText('PAYANAM', pad + 76, footerY);
+  ctx.textAlign = 'right';
+  ctx.font = `600 ${mapMode ? 20 : 26}px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText(mapMode ? '© OpenStreetMap contributors © CARTO' : 'Ride with your convoy', w - pad, footerY);
+  ctx.textAlign = 'left';
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
