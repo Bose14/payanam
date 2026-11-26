@@ -155,7 +155,7 @@ export default function PublishItineraryModal({
                   <span style={styles.liveBadge}>LIVE IN DISCOVER</span>
                 )}
               </div>
-              <p style={styles.subtitle}>Feature 1B · Share with riders and let the community discover & copy your route</p>
+              <p style={styles.subtitle}>Share with riders and let the community discover & copy your route</p>
             </div>
           </div>
           <button onClick={onClose} style={styles.closeBtn} title="Close"><Icon name="close" /></button>

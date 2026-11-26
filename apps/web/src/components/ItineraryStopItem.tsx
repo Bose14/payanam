@@ -39,128 +39,94 @@ export default function ItineraryStopItem({
     }
   };
 
+  const tag = (color: string, bg?: string): React.CSSProperties => ({
+    fontSize: 10,
+    fontWeight: 800,
+    letterSpacing: 0.6,
+    color,
+    backgroundColor: bg,
+    border: `1px solid ${color}`,
+    padding: '1px 6px',
+    borderRadius: 999,
+    whiteSpace: 'nowrap',
+  });
+  const subtitle = stop.description || `Day ${stop.day_number ?? 1}`;
+  const canNavigate = stop.lat != null && stop.lng != null && onOpenNavigation;
+
+  const roundBtn: React.CSSProperties = {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    flexShrink: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 18,
+    cursor: 'pointer',
+    border: '1px solid var(--pz-line)',
+    backgroundColor: 'var(--pz-bg)',
+    color: 'var(--pz-ink)',
+    touchAction: 'manipulation',
+  };
+
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '10px 0',
-        borderBottom: '1px solid #22262E',
-        gap: 12,
+        padding: '12px 0',
+        borderBottom: '1px solid var(--pz-line)',
+        gap: 10,
       }}
     >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: 12,
+          flexShrink: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 18,
+          backgroundColor: isPinned ? 'var(--pz-accent)' : 'var(--pz-warn-bg)',
+          color: isPinned ? 'var(--pz-on-accent)' : 'var(--pz-warn)',
+        }}
+      >
+        <Icon name={getStopTypeIcon(stop.item_type)} />
+      </span>
+
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, marginRight: 2 }}><Icon name={getStopTypeIcon(stop.item_type)} /></span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
-            {stop.place}
-          </span>
-
-          {/* Feature H2: Distinct 'FROM CHAT' tag */}
-          {fromChat && (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                color: 'var(--pz-ok)',
-                backgroundColor: 'var(--pz-ok-bg)',
-                border: '1px solid var(--pz-ok)',
-                padding: '1px 6px',
-                borderRadius: 4,
-                letterSpacing: 0.6,
-              }}
-            >
-              FROM CHAT
-            </span>
-          )}
-
-          {!fromChat && index === 0 && (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 800,
-                color: 'var(--pz-ok)',
-                border: '1px solid var(--pz-ok)',
-                padding: '1px 6px',
-                borderRadius: 4,
-              }}
-            >
-              STARTED
-            </span>
-          )}
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--pz-ink)', lineHeight: 1.3, overflowWrap: 'anywhere' }}>
+          {stop.place}
         </div>
-
-        <div style={{ fontSize: 11, color: 'var(--pz-muted)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <span>
-            {stop.description || `Stop ${index + 1} · Day ${stop.day_number ?? 1}`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+          <span style={{ fontSize: 12, color: 'var(--pz-muted)', fontWeight: 600 }}>
+            Stop {index + 1} · {subtitle}
           </span>
-          {stop.lat != null && stop.lng != null && onOpenNavigation && (
-            <button
-              type="button"
-              onClick={() => onOpenNavigation(stop)}
-              style={{
-                padding: '2px 8px',
-                backgroundColor: 'var(--pz-bg)',
-                border: '1px solid var(--pz-line)',
-                borderRadius: 6,
-                color: 'var(--pz-warn)',
-                fontSize: 10,
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 3,
-              }}
-            >
-              <span><Icon name="compass" /></span> Open in navigation app
-            </button>
-          )}
+          {isPinned && <span style={tag('var(--pz-warn)', 'var(--pz-warn-bg)')}>NEXT STOP</span>}
+          {fromChat && <span style={tag('var(--pz-ok)', 'var(--pz-ok-bg)')}>FROM CHAT</span>}
+          {!fromChat && index === 0 && !isPinned && <span style={tag('var(--pz-ok)')}>START</span>}
         </div>
       </div>
 
-      <div style={{ flexShrink: 0 }}>
-        {isPinned ? (
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 900,
-              color: 'var(--pz-on-accent)',
-              backgroundColor: 'var(--pz-accent)',
-              padding: '4px 8px',
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              boxShadow: '0 2px 4px var(--pz-warn-bg)',
-            }}
-          >
-            <span><Icon name="pin" /></span> PINNED TARGET
-          </span>
-        ) : onPinStop ? (
-          <button
-            type="button"
-            onClick={() => onPinStop(stop)}
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: 'var(--pz-warn)',
-              backgroundColor: 'var(--pz-warn-bg)',
-              border: '1px solid var(--pz-accent)',
-              padding: '5px 10px',
-              borderRadius: 8,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              transition: 'background-color 0.2s',
-            }}
-          >
-            <span><Icon name="pin" /></span> Pin as next stop
-          </button>
-        ) : null}
-      </div>
+      {canNavigate && (
+        <button type="button" onClick={() => onOpenNavigation!(stop)} style={roundBtn} aria-label={`Navigate to ${stop.place}`} title="Open in navigation app">
+          <Icon name="compass" />
+        </button>
+      )}
+      {onPinStop && !isPinned && (
+        <button
+          type="button"
+          onClick={() => onPinStop(stop)}
+          style={{ ...roundBtn, backgroundColor: 'var(--pz-accent)', borderColor: 'var(--pz-accent)', color: 'var(--pz-on-accent)' }}
+          aria-label={`Pin ${stop.place} as next stop`}
+          title="Pin as next stop"
+        >
+          <Icon name="pin" />
+        </button>
+      )}
     </div>
   );
 }
-

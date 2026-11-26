@@ -77,6 +77,7 @@ import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 import Icon, { iconSvg } from '../components/Icon';
 import { saveResumeRide, clearResumeRide } from '../utils/rideResume';
+import Freeze from '../components/Freeze';
 import RideReadyModal from '../components/RideReadyModal';
 import {
   loadChecked, isReadyDone, saveReady, loadFuelState, saveFuelState, rangeLeftKm, FuelState,
@@ -2392,6 +2393,7 @@ export default function RidePage() {
         backgroundColor: 'var(--pz-bg)',
         minHeight: 0,
       }}>
+        <Freeze frozen={tab !== 'map'}>
         {/* Feature E2: Planned Route Progress Strip along planned line */}
         {splitView && activeRoute.length > 1 && (
           <div style={{ order: 2, flexShrink: 0 }}>
@@ -3084,6 +3086,7 @@ export default function RidePage() {
             )}
           </div>
         )}
+        </Freeze>
       </div>
 
       {/* Plan Tab (Mockup Screen 7: Trip detail · itinerary) */}
@@ -3138,16 +3141,15 @@ export default function RidePage() {
 
             {/* Itinerary Section Card */}
             <div style={{ backgroundColor: 'var(--pz-surface)', borderRadius: 18, border: '1.5px solid var(--pz-line)', padding: '16px 18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 16, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
-                  {session?.trips?.title ?? 'Trip itinerary'}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--pz-muted)' }}>
-                  {session?.trips?.days ? `${session.trips.days} day${session.trips.days === 1 ? '' : 's'} · ` : ''}{ridersWithFreshness.length} rider{ridersWithFreshness.length === 1 ? '' : 's'}
-                </span>
+              <div style={{ fontSize: 17, fontWeight: 900, color: 'var(--pz-ink)', letterSpacing: -0.2, lineHeight: 1.25, overflowWrap: 'anywhere' }}>
+                {session?.trips?.title ?? 'Trip itinerary'}
               </div>
-              <div style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 12 }}>
-                {session?.trips?.from_place && session?.trips?.to_place ? `${session.trips.from_place} to ${session.trips.to_place}` : 'Route'}
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--pz-muted)', margin: '4px 0 12px' }}>
+                {[
+                  session?.trips?.days ? `${session.trips.days} day${session.trips.days === 1 ? '' : 's'}` : null,
+                  `${ridersWithFreshness.length} rider${ridersWithFreshness.length === 1 ? '' : 's'}`,
+                  `${allPlanStops.length} stop${allPlanStops.length === 1 ? '' : 's'}`,
+                ].filter(Boolean).join(' · ')}
               </div>
 
               {/* Dynamic Route Itinerary with 'FROM CHAT' tags (Feature H2 & Mockup 7) */}

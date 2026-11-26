@@ -63,7 +63,7 @@ export default function ConvoyInviteCard({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-warn)', textTransform: 'uppercase', letterSpacing: 0.8 }}>
-            CONVOY INVITATION (FEATURE 1A)
+            CONVOY INVITATION
           </span>
           <h4 style={{ margin: '2px 0 0', fontSize: 15, fontWeight: 900, color: 'var(--text-primary)' }}>
             Invite members to itinerary
