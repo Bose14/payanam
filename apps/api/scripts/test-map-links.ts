@@ -28,6 +28,13 @@ assert.equal(parseMapUrl('not a url'), null);
     if (url === 'https://maps.app.goo.gl/AbC') return new Response(null, { status: 302, headers: { location: 'https://www.google.com/maps/place/Pykara+Falls/@11.46,76.58,17z/data=!3d11.4601!4d76.5802' } });
     if (url === 'https://maps.app.goo.gl/loop') return new Response(null, { status: 302, headers: { location: 'https://evil.example.com/steal' } });
     if (url === 'https://maps.apple/p/xyz') return new Response('<html><head><meta property="og:title" content="Kodaikanal Lake"><meta property="place:location:latitude" content="10.2381"><meta property="place:location:longitude" content="77.4892"></head></html>', { status: 200 });
+    // The exact case from the field: modern share link -> place URL with a name and NO coordinates.
+    if (url === 'https://maps.app.goo.gl/Sen') return new Response(null, { status: 302, headers: { location: 'https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2!3m1!1s0x3babe:0x1f?utm_source=mstt_1&entry=gps' } });
+    if (url.startsWith('https://www.google.com/maps/place/Senthir') && url.includes('utm_source')) return new Response('<html><head><title>Senthir bhavan - Google Maps</title><meta content="https://maps.google.com/maps/api/staticmap?center=11.5943%2C78.1796&amp;zoom=16&amp;size=256x256" itemprop="image"></head></html>', { status: 200 });
+    if (url === 'https://maps.app.goo.gl/NoCoords') return new Response(null, { status: 302, headers: { location: 'https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2' } });
+    if (url.startsWith('https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2') ) return new Response('<html><title>Senthir bhavan - Google Maps</title></html>', { status: 200 });
+    if (url.includes('/search') && decodeURIComponent(url).includes('q=Senthir bhavan, NH79')) return json([]);
+    if (url.includes('/search') && decodeURIComponent(url).includes('q=NH79, Tamil Nadu')) return json([{ lat: '11.59', lon: '78.18' }]);
     if (url.includes('/reverse')) return json({ name: 'Cafe Cloud', display_name: 'Cafe Cloud, Ooty, Tamil Nadu, India' });
     if (url.includes('/search')) return json([{ lat: '11.66', lon: '78.15' }]);
     throw new Error('unexpected ' + url);
@@ -47,6 +54,12 @@ assert.equal(parseMapUrl('not a url'), null);
   near(p.lat, 11.66);
   // Plain "lat, lng" typed in.
   p = await resolveMapLink('11.4, 76.7', fetcher); near(p.lng, 76.7);
+  // The failing real-world link: coordinates come from the page's map image.
+  p = await resolveMapLink('https://maps.app.goo.gl/Sen', fetcher);
+  assert.match(p.name, /Senthir bhavan/); near(p.lat, 11.5943); near(p.lng, 78.1796); assert.ok(!p.approximate);
+  // Page has no coordinates at all: fall back to looser name searches and mark it approximate.
+  p = await resolveMapLink('https://maps.app.goo.gl/NoCoords', fetcher);
+  near(p.lat, 11.59); assert.equal(p.approximate, true);
   // SSRF guard: a redirect to another host is refused.
   await assert.rejects(() => resolveMapLink('https://maps.app.goo.gl/loop', fetcher), MapLinkError);
   await assert.rejects(() => resolveMapLink('hello', fetcher), MapLinkError);
