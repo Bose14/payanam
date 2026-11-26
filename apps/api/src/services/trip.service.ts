@@ -18,14 +18,20 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=in`,
-      {
-        headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App/1.0' },
-        signal: AbortSignal.timeout(3500),
-      }
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App/1.0' }, signal: AbortSignal.timeout(3500) },
     );
-    if (!res.ok) return null;
-    const data = await res.json() as Array<{ lat: string; lon: string }>;
-    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    if (res.ok) {
+      const data = await res.json() as Array<{ lat: string; lon: string }>;
+      if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  } catch { /* try the second geocoder */ }
+  try {
+    const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(name)}&limit=3&lang=en`, {
+      headers: { 'User-Agent': 'Payanam-App/1.0' }, signal: AbortSignal.timeout(5000),
+    });
+    const d = await res.json() as { features?: Array<{ geometry: { coordinates: [number, number] }; properties: { countrycode?: string } }> };
+    const hit = d.features?.find((f) => !f.properties.countrycode || f.properties.countrycode === 'IN');
+    if (hit) return { lat: hit.geometry.coordinates[1], lng: hit.geometry.coordinates[0] };
   } catch { /* silent */ }
   return null;
 }
@@ -357,13 +363,16 @@ export async function saveItinerary(
     })),
   );
 
-  const startRow = startCoords && tripEnds ? [{
+  // The start and end are added for you, unless the plan already has a stop for that same town.
+  const firstPart = (v: string) => (v.split(',')[0] ?? v).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const placed = (name: string) => midRows.some((r) => firstPart(r.place) === firstPart(name));
+  const startRow = startCoords && tripEnds && !placed(tripEnds.from_place) ? [{
     trip_id: tripId, day_number: 1, order_index: 0,
     place: tripEnds.from_place, item_type: 'stop', lat: startCoords.lat, lng: startCoords.lng,
     description: 'Starting point', tips: '',
   }] : [];
 
-  const endRow = endCoords && tripEnds ? [{
+  const endRow = endCoords && tripEnds && !placed(tripEnds.to_place) ? [{
     trip_id: tripId, day_number: lastDay, order_index: lastDayMaxOrder + 2,
     place: tripEnds.to_place, item_type: 'stop', lat: endCoords.lat, lng: endCoords.lng,
     description: 'Destination', tips: '',
