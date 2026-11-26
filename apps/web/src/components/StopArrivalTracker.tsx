@@ -43,6 +43,7 @@ export default function StopArrivalTracker({
   isLeader = false,
 }: StopArrivalTrackerProps) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   if (!pinnedStop) return null;
 
@@ -75,6 +76,8 @@ export default function StopArrivalTracker({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={styles.stopTitleRow}>
               <span style={styles.stopName}>{pinnedStop.name}</span>
+            </div>
+            <div style={styles.progressRow}>
               <span style={styles.badgeETA}>
                 {myDistanceKm != null && myDistanceKm < 0.2 ? (
                   'You are here!'
@@ -89,14 +92,12 @@ export default function StopArrivalTracker({
                   </>
                 )}
               </span>
-            </div>
-            <div style={styles.progressRow}>
-              <div style={styles.progressBarBg}>
-                <div style={{ ...styles.progressBarFill, width: `${progressPercent}%` }} />
-              </div>
               <span style={styles.progressText}>
                 {arrivedRiders.length}/{totalRiders} arrived
               </span>
+            </div>
+            <div style={{ ...styles.progressBarBg, marginTop: 4 }}>
+              <div style={{ ...styles.progressBarFill, width: `${progressPercent}%` }} />
             </div>
           </div>
         </div>
@@ -129,7 +130,7 @@ export default function StopArrivalTracker({
             aria-label={expanded ? 'Hide rider status' : 'Show rider status'}
             aria-expanded={expanded}
           >
-            {expanded ? '▼' : '▲'}
+            <span style={{ display: 'inline-block', transform: expanded ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.15s' }}>▼</span>
           </button>
         </div>
       </div>
@@ -137,31 +138,34 @@ export default function StopArrivalTracker({
       {/* Expanded Details Drawer */}
       {expanded && (
         <div style={styles.expandedDrawer}>
-          <div style={styles.drawerHeader}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#9ca3af' }}>
-              Rider Status at this Stop:
-            </span>
-            <div style={{ display: 'flex', gap: 6 }}>
+          {(onChangePin || (isLeader && onClearPin)) && (
+            <div style={styles.actionRow}>
               {onChangePin && (
                 <button
                   type="button"
-                  onClick={onChangePin}
-                  style={styles.linkBtn}
+                  onClick={() => { setExpanded(false); setConfirmClear(false); onChangePin(); }}
+                  style={styles.actionBtn}
                 >
-                  Change Stop
+                  <Icon name="edit" /> <span>Change stop</span>
                 </button>
               )}
               {isLeader && onClearPin && (
                 <button
                   type="button"
-                  onClick={onClearPin}
-                  style={{ ...styles.linkBtn, color: '#ef4444' }}
+                  onClick={() => {
+                    if (!confirmClear) { setConfirmClear(true); return; }
+                    setConfirmClear(false);
+                    setExpanded(false);
+                    onClearPin();
+                  }}
+                  style={{ ...styles.actionBtn, ...styles.actionDanger, ...(confirmClear ? styles.actionDangerOn : null) }}
                 >
-                  Clear Pin
+                  <Icon name="close" /> <span>{confirmClear ? 'Tap again to clear' : 'Clear pin'}</span>
                 </button>
               )}
             </div>
-          </div>
+          )}
+          <div style={styles.drawerTitle}>Rider status at this stop</div>
 
           <div style={styles.ridersGrid}>
             {arrivalsList.map((r) => {
@@ -307,13 +311,18 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   btnToggle: {
-    background: 'none',
-    border: 'none',
-    color: '#9ca3af',
+    background: '#111827',
+    border: '1px solid #374151',
+    borderRadius: 999,
+    color: '#e5e7eb',
     width: 40,
     height: 40,
-    fontSize: 14,
+    fontSize: 12,
     cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    touchAction: 'manipulation',
   },
   expandedDrawer: {
     position: 'absolute',
@@ -334,6 +343,44 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  actionRow: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 12,
+  },
+  actionBtn: {
+    flex: 1,
+    minHeight: 44,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    border: '1px solid #F0C23A',
+    background: 'rgba(240, 194, 58, 0.12)',
+    color: '#F0C23A',
+    fontSize: 14,
+    fontWeight: 800,
+    cursor: 'pointer',
+    touchAction: 'manipulation',
+  },
+  actionDanger: {
+    border: '1px solid #ef4444',
+    background: 'rgba(239, 68, 68, 0.12)',
+    color: '#f87171',
+  },
+  actionDangerOn: {
+    background: '#ef4444',
+    color: '#fff',
+  },
+  drawerTitle: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#9ca3af',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   linkBtn: {
     background: 'none',

@@ -1,5 +1,6 @@
 import React from 'react';
 import { PinnedStopData } from './PinStopModal';
+import Icon from './Icon';
 
 interface NextStopBottomDockProps {
   pinnedStop: PinnedStopData | null;
@@ -22,33 +23,23 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
   // With no target stop the captain uses the add-stop button on the map; nothing is shown here.
   if (!pinnedStop) return null;
 
+  const meta = [
+    'Next stop',
+    distanceKm != null ? `${distanceKm.toFixed(1)} km` : null,
+    `${arrivedCount}/${Math.max(totalCount, 1)} here`,
+  ].filter(Boolean).join(' · ');
+
   return (
     <div style={styles.dockCard}>
-      {/* Top drag notch */}
-      <div style={styles.notchWrap} onClick={onOpenDetail}>
-        <div style={styles.notch} />
-      </div>
-
-      {/* Main Info Row (Mockup 1 Signature) */}
-      <div style={styles.infoRow} onClick={onOpenDetail}>
-        <div>
-          <h4 style={styles.stopName}>{pinnedStop.name}</h4>
-          <p style={styles.stopSub}>
-            Next stop{distanceKm != null ? ` · ${distanceKm.toFixed(1)} km` : ''}
-          </p>
-        </div>
-        <div style={styles.arrivalRatio}>
-          {arrivedCount} of {Math.max(totalCount, 1)} here
-        </div>
-      </div>
-
-      {/* Full-Width Signature Mustard Yellow Button */}
-      <button
-        type="button"
-        onClick={onOpenTellGroup}
-        style={styles.tellGroupBtn}
-      >
-        Tell group
+      <button type="button" onClick={onOpenDetail} style={styles.mainBtn} aria-label={`Next stop ${pinnedStop.name}. Open details`}>
+        <span style={styles.badge}><Icon name="pin" /></span>
+        <span style={styles.textCol}>
+          <span style={styles.stopName}>{pinnedStop.name}</span>
+          <span style={styles.stopSub}>{meta}</span>
+        </span>
+      </button>
+      <button type="button" onClick={onOpenTellGroup} style={styles.iconBtn} aria-label="Tell group" title="Tell group">
+        <Icon name="megaphone" />
       </button>
     </div>
   );
@@ -56,119 +47,84 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   dockCard: {
-    backgroundColor: 'var(--pz-surface, var(--pz-surface))',
-    border: '1px solid var(--pz-line, var(--pz-line))',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'var(--pz-surface)',
+    border: '1px solid var(--pz-line)',
     borderRadius: 16,
     margin: '4px 12px 6px',
-    padding: '12px 14px',
-    boxShadow: 'var(--card-shadow, 0 4px 20px rgba(0, 0, 0, 0.4))',
+    padding: '8px 8px 8px 10px',
+    boxShadow: 'var(--card-shadow, 0 4px 20px rgba(0, 0, 0, 0.25))',
     flexShrink: 0,
     zIndex: 800,
     boxSizing: 'border-box',
+    minWidth: 0,
   },
-  notchWrap: {
+  mainBtn: {
+    flex: 1,
+    minWidth: 0,
     display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    textAlign: 'left',
+    cursor: 'pointer',
+    touchAction: 'manipulation',
+    color: 'var(--pz-ink)',
+    font: 'inherit',
+  },
+  badge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    flexShrink: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 6,
-    cursor: 'pointer',
+    fontSize: 20,
+    backgroundColor: 'var(--pz-warn-bg)',
+    color: 'var(--pz-accent)',
   },
-  notch: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'var(--pz-line, var(--pz-line))',
-  },
-  infoRow: {
+  textCol: {
     display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-    cursor: 'pointer',
-    marginBottom: 8,
-  },
-  unpinnedInfo: {
-    marginBottom: 8,
-    cursor: 'pointer',
+    flexDirection: 'column',
+    minWidth: 0,
+    flex: 1,
   },
   stopName: {
-    margin: 0,
     fontSize: 15,
-    fontWeight: 900,
-    color: 'var(--text-primary)',
-    letterSpacing: -0.3,
+    fontWeight: 800,
+    color: 'var(--pz-ink)',
+    letterSpacing: -0.2,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
   stopSub: {
-    margin: '2px 0 0',
+    marginTop: 2,
     fontSize: 12,
     fontWeight: 600,
-    color: 'var(--pz-muted, var(--pz-muted))',
-  },
-  arrivalRatio: {
-    fontSize: 13,
-    fontWeight: 800,
-    color: 'var(--text-primary)',
+    color: 'var(--pz-muted)',
     whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
     flexShrink: 0,
-    paddingTop: 1,
-  },
-  tellGroupBtn: {
-    width: '100%',
-    minHeight: 44,
-    padding: '10px 16px',
-    backgroundColor: 'var(--pz-accent, var(--pz-accent))',
-    color: 'var(--pz-on-accent, var(--pz-bg))',
+    borderRadius: 999,
     border: 'none',
-    borderRadius: 12,
-    fontSize: 14,
-    fontWeight: 800,
     cursor: 'pointer',
-    letterSpacing: -0.2,
-    boxShadow: '0 2px 8px var(--pz-warn-bg)',
-    transition: 'transform 0.1s ease',
-    touchAction: 'manipulation',
-    marginTop: 6,
-  },
-  btnRow: {
-    display: 'flex',
-    gap: 8,
-    marginTop: 6,
-  },
-  btnPrimary: {
-    flex: 1,
-    minHeight: 42,
-    padding: '10px 14px',
-    backgroundColor: 'var(--pz-accent, var(--pz-accent))',
-    border: '1px solid var(--pz-accent, var(--pz-accent))',
-    borderRadius: 12,
-    fontSize: 13,
-    fontWeight: 800,
-    color: 'var(--pz-on-accent, var(--pz-bg))',
-    cursor: 'pointer',
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    boxShadow: '0 2px 8px var(--pz-warn-bg)',
-    touchAction: 'manipulation',
-  },
-  btnSecondary: {
-    flex: 1,
-    minHeight: 42,
-    padding: '10px 14px',
-    backgroundColor: 'var(--pz-surface, var(--pz-surface))',
-    border: '1px solid var(--pz-line, var(--pz-line))',
-    borderRadius: 12,
-    fontSize: 13,
-    fontWeight: 800,
-    color: 'var(--text-primary)',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    fontSize: 20,
+    backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)',
     touchAction: 'manipulation',
   },
 };
