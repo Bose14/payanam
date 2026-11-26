@@ -1,6 +1,7 @@
 import { TripMilestoneSummary, MilestoneCardCustomization, BACKDROP_PRESETS } from './tripMilestones';
 
 export type StoryFormat = 'story' | 'post';
+export type StoryBackground = 'photo' | 'map';
 
 export const STORY_SIZES: Record<StoryFormat, { w: number; h: number; label: string }> = {
   story: { w: 1080, h: 1920, label: 'Story 9:16' },
@@ -15,6 +16,9 @@ export interface StoryOptions {
   /** Planned route as lat/lng points. Drawn as a line only, with no map and no coordinates. */
   route?: Array<[number, number]>;
   showRoute: boolean;
+  /** 'map' draws a street map behind the route; it needs mapView from buildMapBackdrop. */
+  background?: StoryBackground;
+  mapView?: MapBackdrop | null;
 }
 
 export function loadImageFile(file: File): Promise<HTMLImageElement> {
@@ -96,6 +100,115 @@ function drawRoute(ctx: CanvasRenderingContext2D, route: Array<[number, number]>
   ctx.restore();
 }
 
+const TILE = 256;
+const lonToX = (lon: number, z: number) => ((lon + 180) / 360) * TILE * 2 ** z;
+const latToY = (lat: number, z: number) => {
+  const r = (lat * Math.PI) / 180;
+  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * TILE * 2 ** z;
+};
+
+export interface MapBackdrop {
+  canvas: HTMLCanvasElement;
+  project: (lat: number, lng: number) => { x: number; y: number };
+}
+
+/** The part of the picture where the route is fitted when a map is the background. */
+function mapArea(format: StoryFormat) {
+  const { w, h } = STORY_SIZES[format];
+  const top = format === 'story' ? 340 : 300;
+  const bottom = format === 'story' ? 560 : 500;
+  return { x: 64, y: top, w: w - 128, h: h - top - bottom };
+}
+
+const TILE_URLS = [
+  (z: number, x: number, y: number) => `https://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`,
+  (z: number, x: number, y: number) => `https://tile.openstreetmap.org/${z}/${x}/${y}.png`,
+];
+
+function loadTile(z: number, x: number, y: number): Promise<HTMLImageElement | null> {
+  const attempt = (n: number): Promise<HTMLImageElement | null> =>
+    new Promise((resolve) => {
+      if (n >= TILE_URLS.length) { resolve(null); return; }
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const timer = window.setTimeout(() => { img.src = ''; resolve(attempt(n + 1)); }, 8000);
+      img.onload = () => { window.clearTimeout(timer); resolve(img); };
+      img.onerror = () => { window.clearTimeout(timer); resolve(attempt(n + 1)); };
+      img.src = TILE_URLS[n](z, x, y);
+    });
+  return attempt(0);
+}
+
+/** Builds a street map picture with the route fitted inside it. Returns null if no map tiles could load. */
+export async function buildMapBackdrop(route: Array<[number, number]>, format: StoryFormat): Promise<MapBackdrop | null> {
+  if (route.length < 2) return null;
+  const { w, h } = STORY_SIZES[format];
+  const area = mapArea(format);
+  const pts = thin(route);
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [la, ln] of pts) {
+    minLat = Math.min(minLat, la); maxLat = Math.max(maxLat, la);
+    minLng = Math.min(minLng, ln); maxLng = Math.max(maxLng, ln);
+  }
+  let zf = 16;
+  for (; zf > 2; zf -= 0.25) {
+    const sx = lonToX(maxLng, zf) - lonToX(minLng, zf);
+    const sy = latToY(minLat, zf) - latToY(maxLat, zf);
+    if (sx <= area.w * 0.88 && sy <= area.h * 0.88) break;
+  }
+  const Z = Math.max(2, Math.min(16, Math.round(zf)));
+  const T = TILE * 2 ** (zf - Z); // size a tile is drawn at
+  const cx = (lonToX(minLng, zf) + lonToX(maxLng, zf)) / 2;
+  const cy = (latToY(minLat, zf) + latToY(maxLat, zf)) / 2;
+  const tx = area.x + area.w / 2;
+  const ty = area.y + area.h / 2;
+  const originX = cx - tx; // world x (at zoom zf) shown at canvas x = 0
+  const originY = cy - ty;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#0F1316';
+  ctx.fillRect(0, 0, w, h);
+
+  const n = 2 ** Z;
+  const i0 = Math.floor(originX / T), i1 = Math.floor((originX + w) / T);
+  const j0 = Math.max(0, Math.floor(originY / T)), j1 = Math.min(n - 1, Math.floor((originY + h) / T));
+  const jobs: Array<Promise<void>> = [];
+  let loaded = 0;
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      jobs.push(loadTile(Z, ((i % n) + n) % n, j).then((img) => {
+        if (!img) return;
+        loaded++;
+        ctx.drawImage(img, i * T - originX, j * T - originY, T + 0.5, T + 0.5);
+      }));
+    }
+  }
+  await Promise.all(jobs);
+  if (loaded === 0) return null;
+  return { canvas, project: (lat, lng) => ({ x: lonToX(lng, zf) - originX, y: latToY(lat, zf) - originY }) };
+}
+
+function drawRouteOnMap(ctx: CanvasRenderingContext2D, route: Array<[number, number]>, view: MapBackdrop, accent: string) {
+  const pts = thin(route).map(([la, ln]) => view.project(la, ln));
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const path = () => { ctx.beginPath(); pts.forEach((q, i) => (i === 0 ? ctx.moveTo(q.x, q.y) : ctx.lineTo(q.x, q.y))); };
+  path(); ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 22; ctx.stroke();
+  path(); ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 16; ctx.stroke();
+  path(); ctx.strokeStyle = accent; ctx.lineWidth = 10; ctx.stroke();
+  const a = pts[0], b = pts[pts.length - 1];
+  ctx.lineWidth = 6;
+  ctx.fillStyle = '#22C55E'; ctx.strokeStyle = '#FFFFFF';
+  ctx.beginPath(); ctx.arc(a.x, a.y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#EF4444';
+  ctx.beginPath(); ctx.arc(b.x, b.y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
 /** Paints the finished share picture onto the canvas. */
 export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
   const { w, h } = STORY_SIZES[o.format];
@@ -108,8 +221,11 @@ export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
   const pad = 64;
   const F = "Manrope, Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
 
-  // Backdrop: the rider's photo (cover fit), or the chosen theme colours when there is no photo.
-  if (o.photo) {
+  const mapMode = o.background === 'map' && !!o.mapView;
+  // Backdrop: a street map, the rider's photo (cover fit), or the chosen theme colours.
+  if (mapMode && o.mapView) {
+    ctx.drawImage(o.mapView.canvas, 0, 0);
+  } else if (o.photo) {
     const ir = o.photo.width / o.photo.height;
     const cr = w / h;
     let sw = o.photo.width, sh = o.photo.height, sx = 0, sy = 0;
@@ -167,28 +283,57 @@ export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
   const blockBottom = footerY - 80 - noteH - bikeH;
   const blockTop = blockBottom - stats.length * rowH;
 
-  stats.forEach((st, i) => {
-    const y0 = blockTop + i * rowH;
+  if (mapMode) {
+    // The distance column is wider because its number plus unit is the longest.
+    const weights = stats.map((st) => (st.unit ? 1.6 : 1));
+    const totalW = weights.reduce((a, b) => a + b, 0) || 1;
+    const colX: number[] = [];
+    let acc = pad;
+    weights.forEach((wt) => { colX.push(acc); acc += ((w - pad * 2) * wt) / totalW; });
+    const mValue = isStory ? 88 : 72;
+    const mLabel = isStory ? 28 : 24;
     shadow();
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
-    ctx.font = `600 ${labelSize}px ${F}`;
-    ctx.fillText(st.label, pad, y0 + labelSize);
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = `800 ${valueSize}px ${F}`;
-    ctx.fillText(st.value, pad, y0 + labelSize + valueSize - 8);
-    if (st.unit) {
-      const vw = ctx.measureText(st.value).width;
-      ctx.font = `700 ${Math.round(valueSize * 0.4)}px ${F}`;
-      ctx.fillText(st.unit, pad + vw + 12, y0 + labelSize + valueSize - 8);
-    }
-  });
-
-  // Route line sits to the right of the numbers, like the map on a Strava share.
-  if (o.showRoute && o.route && o.route.length > 1 && stats.length) {
+    stats.forEach((st, i) => {
+      const x0 = colX[i];
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = `600 ${mLabel}px ${F}`;
+      ctx.fillText(st.label, x0, blockBottom - mValue - 14);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `800 ${mValue}px ${F}`;
+      ctx.fillText(st.value, x0, blockBottom - 8);
+      if (st.unit) {
+        const vw = ctx.measureText(st.value).width;
+        ctx.font = `700 ${Math.round(mValue * 0.4)}px ${F}`;
+        ctx.fillText(st.unit, x0 + vw + 8, blockBottom - 8);
+      }
+    });
     noShadow();
-    const bw = isStory ? 440 : 400;
-    const bh = Math.min(stats.length * rowH, isStory ? 640 : 480);
-    drawRoute(ctx, o.route, { x: w - pad - bw, y: blockBottom - bh - 10, w: bw, h: bh }, accent);
+    if (o.showRoute && o.route && o.route.length > 1 && o.mapView) drawRouteOnMap(ctx, o.route, o.mapView, accent);
+  } else {
+    stats.forEach((st, i) => {
+      const y0 = blockTop + i * rowH;
+      shadow();
+      ctx.fillStyle = 'rgba(255,255,255,0.88)';
+      ctx.font = `600 ${labelSize}px ${F}`;
+      ctx.fillText(st.label, pad, y0 + labelSize);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `800 ${valueSize}px ${F}`;
+      ctx.fillText(st.value, pad, y0 + labelSize + valueSize - 8);
+      if (st.unit) {
+        const vw = ctx.measureText(st.value).width;
+        ctx.font = `700 ${Math.round(valueSize * 0.4)}px ${F}`;
+        ctx.fillText(st.unit, pad + vw + 12, y0 + labelSize + valueSize - 8);
+      }
+    });
+
+    // Route line sits to the right of the numbers, like the map on a Strava share.
+    if (o.showRoute && o.route && o.route.length > 1 && stats.length) {
+      noShadow();
+      const bw = isStory ? 440 : 400;
+      const bh = Math.min(stats.length * rowH, isStory ? 640 : 480);
+      drawRoute(ctx, o.route, { x: w - pad - bw, y: blockBottom - bh - 10, w: bw, h: bh }, accent);
+    }
+
   }
 
   let y = blockBottom + 20;
@@ -215,9 +360,9 @@ export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
   ctx.font = `900 28px ${F}`;
   ctx.fillText('PAYANAM', pad + 76, footerY);
   ctx.textAlign = 'right';
-  ctx.font = `600 26px ${F}`;
+  ctx.font = `600 ${mapMode ? 20 : 26}px ${F}`;
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  ctx.fillText('Ride with your convoy', w - pad, footerY);
+  ctx.fillText(mapMode ? '© OpenStreetMap contributors © CARTO' : 'Ride with your convoy', w - pad, footerY);
   ctx.textAlign = 'left';
 }
 
