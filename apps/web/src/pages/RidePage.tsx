@@ -414,18 +414,6 @@ export default function RidePage() {
 
   // Mobile Mockup UX & Last-seen State
   const [splitView, setSplitView] = useState(true);
-  const headerRef = useRef<HTMLDivElement | null>(null);
-  const [headerH, setHeaderH] = useState(100);
-  useEffect(() => {
-    const el = headerRef.current;
-    if (!el) return;
-    const measure = () => setHeaderH(el.offsetHeight);
-    measure();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   const [showStopDetailSheet, setShowStopDetailSheet] = useState(false);
   const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
@@ -2157,7 +2145,7 @@ export default function RidePage() {
       )}
 
       {/* Header — Matte Obsidian Dark matching Mockup */}
-      <div ref={headerRef} style={{
+      <div style={{
         backgroundColor: 'var(--pz-bg)',
         padding: 'max(14px, env(safe-area-inset-top, 14px)) 18px 8px',
         display: 'flex',
@@ -2326,55 +2314,6 @@ export default function RidePage() {
         </div>
       </div>
 
-      {/* Alerts stack: capped in height so the map always keeps its room */}
-      <div style={{ position: 'absolute', left: 0, right: 0, top: headerH + 54, zIndex: 1100, maxHeight: '38vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', pointerEvents: 'none', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.28))' }} className="ride-notifs">
-      {/* Missing rider alert (captain only, ride map tab only), grouped into one row */}
-      {isLead && tab === 'map' && (() => {
-        const list = missingRiders.filter((r) => !dismissedMissing.includes(r.userId));
-        if (list.length === 0) return null;
-        const names = list.length === 1 ? list[0].userName : list.length === 2 ? `${list[0].userName} and ${list[1].userName}` : `${list[0].userName} and ${list.length - 1} others`;
-        return (
-          <div role="alert" style={{
-            margin: '4px 12px 4px', padding: '8px 10px 8px 12px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10,
-            background: 'var(--pz-surface)', border: '1px solid var(--pz-line)', borderLeft: '4px solid var(--pz-bad)',
-          }}>
-            <span style={{ color: 'var(--pz-bad)', display: 'inline-flex', fontSize: 18 }}><Icon name="warning" /></span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--pz-ink)', overflowWrap: 'anywhere' }}>{names} may be missing</div>
-              <div style={{ fontSize: 12, color: 'var(--pz-muted)' }}>Last seen {list[0].freshness.ageLabel}</div>
-            </div>
-            <button type="button" className="pz-btn small" onClick={() => handleFocusRider(list[0])}>Locate</button>
-            <button type="button" onClick={() => setDismissedMissing((p) => [...p, ...list.map((r) => r.userId)])}
-              aria-label="Dismiss" title="Dismiss"
-              style={{ width: 32, height: 32, borderRadius: 999, border: '1px solid var(--pz-line)', background: 'var(--pz-bg)', color: 'var(--pz-ink)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="close" />
-            </button>
-          </div>
-        );
-      })()}
-
-      {/* Fuel range chip (ride map tab only) */}
-      {tab === 'map' && fuelState && (() => {
-        const left = rangeLeftKm(fuelState, myAlong);
-        const short = routeLeftKm != null && left < routeLeftKm;
-        const low = left < 40;
-        if (!low && !short) return null;
-        return (
-          <button type="button" onClick={() => setReadyStep('fuel')} style={{
-            margin: '4px 12px 4px', padding: '8px 12px', borderRadius: 12, flexShrink: 0, cursor: 'pointer', textAlign: 'left', width: 'calc(100% - 24px)',
-            display: 'flex', alignItems: 'center', gap: 10, color: 'var(--pz-ink)',
-            background: 'var(--pz-surface)', border: `1.5px solid ${low ? 'var(--pz-bad)' : short ? 'var(--pz-warn)' : 'var(--pz-line)'}`,
-          }}>
-            <span style={{ display: 'inline-flex', color: low ? 'var(--pz-bad)' : 'var(--pz-accent)' }}><Icon name="fuel" /></span>
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
-              Fuel range about {left} km
-              {routeLeftKm != null && <span style={{ fontWeight: 500, color: 'var(--pz-muted)' }}>{short ? `, route has ${Math.round(routeLeftKm)} km left: plan a fuel stop` : `, enough for the ${Math.round(routeLeftKm)} km left`}</span>}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--pz-accent)', fontWeight: 800 }}>Refuelled?</span>
-          </button>
-        );
-      })()}
-
       {readyStep && sessionId && user?.id && (
         <RideReadyModal
           step={readyStep}
@@ -2387,236 +2326,6 @@ export default function RidePage() {
           onSaveFuel={(f) => { saveFuelState(sessionId, user.id, f); setFuelState(f); setReadyStep(null); }}
         />
       )}
-
-      {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
-      {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (
-        <div style={{
-          backgroundColor: 'var(--pz-surface)',
-          border: '1.5px solid var(--pz-line)',
-          borderRadius: 14,
-          margin: '2px 12px 6px',
-          padding: '6px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-          flexShrink: 0,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              backgroundColor: 'var(--pz-warn-bg)',
-              color: 'var(--pz-warn)',
-              fontSize: 12,
-              flexShrink: 0,
-            }}>
-              <Icon name="map" />
-            </span>
-            <span style={{
-              fontSize: 13,
-              fontWeight: 800,
-              color: 'var(--text-primary)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              letterSpacing: -0.2,
-            }}>
-              {session.trips.title}
-            </span>
-          </div>
-
-        </div>
-      )}
-
-      {/* Floating HUD Toast */}
-      {toast && (
-        <div style={{
-          position: 'fixed',
-          top: 'max(60px, calc(env(safe-area-inset-top, 0px) + 16px))',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 9999,
-          background: 'rgba(17, 24, 39, 0.95)',
-          border: '1px solid #f59e0b',
-          color: '#fff',
-          padding: '8px 16px',
-          borderRadius: 20,
-          fontSize: 13,
-          fontWeight: 700,
-          boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
-          animation: 'fadeIn 0.2s ease-out',
-          maxWidth: 'calc(100vw - 32px)',
-          textAlign: 'center',
-          boxSizing: 'border-box',
-        }}>
-          {toast}
-        </div>
-      )}
-
-      {/* Feature K: Captain Announcement Alert Card (Members see the announcement as an alert) */}
-      {activeAnnouncement && (
-        <div style={{
-          margin: '4px 12px 6px',
-          padding: '8px 10px 8px 12px',
-          borderRadius: 12,
-          backgroundColor: 'var(--pz-surface)',
-          border: '1px solid var(--pz-line)',
-          borderLeft: activeAnnouncement.urgency === 'high' ? '4px solid var(--pz-bad)' : '4px solid var(--pz-accent)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          flexShrink: 0,
-          zIndex: 35,
-          animation: 'slideDown 0.25s ease-out',
-        }}>
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            backgroundColor: activeAnnouncement.urgency === 'high' ? 'var(--pz-bad-bg)' : 'var(--pz-warn-bg)',
-            border: activeAnnouncement.urgency === 'high' ? '1px solid var(--pz-bad)' : '1px solid var(--pz-accent)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20,
-            flexShrink: 0,
-          }}>
-            <Icon name={activeAnnouncement.icon} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <span style={{
-                fontSize: 9,
-                fontWeight: 900,
-                color: activeAnnouncement.urgency === 'high' ? 'var(--pz-bad)' : 'var(--pz-accent)',
-                letterSpacing: 0.8,
-                textTransform: 'uppercase',
-              }}>
-                CAPTAIN ANNOUNCEMENT
-              </span>
-              <span style={{ fontSize: 9.5, color: 'var(--pz-muted)', fontWeight: 600 }}>
-                {activeAnnouncement.timestamp}
-              </span>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-              {activeAnnouncement.title}
-            </div>
-            {activeAnnouncement.message && (
-              <div style={{ fontSize: 11.5, color: 'var(--pz-muted)', fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
-                {activeAnnouncement.message}
-              </div>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setActiveAnnouncement(null)}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: 'var(--pz-bg)',
-              border: '1.5px solid var(--pz-line)',
-              borderRadius: 10,
-              color: 'var(--text-primary)',
-              fontSize: 11,
-              fontWeight: 800,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            Got it
-          </button>
-        </div>
-      )}
-
-      {/* Feature P1: Step 3 - If tracking stops: The Ride tab warns: Tracking paused. Reopen Payanam. */}
-      {trackingStatus.isPaused && (
-        <TrackingPausedBanner
-          pauseReason={trackingStatus.pauseReason}
-          onResume={() => {
-            backgroundTrackingEngine.resumeTracking();
-            setToast('Tracking resumed');
-            setTimeout(() => setToast(''), 3000);
-          }}
-          onOpenMeSettings={() => setTab('me')}
-        />
-      )}
-
-      {/* Feature C: Route-deviation alert card */}
-      <RouteDeviationCard
-        alerts={activeDeviationAlerts}
-        isCaptain={isLead}
-        currentUserId={user?.id}
-        onRegroup={handleRegroup}
-        onFocusRider={(lat, lng) => {
-          setFocusTarget([lat, lng]);
-          setFollowing(false);
-          setToast('Focused on off-route rider');
-        }}
-        onNavigateBack={(lat, lng) => {
-          setNavTarget({ name: 'Planned Route Rejoin Point', lat, lng });
-          setShowNavModal(true);
-        }}
-        onDismiss={(userId) => {
-          setDismissedDeviations((prev) => new Set([...prev, userId]));
-        }}
-      />
-
-      {/* Feature D: Battery-saver mode note on Ride tab */}
-      <BatterySaverNote
-        enabled={batterySaver}
-        onOpenSettings={() => setTab('me')}
-      />
-
-      {/* Feature J: Arrival detection offer (<200m) */}
-      {isArrivalZone && pinnedStop && !isMeArrived && !arrivalOfferDismissed && (
-        <ArrivalOfferBanner
-          stopName={pinnedStop.name}
-          distanceMeters={(distToPinnedStop ?? 0.1) * 1000}
-          onConfirmArrival={() => handleToggleMyArrival(true)}
-          onDismiss={() => setArrivalOfferDismissed(true)}
-        />
-      )}
-
-      {/* Feature J: Missed stop prompt (>350m past stop) */}
-      {isMissedStop && pinnedStop && !isMeArrived && !missedPromptDismissed && (
-        <MissedStopPromptCard
-          pinnedStop={pinnedStop}
-          onConfirmStopped={() => handleToggleMyArrival(true)}
-          onSkipStop={() => setMissedPromptDismissed(true)}
-          onTurnBack={() => {
-            setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng });
-            setShowNavModal(true);
-            setMissedPromptDismissed(true);
-          }}
-        />
-      )}
-
-      {/* Feature F+I: Stop Pre-Alert & Arrival Card */}
-      {!dismissStopApproach && pinnedStop && (stopApproachEval.isApproaching || isMeArrived) && (
-        <StopApproachCard
-          pinnedStop={pinnedStop}
-          stage={stopApproachEval.stage}
-          distanceKm={distToPinnedStop}
-          etaFormatted={stopApproachEval.etaFormatted}
-          arrivedCount={arrivedCount}
-          totalCount={ridersWithFreshness.length}
-          isMeArrived={isMeArrived}
-          onToggleMyArrival={handleToggleMyArrival}
-          onOpenDetail={() => setShowStopDetailSheet(true)}
-          onOpenNavigation={(target) => {
-            setNavTarget(target);
-            setShowNavModal(true);
-          }}
-          onDismiss={() => setDismissStopApproach(true)}
-        />
-      )}
-
-      </div>
 
       {/* Stop Arrival & ETA Tracker Bar */}
       {pinnedStop && (
@@ -2799,6 +2508,286 @@ export default function RidePage() {
             </div>
           )}
 
+                {/* Alerts stack: capped in height so the map always keeps its room */}
+                <div className="ride-notifs" style={{ position: 'absolute', left: 0, right: 0, top: 58, zIndex: 1100, maxHeight: 'calc(100% - 130px)', overflowY: 'auto', WebkitOverflowScrolling: 'touch', pointerEvents: 'none', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.28))' }}>
+                {/* Missing rider alert (captain only, ride map tab only), grouped into one row */}
+                {isLead && tab === 'map' && (() => {
+                  const list = missingRiders.filter((r) => !dismissedMissing.includes(r.userId));
+                  if (list.length === 0) return null;
+                  const names = list.length === 1 ? list[0].userName : list.length === 2 ? `${list[0].userName} and ${list[1].userName}` : `${list[0].userName} and ${list.length - 1} others`;
+                  return (
+                    <div role="alert" style={{
+                      margin: '4px 12px 4px', padding: '8px 10px 8px 12px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10,
+                      background: 'var(--pz-surface)', border: '1px solid var(--pz-line)', borderLeft: '4px solid var(--pz-bad)',
+                    }}>
+                      <span style={{ color: 'var(--pz-bad)', display: 'inline-flex', fontSize: 18 }}><Icon name="warning" /></span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: 13, color: 'var(--pz-ink)', overflowWrap: 'anywhere' }}>{names} may be missing</div>
+                        <div style={{ fontSize: 12, color: 'var(--pz-muted)' }}>Last seen {list[0].freshness.ageLabel}</div>
+                      </div>
+                      <button type="button" className="pz-btn small" onClick={() => handleFocusRider(list[0])}>Locate</button>
+                      <button type="button" onClick={() => setDismissedMissing((p) => [...p, ...list.map((r) => r.userId)])}
+                        aria-label="Dismiss" title="Dismiss"
+                        style={{ width: 32, height: 32, borderRadius: 999, border: '1px solid var(--pz-line)', background: 'var(--pz-bg)', color: 'var(--pz-ink)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon name="close" />
+                      </button>
+                    </div>
+                  );
+                })()}
+          
+                {/* Fuel range chip (ride map tab only) */}
+                {tab === 'map' && fuelState && (() => {
+                  const left = rangeLeftKm(fuelState, myAlong);
+                  const short = routeLeftKm != null && left < routeLeftKm;
+                  const low = left < 40;
+                  if (!low && !short) return null;
+                  return (
+                    <button type="button" onClick={() => setReadyStep('fuel')} style={{
+                      margin: '4px 12px 4px', padding: '8px 12px', borderRadius: 12, flexShrink: 0, cursor: 'pointer', textAlign: 'left', width: 'calc(100% - 24px)',
+                      display: 'flex', alignItems: 'center', gap: 10, color: 'var(--pz-ink)',
+                      background: 'var(--pz-surface)', border: `1.5px solid ${low ? 'var(--pz-bad)' : short ? 'var(--pz-warn)' : 'var(--pz-line)'}`,
+                    }}>
+                      <span style={{ display: 'inline-flex', color: low ? 'var(--pz-bad)' : 'var(--pz-accent)' }}><Icon name="fuel" /></span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
+                        Fuel range about {left} km
+                        {routeLeftKm != null && <span style={{ fontWeight: 500, color: 'var(--pz-muted)' }}>{short ? `, route has ${Math.round(routeLeftKm)} km left: plan a fuel stop` : `, enough for the ${Math.round(routeLeftKm)} km left`}</span>}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--pz-accent)', fontWeight: 800 }}>Refuelled?</span>
+                    </button>
+                  );
+                })()}
+          
+          
+                {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
+                {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (
+                  <div style={{
+                    backgroundColor: 'var(--pz-surface)',
+                    border: '1.5px solid var(--pz-line)',
+                    borderRadius: 14,
+                    margin: '2px 12px 6px',
+                    padding: '6px 12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 22,
+                        height: 22,
+                        borderRadius: 6,
+                        backgroundColor: 'var(--pz-warn-bg)',
+                        color: 'var(--pz-warn)',
+                        fontSize: 12,
+                        flexShrink: 0,
+                      }}>
+                        <Icon name="map" />
+                      </span>
+                      <span style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: 'var(--text-primary)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: -0.2,
+                      }}>
+                        {session.trips.title}
+                      </span>
+                    </div>
+          
+                  </div>
+                )}
+          
+                {/* Floating HUD Toast */}
+                {toast && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 'max(60px, calc(env(safe-area-inset-top, 0px) + 16px))',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 9999,
+                    background: 'rgba(17, 24, 39, 0.95)',
+                    border: '1px solid #f59e0b',
+                    color: '#fff',
+                    padding: '8px 16px',
+                    borderRadius: 20,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                    animation: 'fadeIn 0.2s ease-out',
+                    maxWidth: 'calc(100vw - 32px)',
+                    textAlign: 'center',
+                    boxSizing: 'border-box',
+                  }}>
+                    {toast}
+                  </div>
+                )}
+          
+                {/* Feature K: Captain Announcement Alert Card (Members see the announcement as an alert) */}
+                {activeAnnouncement && (
+                  <div style={{
+                    margin: '4px 12px 6px',
+                    padding: '8px 10px 8px 12px',
+                    borderRadius: 12,
+                    backgroundColor: 'var(--pz-surface)',
+                    border: '1px solid var(--pz-line)',
+                    borderLeft: activeAnnouncement.urgency === 'high' ? '4px solid var(--pz-bad)' : '4px solid var(--pz-accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    flexShrink: 0,
+                    zIndex: 35,
+                    animation: 'slideDown 0.25s ease-out',
+                  }}>
+                    <div style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      backgroundColor: activeAnnouncement.urgency === 'high' ? 'var(--pz-bad-bg)' : 'var(--pz-warn-bg)',
+                      border: activeAnnouncement.urgency === 'high' ? '1px solid var(--pz-bad)' : '1px solid var(--pz-accent)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 20,
+                      flexShrink: 0,
+                    }}>
+                      <Icon name={activeAnnouncement.icon} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <span style={{
+                          fontSize: 9,
+                          fontWeight: 900,
+                          color: activeAnnouncement.urgency === 'high' ? 'var(--pz-bad)' : 'var(--pz-accent)',
+                          letterSpacing: 0.8,
+                          textTransform: 'uppercase',
+                        }}>
+                          CAPTAIN ANNOUNCEMENT
+                        </span>
+                        <span style={{ fontSize: 9.5, color: 'var(--pz-muted)', fontWeight: 600 }}>
+                          {activeAnnouncement.timestamp}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                        {activeAnnouncement.title}
+                      </div>
+                      {activeAnnouncement.message && (
+                        <div style={{ fontSize: 11.5, color: 'var(--pz-muted)', fontWeight: 600, marginTop: 2, lineHeight: 1.3 }}>
+                          {activeAnnouncement.message}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveAnnouncement(null)}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: 'var(--pz-bg)',
+                        border: '1.5px solid var(--pz-line)',
+                        borderRadius: 10,
+                        color: 'var(--text-primary)',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    >
+                      Got it
+                    </button>
+                  </div>
+                )}
+          
+                {/* Feature P1: Step 3 - If tracking stops: The Ride tab warns: Tracking paused. Reopen Payanam. */}
+                {trackingStatus.isPaused && (
+                  <TrackingPausedBanner
+                    pauseReason={trackingStatus.pauseReason}
+                    onResume={() => {
+                      backgroundTrackingEngine.resumeTracking();
+                      setToast('Tracking resumed');
+                      setTimeout(() => setToast(''), 3000);
+                    }}
+                    onOpenMeSettings={() => setTab('me')}
+                  />
+                )}
+          
+                {/* Feature C: Route-deviation alert card */}
+                <RouteDeviationCard
+                  alerts={activeDeviationAlerts}
+                  isCaptain={isLead}
+                  currentUserId={user?.id}
+                  onRegroup={handleRegroup}
+                  onFocusRider={(lat, lng) => {
+                    setFocusTarget([lat, lng]);
+                    setFollowing(false);
+                    setToast('Focused on off-route rider');
+                  }}
+                  onNavigateBack={(lat, lng) => {
+                    setNavTarget({ name: 'Planned Route Rejoin Point', lat, lng });
+                    setShowNavModal(true);
+                  }}
+                  onDismiss={(userId) => {
+                    setDismissedDeviations((prev) => new Set([...prev, userId]));
+                  }}
+                />
+          
+                {/* Feature D: Battery-saver mode note on Ride tab */}
+                <BatterySaverNote
+                  enabled={batterySaver}
+                  onOpenSettings={() => setTab('me')}
+                />
+          
+                {/* Feature J: Arrival detection offer (<200m) */}
+                {isArrivalZone && pinnedStop && !isMeArrived && !arrivalOfferDismissed && (
+                  <ArrivalOfferBanner
+                    stopName={pinnedStop.name}
+                    distanceMeters={(distToPinnedStop ?? 0.1) * 1000}
+                    onConfirmArrival={() => handleToggleMyArrival(true)}
+                    onDismiss={() => setArrivalOfferDismissed(true)}
+                  />
+                )}
+          
+                {/* Feature J: Missed stop prompt (>350m past stop) */}
+                {isMissedStop && pinnedStop && !isMeArrived && !missedPromptDismissed && (
+                  <MissedStopPromptCard
+                    pinnedStop={pinnedStop}
+                    onConfirmStopped={() => handleToggleMyArrival(true)}
+                    onSkipStop={() => setMissedPromptDismissed(true)}
+                    onTurnBack={() => {
+                      setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng });
+                      setShowNavModal(true);
+                      setMissedPromptDismissed(true);
+                    }}
+                  />
+                )}
+          
+                {/* Feature F+I: Stop Pre-Alert & Arrival Card */}
+                {!dismissStopApproach && pinnedStop && (stopApproachEval.isApproaching || isMeArrived) && (
+                  <StopApproachCard
+                    pinnedStop={pinnedStop}
+                    stage={stopApproachEval.stage}
+                    distanceKm={distToPinnedStop}
+                    etaFormatted={stopApproachEval.etaFormatted}
+                    arrivedCount={arrivedCount}
+                    totalCount={ridersWithFreshness.length}
+                    isMeArrived={isMeArrived}
+                    onToggleMyArrival={handleToggleMyArrival}
+                    onOpenDetail={() => setShowStopDetailSheet(true)}
+                    onOpenNavigation={(target) => {
+                      setNavTarget(target);
+                      setShowNavModal(true);
+                    }}
+                    onDismiss={() => setDismissStopApproach(true)}
+                  />
+                )}
+          
+                </div>
+          
           {/* Map Top Control Bar */}
           <div style={{
             position: 'absolute',
