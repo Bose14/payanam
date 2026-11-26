@@ -6,6 +6,7 @@ import rideRoutes from './ride.routes';
 import profileRoutes from './profile.routes';
 import chatRoutes from './chat.routes';
 import pushRoutes from './push.routes';
+import placeRoutes from './place.routes';
 
 const registry = [
   { path: '/health', router: healthRoutes },
@@ -17,6 +18,7 @@ const registry = [
   { path: '/profile', router: profileRoutes },
   { path: '/chat', router: chatRoutes },
   { path: '/push', router: pushRoutes },
+  { path: '/places', router: placeRoutes },
 ];
 
 export function registerRoutes(app: Express) {

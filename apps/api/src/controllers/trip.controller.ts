@@ -70,7 +70,9 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
     let itinerary: Awaited<ReturnType<typeof generateItinerary>> = [];
     if (itinerary_mode === 'ai') {
       try {
-        itinerary = await generateItinerary(from_place, to_place, parsedDays, bike_type, trip_type, preferences);
+        itinerary = await generateItinerary(from_place, to_place, parsedDays, bike_type, trip_type, preferences, {
+          fromLat: from_lat, fromLng: from_lng, toLat: to_lat, toLng: to_lng,
+        });
       } catch (aiErr: unknown) {
         const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
         console.error('[createTrip] AI generation failed:', msg);

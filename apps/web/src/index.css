@@ -707,3 +707,5 @@ html, body {
     font-size: 18px !important;
   }
 }
+
+@keyframes pz-spin { to { transform: rotate(360deg); } }
