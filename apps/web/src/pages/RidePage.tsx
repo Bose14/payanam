@@ -415,6 +415,18 @@ export default function RidePage() {
 
   // Mobile Mockup UX & Last-seen State
   const [splitView, setSplitView] = useState(true);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [headerH, setHeaderH] = useState(100);
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setHeaderH(el.offsetHeight);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const [showStopDetailSheet, setShowStopDetailSheet] = useState(false);
   const [showTellGroupSheet, setShowTellGroupSheet] = useState(false);
   const [showNearbyHelp, setShowNearbyHelp] = useState(false);
@@ -2110,7 +2122,7 @@ export default function RidePage() {
   const isLead = session?.started_by === user?.id;
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--pz-bg)', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
+    <div style={{ height: '100dvh', position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--pz-bg)', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
       {/* Dynamic Dark Style for Map & Elements */}
       <style>{`
         .warm-map-container,
@@ -2125,6 +2137,7 @@ export default function RidePage() {
         .warm-map-container .leaflet-control-attribution {
           display: none;
         }
+        .ride-notifs > * { pointer-events: auto; }
       `}</style>
 
       {/* SOS Banner */}
@@ -2148,7 +2161,7 @@ export default function RidePage() {
       )}
 
       {/* Header — Matte Obsidian Dark matching Mockup */}
-      <div style={{
+      <div ref={headerRef} style={{
         backgroundColor: 'var(--pz-bg)',
         padding: 'max(14px, env(safe-area-inset-top, 14px)) 18px 8px',
         display: 'flex',
@@ -2318,7 +2331,7 @@ export default function RidePage() {
       </div>
 
       {/* Alerts stack: capped in height so the map always keeps its room */}
-      <div style={{ order: 2, flexShrink: 0, maxHeight: tab === 'map' ? '32vh' : undefined, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: headerH + 54, zIndex: 1100, maxHeight: '38vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', pointerEvents: 'none', filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.28))' }} className="ride-notifs">
       {/* Missing rider alert (captain only, ride map tab only), grouped into one row */}
       {isLead && tab === 'map' && (() => {
         const list = missingRiders.filter((r) => !dismissedMissing.includes(r.userId));
@@ -2524,27 +2537,6 @@ export default function RidePage() {
         </div>
       )}
 
-      {/* Stop Arrival & ETA Tracker Bar */}
-      {pinnedStop && (
-        <StopArrivalTracker
-          pinnedStop={pinnedStop}
-          ridersArrival={enrichedRidersArrival}
-          currentUserId={user?.id}
-          myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
-          mySpeedKmh={myPosRef.current ? 0 : 0}
-          isMyStale={myFreshness.isStale || myFreshness.isUnknown}
-          myAgeLabel={myFreshness.ageLabel}
-          onToggleMyArrival={handleToggleMyArrival}
-          onOpenNavigation={(target) => {
-            setNavTarget(target);
-            setShowNavModal(true);
-          }}
-          onChangePin={isLead ? () => setShowPinModal(true) : undefined}
-          onClearPin={handleClearPin}
-          isLeader={isLead}
-        />
-      )}
-
       {/* Feature P1: Step 3 - If tracking stops: The Ride tab warns: Tracking paused. Reopen Payanam. */}
       {trackingStatus.isPaused && (
         <TrackingPausedBanner
@@ -2629,6 +2621,30 @@ export default function RidePage() {
       )}
 
       </div>
+
+      {/* Stop Arrival & ETA Tracker Bar */}
+      {pinnedStop && (
+        <div style={{ order: 2, flexShrink: 0 }}>
+        <StopArrivalTracker
+          pinnedStop={pinnedStop}
+          ridersArrival={enrichedRidersArrival}
+          currentUserId={user?.id}
+          myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+          mySpeedKmh={myPosRef.current ? 0 : 0}
+          isMyStale={myFreshness.isStale || myFreshness.isUnknown}
+          myAgeLabel={myFreshness.ageLabel}
+          onToggleMyArrival={handleToggleMyArrival}
+          onOpenNavigation={(target) => {
+            setNavTarget(target);
+            setShowNavModal(true);
+          }}
+          onChangePin={isLead ? () => setShowPinModal(true) : undefined}
+          onClearPin={handleClearPin}
+          isLeader={isLead}
+        />
+        </div>
+      )}
+
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
@@ -3813,6 +3829,7 @@ export default function RidePage() {
 
       {/* Bottom tab bar — Prototype Design System Tab Navigation */}
       <div className="pz-tabs" role="tablist" style={{
+        order: 10,
         zIndex: 900,
         position: 'relative',
         flexShrink: 0,
