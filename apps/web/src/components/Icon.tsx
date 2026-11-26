@@ -55,6 +55,7 @@ const PATHS: Record<string, string> = {
   bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   download: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
+  clipboard: '<rect x="6" y="5" width="12" height="16" rx="2"/><path d="M9 5V4h6v1M9 11h6M9 15h4"/>',
   scale: '<path d="M12 3v18M5 21h14M5 8h14M5 8l-3 7a3 3 0 0 0 6 0zM19 8l-3 7a3 3 0 0 0 6 0z"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',

@@ -264,6 +264,21 @@ export const tripService = {
   },
 };
 
+export interface ResolvedMapPlace { name: string; lat: number; lng: number; source: 'google' | 'apple' }
+
+export const placeService = {
+  /** Reads a pasted Google Maps or Apple Maps link (short links included) into a named point. */
+  resolveLink: async (url: string): Promise<ResolvedMapPlace> => {
+    try {
+      const response = await api.post('/api/places/resolve-link', { url });
+      return response.data.data.place;
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      throw new Error(e.response?.data?.message || 'Could not read that link. Check it and try again.');
+    }
+  },
+};
+
 export const rideService = {
   startRide: async (tripId: string) => {
     const response = await api.post('/api/rides/start', { tripId });

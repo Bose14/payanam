@@ -4,7 +4,7 @@ import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
 import { geocodeBest } from '../hooks/usePlaceSearch';
-import PlaceInput from '../components/PlaceInput';
+import AddWaypointForm from '../components/AddWaypointForm';
 import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
 import NavigationAppModal from '../components/NavigationAppModal';
@@ -1083,54 +1083,14 @@ export default function TripDetailPage() {
                       {trip?.isOwner && (
                         <div style={{ marginTop: 16 }}>
                           {addingToDay === day ? (
-                            <div style={styles.addStopBox}>
-                              <h4 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>
-                                + Add Waypoint to Day {day}
-                              </h4>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <PlaceInput
-                                  value={addForm.place}
-                                  onChange={v => setAddForm(f => ({ ...f, place: v, lat: undefined, lng: undefined }))}
-                                  onSelect={(loc) => setAddForm(f => ({ ...f, place: loc.name, lat: loc.lat, lng: loc.lng }))}
-                                  placeholder="Search location or landmark..."
-                                />
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                  <select
-                                    value={addForm.item_type}
-                                    onChange={e => setAddForm(f => ({ ...f, item_type: e.target.value }))}
-                                    style={styles.selectInput}
-                                  >
-                                    <option value="fuel_stop">Fuel Stop</option>
-                                    <option value="meal">Food / Dhaba</option>
-                                    <option value="attraction">Attraction / Scenic</option>
-                                    <option value="rest">Tea / Rest Break</option>
-                                    <option value="stay">Night Stay</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    value={addForm.description}
-                                    onChange={e => setAddForm(f => ({ ...f, description: e.target.value }))}
-                                    placeholder="Brief note or stop description"
-                                    style={styles.textInput}
-                                  />
-                                </div>
-                                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                                  <button
-                                    onClick={() => addStop(day)}
-                                    disabled={addingStop || !addForm.place.trim()}
-                                    style={styles.btnConfirmAdd}
-                                  >
-                                    {addingStop ? 'Adding...' : 'Add Waypoint'}
-                                  </button>
-                                  <button
-                                    onClick={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }}
-                                    style={styles.btnCancelAdd}
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
+                            <AddWaypointForm
+                              day={day}
+                              draft={addForm}
+                              onChange={(next) => setAddForm(next)}
+                              onSubmit={() => addStop(day)}
+                              onCancel={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }}
+                              submitting={addingStop}
+                            />
                           ) : (
                             <button
                               onClick={() => { setAddingToDay(day); setAddForm({ place: '', item_type: 'attraction', description: '' }); }}
