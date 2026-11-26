@@ -2366,7 +2366,7 @@ export default function RidePage() {
       }}>
         {/* Feature E2: Planned Route Progress Strip along planned line */}
         {splitView && activeRoute.length > 1 && (
-          <div style={{ order: 2 }}>
+          <div style={{ order: 2, flexShrink: 0 }}>
           <RouteProgressStrip
             routeTitle={session?.trips?.title ? `${session.trips.title}` : 'Planned Route Progress'}
             totalDistanceMeters={totalRouteDist}
@@ -2972,20 +2972,15 @@ export default function RidePage() {
         {splitView && (
           <div style={{
             order: 3,
-            flex: 1,
-            minHeight: 0,
+            flex: '0 0 auto',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
             backgroundColor: 'var(--pz-bg)',
           }}>
             {/* Rider Roster List (Scrolls in available middle space) */}
             <div style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'auto',
-              WebkitOverflowScrolling: 'touch',
-              padding: '2px 12px 4px',
+              flex: '0 0 auto',
+              padding: '8px 12px 12px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '2px 2px 6px' }}>
                 <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', letterSpacing: 0.8, textTransform: 'uppercase' }}>
@@ -3012,7 +3007,7 @@ export default function RidePage() {
             </div>
 
             {/* Next Stop Bottom Dock - FIXED AT BOTTOM OF SPLIT VIEW, ALWAYS VISIBLE & TAP-FRIENDLY */}
-            <div style={{ flexShrink: 0, zIndex: 10 }}>
+            <div style={{ flexShrink: 0, zIndex: 10, position: 'sticky', bottom: 0, background: 'var(--pz-bg)', paddingTop: 4 }}>
               <NextStopBottomDock
                 pinnedStop={pinnedStop}
                 distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
