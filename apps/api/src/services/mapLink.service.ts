@@ -102,6 +102,7 @@ async function followRedirects(startUrl: string, doFetch: Fetcher): Promise<{ ur
       signal: AbortSignal.timeout(8000),
     });
     const loc = res.headers.get('location');
+    console.log(`[mapLink] hop ${hop} ${res.status} ${host}${new URL(url).pathname.slice(0, 60)}${loc ? ' -> ' + new URL(loc, url).hostname : ''}`);
     if (res.status >= 300 && res.status < 400 && loc) {
       url = new URL(loc, url).href;
       // Google may route through a consent page; the real target is in its `continue` parameter.
@@ -112,6 +113,7 @@ async function followRedirects(startUrl: string, doFetch: Fetcher): Promise<{ ur
       continue;
     }
     const html = res.ok ? (await res.text()).slice(0, 900_000) : '';
+    console.log(`[mapLink] final ${res.status} ${host} html=${html.length}B coords=${coordsFromHtml(html) ? 'yes' : 'no'}`);
     return { url, html };
   }
   throw new MapLinkError('That link redirects too many times.');
@@ -163,26 +165,64 @@ async function geocodeOnce(q: string, doFetch: Fetcher): Promise<{ lat: number; 
   return null;
 }
 
+async function photonSearch(q: string, bias: { lat: number; lng: number } | null, doFetch: Fetcher): Promise<{ lat: number; lng: number; name: string } | null> {
+  try {
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=en` + (bias ? `&lat=${bias.lat}&lon=${bias.lng}&location_bias_scale=0.3` : '');
+    const res = await doFetch(url, { headers: { 'User-Agent': 'Payanam-App/1.0' }, signal: AbortSignal.timeout(6000) });
+    const d = (await res.json()) as { features?: Array<{ geometry: { coordinates: [number, number] }; properties: { name?: string; countrycode?: string } }> };
+    const hits = (d.features ?? []).filter((f) => !f.properties.countrycode || f.properties.countrycode === 'IN');
+    const pick = bias
+      ? hits.map((f) => ({ f, km: kmBetween(bias, { lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] }) })).sort((a, b) => a.km - b.km)[0]
+      : hits[0] && { f: hits[0], km: 0 };
+    if (!pick || (bias && pick.km > 35)) return null;
+    return { lat: pick.f.geometry.coordinates[1], lng: pick.f.geometry.coordinates[0], name: pick.f.properties.name ?? '' };
+  } catch { return null; }
+}
+
+function kmBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
 /**
- * Looks a place name up. Full street addresses often fail on OpenStreetMap, so we also try the
- * name with the postcode removed, then the area, then the postcode alone. The first hit wins.
+ * Finds a point for a place name taken from a Google link. Full street addresses often fail on
+ * OpenStreetMap, so this goes step by step and stops at the first success:
+ *   1. the whole name, then without the postcode
+ *   2. the postcode area, then a fuzzy search for the business name near that area
+ *   3. looser wordings (area only)
+ * Results from step 2's area-only fallback and step 3 are marked approximate.
  */
 async function geocodeName(name: string, doFetch: Fetcher): Promise<{ lat: number; lng: number; exact: boolean } | null> {
   const parts = name.split(',').map((p) => p.trim()).filter(Boolean);
   const pin = name.match(/\b\d{6}\b/)?.[0];
-  const noPin = name.replace(/\b\d{6}\b/, '').replace(/\s+,/g, ',').trim();
-  const first = await geocodeOnce(name, doFetch) ?? (noPin !== name ? await geocodeOnce(noPin, doFetch) : null);
+  const noPin = name.replace(/\b\d{6}\b/, '').replace(/\s+,/g, ',').replace(/,\s*$/, '').trim();
+
+  const first = (await geocodeOnce(name, doFetch)) ?? (noPin !== name ? await geocodeOnce(noPin, doFetch) : null);
   if (first) return { ...first, exact: true };
+
+  // Postcode centroid, used to anchor a fuzzy search for the business itself.
+  let centre: { lat: number; lng: number } | null = null;
+  if (pin) {
+    centre = (await geocodeOnce(`${pin}, India`, doFetch)) ?? (await geocodeOnce(pin, doFetch));
+  }
+  const business = parts[0] ?? name;
+  const near = await photonSearch(parts.slice(0, 2).join(' '), centre, doFetch)
+    ?? (parts.length > 1 ? await photonSearch(business, centre, doFetch) : null);
+  if (near) return { lat: near.lat, lng: near.lng, exact: true };
+  if (centre) return { ...centre, exact: false };
+
   const variants = [
-    parts.length > 2 ? parts.slice(0, 2).join(', ') + (parts.length > 3 ? '' : '') : '',
     parts.length > 1 ? parts.slice(1).join(', ').replace(/\b\d{6}\b/, '').trim() : '',
-    pin ? `${pin}, India` : '',
+    parts.length > 2 ? parts.slice(0, 2).join(', ') : '',
   ].filter((v) => v && v !== name && v !== noPin);
   for (const v of variants) {
     const hit = await geocodeOnce(v, doFetch);
     if (hit) return { ...hit, exact: false };
   }
-  return null;
+  const anywhere = await photonSearch(name, null, doFetch);
+  return anywhere ? { lat: anywhere.lat, lng: anywhere.lng, exact: false } : null;
 }
 
 async function reverseName(lat: number, lng: number, doFetch: Fetcher): Promise<string> {

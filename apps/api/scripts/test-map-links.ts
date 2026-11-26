@@ -22,6 +22,7 @@ r = parseMapUrl('https://maps.apple.com/?address=Salem,%20Tamil%20Nadu')!; asser
 assert.equal(parseMapUrl('https://evil.example.com/maps?q=1,2'), null);
 assert.equal(parseMapUrl('not a url'), null);
 
+let photon = false;
 (async () => {
   const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 });
   const fetcher = (async (url: string) => {
@@ -34,9 +35,11 @@ assert.equal(parseMapUrl('not a url'), null);
     if (url === 'https://maps.app.goo.gl/NoCoords') return new Response(null, { status: 302, headers: { location: 'https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2' } });
     if (url.startsWith('https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2') ) return new Response('<html><title>Senthir bhavan - Google Maps</title></html>', { status: 200 });
     if (url.includes('/search') && decodeURIComponent(url).includes('q=Senthir bhavan, NH79')) return json([]);
-    if (url.includes('/search') && decodeURIComponent(url).includes('q=NH79, Tamil Nadu')) return json([{ lat: '11.59', lon: '78.18' }]);
+    if (url.includes('/search') && decodeURIComponent(url).includes('q=636119, India')) return json([{ lat: '11.59', lon: '78.18' }]);
+    if (url.includes('photon.komoot.io')) return json({ features: photon ? [{ geometry: { coordinates: [78.1796, 11.5943] }, properties: { name: 'Senthir Bhavan', countrycode: 'IN' } }, { geometry: { coordinates: [80.2, 13.0] }, properties: { name: 'Far one', countrycode: 'IN' } }] : [] });
     if (url.includes('/reverse')) return json({ name: 'Cafe Cloud', display_name: 'Cafe Cloud, Ooty, Tamil Nadu, India' });
-    if (url.includes('/search')) return json([{ lat: '11.66', lon: '78.15' }]);
+    if (url.includes('/search') && decodeURIComponent(url).includes('q=Salem')) return json([{ lat: '11.66', lon: '78.15' }]);
+    if (url.includes('/search')) return json([]);
     throw new Error('unexpected ' + url);
   }) as unknown as typeof fetch;
 
@@ -58,8 +61,13 @@ assert.equal(parseMapUrl('not a url'), null);
   p = await resolveMapLink('https://maps.app.goo.gl/Sen', fetcher);
   assert.match(p.name, /Senthir bhavan/); near(p.lat, 11.5943); near(p.lng, 78.1796); assert.ok(!p.approximate);
   // Page has no coordinates at all: fall back to looser name searches and mark it approximate.
+  photon = false;
   p = await resolveMapLink('https://maps.app.goo.gl/NoCoords', fetcher);
-  near(p.lat, 11.59); assert.equal(p.approximate, true);
+  near(p.lat, 11.59); assert.equal(p.approximate, true); // postcode area only
+  // ...and when the business itself is findable near that postcode, use its exact spot.
+  photon = true;
+  p = await resolveMapLink('https://maps.app.goo.gl/NoCoords', fetcher);
+  near(p.lat, 11.5943); near(p.lng, 78.1796); assert.ok(!p.approximate);
   // SSRF guard: a redirect to another host is refused.
   await assert.rejects(() => resolveMapLink('https://maps.app.goo.gl/loop', fetcher), MapLinkError);
   await assert.rejects(() => resolveMapLink('hello', fetcher), MapLinkError);
