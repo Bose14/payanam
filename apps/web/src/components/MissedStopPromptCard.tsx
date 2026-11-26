@@ -18,51 +18,19 @@ export const MissedStopPromptCard: React.FC<MissedStopPromptCardProps> = ({
   if (!pinnedStop) return null;
 
   return (
-    <div style={styles.container}>
-      {/* Header Row */}
-      <div style={styles.headerRow}>
-        <div style={styles.headerLeft}>
-          <span style={styles.warningIcon}><Icon name="warning" /></span>
-          <div>
-            <span style={styles.pretitle}>MISSED STOP PROMPT</span>
-            <h4 style={styles.title}>Did you stop here?</h4>
-          </div>
+    <div style={styles.container} role="alert">
+      <div style={styles.topRow}>
+        <span style={styles.warningIcon}><Icon name="warning" /></span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={styles.title}>Did you stop at {pinnedStop.name}?</div>
+          <div style={styles.desc}>You passed it without marking arrival.</div>
         </div>
-        <span style={styles.badge}>PASSED STOP</span>
       </div>
-
-      {/* Description */}
-      <p style={styles.desc}>
-        You passed <strong style={{ color: 'var(--text-primary)' }}>{pinnedStop.name}</strong> without marking arrival. Did you take this break or continue riding?
-      </p>
-
-      {/* Action Buttons Row */}
       <div style={styles.btnRow}>
-        <button
-          type="button"
-          onClick={onConfirmStopped}
-          style={styles.primaryBtn}
-        >
-          Yes, I stopped here
-        </button>
-
-        <button
-          type="button"
-          onClick={onSkipStop}
-          style={styles.secondaryBtn}
-        >
-          Skipped, continuing ahead
-        </button>
-
+        <button type="button" onClick={onConfirmStopped} style={styles.primaryBtn}>I stopped</button>
+        <button type="button" onClick={onSkipStop} style={styles.secondaryBtn}>Skip</button>
         {onTurnBack && (
-          <button
-            type="button"
-            onClick={onTurnBack}
-            style={styles.turnBackBtn}
-            title="Turn back to stop"
-          >
-            ↩ Turn back
-          </button>
+          <button type="button" onClick={onTurnBack} style={styles.secondaryBtn} title="Turn back to stop">Turn back</button>
         )}
       </div>
     </div>
@@ -71,103 +39,27 @@ export const MissedStopPromptCard: React.FC<MissedStopPromptCardProps> = ({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    margin: '0 12px 8px 12px',
-    padding: '12px 14px',
-    borderRadius: 18,
-    border: '1.5px solid #F59E0B',
+    margin: '0 12px 6px',
+    padding: '10px 12px',
+    borderRadius: 12,
+    borderLeft: '4px solid var(--pz-warn, #F59E0B)',
+    border: '1px solid var(--pz-line)',
+    borderLeftWidth: 4,
+    borderLeftColor: 'var(--pz-warn, #F59E0B)',
     backgroundColor: 'var(--pz-surface)',
-    boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
-    flexShrink: 0,
-    zIndex: 40,
-    animation: 'slideDown 0.25s ease-out',
-  },
-  headerRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 4,
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
-  warningIcon: {
-    fontSize: 18,
-  },
-  pretitle: {
-    fontSize: 9,
-    fontWeight: 900,
-    color: '#F59E0B',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    display: 'block',
-  },
-  title: {
-    margin: '1px 0 0',
-    fontSize: 14,
-    fontWeight: 900,
-    color: 'var(--text-primary)',
-    letterSpacing: -0.2,
-  },
-  badge: {
-    fontSize: 9,
-    fontWeight: 900,
-    letterSpacing: 0.5,
-    padding: '2px 7px',
-    borderRadius: 999,
-    border: '1px solid #F59E0B',
-    color: '#F59E0B',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    textTransform: 'uppercase',
     flexShrink: 0,
   },
-  desc: {
-    margin: '6px 0 10px',
-    fontSize: 11.5,
-    color: 'var(--pz-muted)',
-    lineHeight: 1.45,
-  },
-  btnRow: {
-    display: 'flex',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
+  topRow: { display: 'flex', alignItems: 'flex-start', gap: 10 },
+  warningIcon: { fontSize: 18, color: 'var(--pz-warn, #F59E0B)', display: 'inline-flex', marginTop: 1 },
+  title: { fontSize: 14, fontWeight: 800, color: 'var(--pz-ink)', lineHeight: 1.25, overflowWrap: 'anywhere' },
+  desc: { fontSize: 12, color: 'var(--pz-muted)', marginTop: 1 },
+  btnRow: { display: 'flex', gap: 8, marginTop: 8 },
   primaryBtn: {
-    flex: 1,
-    minWidth: 140,
-    padding: '8px 12px',
-    borderRadius: 10,
-    border: 'none',
-    backgroundColor: 'var(--pz-accent)',
-    color: 'var(--pz-on-accent)',
-    fontWeight: 900,
-    fontSize: 11.5,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    flex: 1.3, padding: '9px 10px', borderRadius: 10, border: 'none', backgroundColor: 'var(--pz-accent)',
+    color: 'var(--pz-on-accent)', fontWeight: 800, fontSize: 13, cursor: 'pointer',
   },
   secondaryBtn: {
-    flex: 1,
-    minWidth: 140,
-    padding: '8px 12px',
-    borderRadius: 10,
-    border: '1px solid var(--pz-line)',
-    backgroundColor: 'var(--pz-bg)',
-    color: 'var(--text-primary)',
-    fontWeight: 800,
-    fontSize: 11.5,
-    cursor: 'pointer',
-  },
-  turnBackBtn: {
-    padding: '8px 10px',
-    borderRadius: 10,
-    border: '1px solid var(--pz-line)',
-    backgroundColor: 'var(--pz-bg)',
-    color: 'var(--pz-muted)',
-    fontWeight: 800,
-    fontSize: 11,
-    cursor: 'pointer',
+    flex: 1, padding: '9px 10px', borderRadius: 10, border: '1px solid var(--pz-line)', backgroundColor: 'var(--pz-bg)',
+    color: 'var(--pz-ink)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
   },
 };
-
