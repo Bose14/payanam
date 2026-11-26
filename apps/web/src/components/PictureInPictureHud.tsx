@@ -737,10 +737,10 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
             backgroundColor: isPipActive ? 'var(--pz-warn-bg)' : 'rgba(27, 30, 35, 0.88)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
-            border: isPipActive ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid var(--pz-line, #2A2E35)',
-            color: isPipActive ? 'var(--pz-accent, #F0C23A)' : 'var(--pz-ink, #FFFFFF)',
+            border: isPipActive ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid rgba(255,255,255,0.25)',
+            color: isPipActive ? 'var(--pz-accent, #F0C23A)' : '#FFFFFF',
             borderRadius: 20,
-            padding: '5px 12px',
+            padding: '7px 12px',
             fontSize: 11,
             fontWeight: 800,
             cursor: 'pointer',
@@ -756,7 +756,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           title={isPipActive ? 'Close Picture-in-Picture HUD' : 'Open 60 FPS Picture-in-Picture Convoy HUD'}
         >
           <span>📺</span>
-          <span>{isPipActive ? 'Floating view on' : 'Floating view'}</span>
+          <span>{isPipActive ? 'Pop out on' : 'Pop out'}</span>
         </button>
       )}
     </>
