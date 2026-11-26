@@ -5,7 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { rideService, tripService } from '../services/api';
+import { rideService, tripService, chatService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
   NavigationAppModal,
@@ -1181,7 +1181,7 @@ export default function RidePage() {
     }
   }, [sessionId, userName, user?.id]);
 
-  const handlePinStop = useCallback(async (stop: PinnedStopData, addToItinerary?: boolean) => {
+  const handlePinStop = useCallback(async (stop: PinnedStopData, _addToItinerary?: boolean) => {
     if (!sessionId || !session || session.started_by !== user?.id) return; // captain only
     setPinnedStop(stop);
     setRidersArrival({});
@@ -1189,21 +1189,31 @@ export default function RidePage() {
     setToast(`Convoy Target Stop: ${stop.name}`);
     setTimeout(() => setToast(''), 3500);
 
-    // If user asked to add to itinerary permanently
-    if (addToItinerary && session.trip_id) {
+    // Stops that are not already on the itinerary (custom or nearby pins) are added automatically
+    const alreadyPlanned = !!stop.id && !String(stop.id).startsWith('nearby_');
+    let addedToItinerary = false;
+    if (!alreadyPlanned && session.trip_id) {
       try {
         await tripService.addStop(session.trip_id, {
           place: stop.name,
           item_type: stop.type,
-          description: stop.description || 'Pinned during live ride',
+          description: stop.description || 'Added during the ride',
           lat: stop.lat,
           lng: stop.lng,
         });
-        setToast(`Added ${stop.name} to trip itinerary!`);
+        addedToItinerary = true;
+        setToast(`Added ${stop.name} to the trip itinerary`);
         setTimeout(() => setToast(''), 3500);
       } catch (err) {
         console.warn('Failed to add stop to itinerary:', err);
       }
+    }
+
+    // Tell the trip group chat about the new stop
+    if (session.trip_id) {
+      chatService.send(`trip:${session.trip_id}`, {
+        body: `Next stop: ${stop.name}${addedToItinerary ? ' (added to the itinerary)' : ''}`,
+      }).catch(() => null);
     }
 
     // Broadcast to real-time channel
@@ -2105,6 +2115,32 @@ export default function RidePage() {
 
   const isLead = session?.started_by === user?.id;
 
+  const fabBtn: React.CSSProperties = {
+    width: 44, height: 44, borderRadius: 999, cursor: 'pointer', pointerEvents: 'auto',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+    backgroundColor: 'var(--pz-surface)', border: '1.5px solid var(--pz-line)', color: 'var(--pz-ink)',
+    boxShadow: '0 3px 12px rgba(0, 0, 0, 0.35)',
+  };
+  const mapFabs = (
+    <>
+      {isLead && !pinnedStop && (
+        <button type="button" onClick={() => setShowPinModal(true)} aria-label="Add next stop" title="Add next stop"
+          style={{ ...fabBtn, backgroundColor: 'var(--pz-accent)', borderColor: 'var(--pz-accent)', color: 'var(--pz-on-accent)' }}>
+          <Icon name="pin" />
+        </button>
+      )}
+      <button type="button" onClick={() => setShowTellGroupSheet(true)} aria-label="Tell group" title="Tell group (quick message)" style={fabBtn}>
+        <Icon name="megaphone" />
+      </button>
+      {!following && myLat && myLng && (
+        <button type="button" onClick={() => { setFollowing(true); setFocusTarget(null); }} aria-label="Re-center on me" title="Re-center on me"
+          style={{ ...fabBtn, color: 'var(--pz-warn)', borderColor: 'var(--pz-accent)' }}>
+          <Icon name="target" />
+        </button>
+      )}
+    </>
+  );
+
   return (
     <div style={{ height: '100dvh', position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--pz-bg)', fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflow: 'hidden' }}>
       {/* Dynamic Dark Style for Map & Elements */}
@@ -2848,32 +2884,11 @@ export default function RidePage() {
             </div>
           </div>
 
-          {/* Re-center button */}
-          {splitView && !following && myLat && myLng && (
-            <button
-              onClick={() => { setFollowing(true); setFocusTarget(null); }}
-              style={{
-                position: 'absolute',
-                bottom: splitView ? 12 : (pinnedStop ? 115 : 20),
-                right: 12,
-                zIndex: 1000,
-                backgroundColor: 'var(--pz-surface)',
-                border: '2px solid var(--pz-accent)',
-                color: 'var(--pz-warn)',
-                borderRadius: '50%',
-                width: 38,
-                height: 38,
-                fontSize: 18,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
-              }}
-              title="Re-center on me"
-            >
-              <Icon name="pin" />
-            </button>
+          {/* Map action buttons (add stop, tell group, re-center) */}
+          {splitView && (
+            <div style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 1000, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none' }}>
+              {mapFabs}
+            </div>
           )}
 
           {/* Map Follow & Drag Container */}
@@ -3007,6 +3022,7 @@ export default function RidePage() {
             </div>
 
             {/* Next Stop Bottom Dock - FIXED AT BOTTOM OF SPLIT VIEW, ALWAYS VISIBLE & TAP-FRIENDLY */}
+            {pinnedStop && (
             <div style={{ flexShrink: 0, zIndex: 10, position: 'sticky', bottom: 0, background: 'var(--pz-bg)', paddingTop: 4 }}>
               <NextStopBottomDock
                 pinnedStop={pinnedStop}
@@ -3018,64 +3034,34 @@ export default function RidePage() {
                 onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
               />
             </div>
+            )}
           </div>
         )}
 
         {/* In Full Map View: one bottom stack so action buttons and the dock never overlap */}
         {!splitView && (
           <div style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            pointerEvents: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
+            position: 'absolute', bottom: 8, left: 0, right: 0, zIndex: 1000, pointerEvents: 'none',
+            display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0 12px', pointerEvents: 'none' }}>
-              {!pinnedStop ? (
-                <button
-                  type="button"
-                  onClick={() => setShowTellGroupSheet(true)}
-                  style={{
-                    pointerEvents: 'auto', backgroundColor: 'var(--pz-accent)', color: 'var(--pz-on-accent)', border: 'none',
-                    borderRadius: 24, padding: '10px 18px', fontSize: 13, fontWeight: 900, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
-                  }}
-                  title="Tell group presets"
-                >
-                  <span><Icon name="megaphone" /></span>
-                  <span>Tell group</span>
-                </button>
-              ) : <span />}
-              {!following && myLat && myLng && (
-                <button
-                  onClick={() => { setFollowing(true); setFocusTarget(null); }}
-                  style={{
-                    pointerEvents: 'auto', backgroundColor: 'var(--pz-surface)', border: '2px solid var(--pz-accent)', color: 'var(--pz-warn)',
-                    borderRadius: '50%', width: 40, height: 40, fontSize: 18, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
-                  }}
-                  title="Re-center on me"
-                  aria-label="Re-center on me"
-                >
-                  <Icon name="pin" />
-                </button>
-              )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 12px', pointerEvents: 'none' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none' }}>
+                {mapFabs}
+              </div>
             </div>
-            <div style={{ pointerEvents: 'auto' }}>
-              <NextStopBottomDock
-                pinnedStop={pinnedStop}
-                distanceKm={pinnedStop && myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
-                arrivedCount={arrivedCount}
-                totalCount={ridersWithFreshness.length}
-                onOpenDetail={() => setShowStopDetailSheet(true)}
-                onOpenTellGroup={() => setShowTellGroupSheet(true)}
-                onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
-              />
-            </div>
+            {pinnedStop && (
+              <div style={{ pointerEvents: 'auto' }}>
+                <NextStopBottomDock
+                  pinnedStop={pinnedStop}
+                  distanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
+                  arrivedCount={arrivedCount}
+                  totalCount={ridersWithFreshness.length}
+                  onOpenDetail={() => setShowStopDetailSheet(true)}
+                  onOpenTellGroup={() => setShowTellGroupSheet(true)}
+                  onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
