@@ -2318,7 +2318,7 @@ export default function RidePage() {
       </div>
 
       {/* Alerts stack: capped in height so the map always keeps its room */}
-      <div style={{ flexShrink: 0, maxHeight: tab === 'map' ? '30vh' : undefined, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ order: 2, flexShrink: 0, maxHeight: tab === 'map' ? '32vh' : undefined, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
       {/* Missing rider alert (captain only, ride map tab only), grouped into one row */}
       {isLead && tab === 'map' && (() => {
         const list = missingRiders.filter((r) => !dismissedMissing.includes(r.userId));
@@ -2349,6 +2349,7 @@ export default function RidePage() {
         const left = rangeLeftKm(fuelState, myAlong);
         const short = routeLeftKm != null && left < routeLeftKm;
         const low = left < 40;
+        if (!low && !short) return null;
         return (
           <button type="button" onClick={() => setReadyStep('fuel')} style={{
             margin: '4px 12px 4px', padding: '8px 12px', borderRadius: 12, flexShrink: 0, cursor: 'pointer', textAlign: 'left', width: 'calc(100% - 24px)',
@@ -2364,11 +2365,6 @@ export default function RidePage() {
           </button>
         );
       })()}
-      {tab === 'map' && !fuelState && (
-        <button type="button" onClick={() => setReadyStep('fuel')} className="pz-btn small" style={{ margin: '4px 12px 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon name="fuel" /> Set fuel range
-        </button>
-      )}
 
       {readyStep && sessionId && user?.id && (
         <RideReadyModal
@@ -2636,6 +2632,7 @@ export default function RidePage() {
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
+        order: 1,
         flex: tab === 'map' ? 1 : 0,
         overflowY: 'auto',
         overflowX: 'hidden',
@@ -2648,6 +2645,7 @@ export default function RidePage() {
       }}>
         {/* Feature E2: Planned Route Progress Strip along planned line */}
         {splitView && activeRoute.length > 1 && (
+          <div style={{ order: 2 }}>
           <RouteProgressStrip
             routeTitle={session?.trips?.title ? `${session.trips.title}` : 'Planned Route Progress'}
             totalDistanceMeters={totalRouteDist}
@@ -2668,10 +2666,12 @@ export default function RidePage() {
               }
             }}
           />
+          </div>
         )}
 
         {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
         <div className="warm-map-container" style={{
+          order: 1,
           flex: splitView ? '0 0 clamp(240px, 42vh, 400px)' : '1 1 auto',
           height: splitView ? 'clamp(240px, 42vh, 400px)' : '100%',
           minHeight: 0,
@@ -2859,7 +2859,22 @@ export default function RidePage() {
               />
             </div>
 
-            {/* Right Status Indicator */}
+            {/* Right controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'none' }}>
+            <button
+              type="button"
+              onClick={() => setReadyStep('fuel')}
+              aria-label={fuelState ? 'Fuel range' : 'Set fuel range'}
+              title={fuelState ? 'Fuel range' : 'Set fuel range'}
+              style={{
+                pointerEvents: 'auto', width: 38, height: 38, borderRadius: 999, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                backgroundColor: 'rgba(27, 30, 35, 0.88)', backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.25)', color: '#FFFFFF', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+              }}
+            >
+              <Icon name="fuel" />
+            </button>
             {wakeLockActive && (
               <div
                 style={{
@@ -2883,6 +2898,7 @@ export default function RidePage() {
                 <span className="hide-on-mobile">Screen on</span>
               </div>
             )}
+            </div>
           </div>
 
           {/* Re-center button */}
@@ -3038,6 +3054,7 @@ export default function RidePage() {
         {/* In Split View: Alert Banner + Rider Roster + Next Stop Bottom Dock */}
         {splitView && (
           <div style={{
+            order: 3,
             flex: 1,
             minHeight: 0,
             display: 'flex',
