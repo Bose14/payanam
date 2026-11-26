@@ -26,6 +26,7 @@ interface StopDetailSheetProps {
   onToggleMyArrival: (isArrived: boolean) => void;
   onOpenNavigation: (target: { name: string; lat: number; lng: number }) => void;
   onChangeStop?: () => void;
+  onClearPin?: () => void;
 }
 
 export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
@@ -40,6 +41,7 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
   onToggleMyArrival,
   onOpenNavigation,
   onChangeStop,
+  onClearPin,
 }) => {
   if (!isOpen || !pinnedStop) return null;
 
@@ -243,6 +245,15 @@ export const StopDetailSheet: React.FC<StopDetailSheetProps> = ({
               style={styles.changeBtn}
             >
               Change Target Stop
+            </button>
+          )}
+          {onClearPin && (
+            <button
+              type="button"
+              onClick={onClearPin}
+              style={{ ...styles.changeBtn, color: 'var(--pz-bad)', border: '1px solid var(--pz-bad)', borderRadius: 12, padding: '10px', fontSize: 13, fontWeight: 700 }}
+            >
+              Clear target stop
             </button>
           )}
         </div>
