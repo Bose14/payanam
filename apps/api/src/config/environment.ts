@@ -20,6 +20,7 @@ const envSchema = z.object({
   API_URL: z.string().default('http://localhost:3001'),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   GROQ_API_KEY: z.string(),
+  GROQ_MODEL: z.string().optional(),
   // Phone sign-in. With no Twilio values the code is logged on the server instead of sent.
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),

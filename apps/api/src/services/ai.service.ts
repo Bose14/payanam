@@ -126,7 +126,11 @@ export async function geocodePlace(name: string): Promise<LatLng | null> {
       `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=in`, 4000),
   );
   if (india?.[0]) return { lat: parseFloat(india[0].lat), lng: parseFloat(india[0].lon) };
-  return null;
+  // Nominatim sometimes refuses shared hosting IPs. Photon uses the same OpenStreetMap data.
+  const photon = await getJson<{ features?: Array<{ geometry: { coordinates: [number, number] }; properties: { countrycode?: string } }> }>(
+    `https://photon.komoot.io/api/?q=${q}&limit=3&lang=en`, 5000);
+  const hit = photon?.features?.find((f) => !f.properties.countrycode || f.properties.countrycode === 'IN');
+  return hit ? { lat: hit.geometry.coordinates[1], lng: hit.geometry.coordinates[0] } : null;
 }
 
 interface ReverseResult {
@@ -235,7 +239,7 @@ async function buildRouteBasedItinerary(
       endPlace = await nameFor(endKm, `Day ${d} overnight town`);
     }
 
-    if (!isLast || endPoint) {
+    {
       stops.push({
         order: stops.length + 1,
         place: endPlace,
@@ -281,10 +285,11 @@ async function verifyAiItinerary(
   days: number,
   path: RoutePath | null,
   tripType: string,
+  straightLine = false,
 ): Promise<ItineraryDay[]> {
   const oneWay = tripType === 'one_way';
   // How far from the real road a stop may be. Detours for a waterfall or viewpoint are fine.
-  const corridorKm = oneWay ? 60 : 150;
+  const corridorKm = (oneWay ? 60 : 150) + (straightLine ? 60 : 0);
   const seen = new Set<string>();
   let geocodeBudget = 6;
   const result: ItineraryDay[] = [];
@@ -381,7 +386,18 @@ export async function generateItinerary(
     coords?.fromLat != null && coords?.fromLng != null ? { lat: coords.fromLat, lng: coords.fromLng } : await geocodePlace(from);
   const toCoords: LatLng | null =
     coords?.toLat != null && coords?.toLng != null ? { lat: coords.toLat, lng: coords.toLng } : await geocodePlace(to);
-  const path = fromCoords && toCoords ? await fetchRoute(fromCoords, toCoords) : null;
+  let path = fromCoords && toCoords ? await fetchRoute(fromCoords, toCoords) : null;
+  let straightLine = false;
+  if (!path && fromCoords && toCoords) {
+    // Router unreachable: use the straight line (with a road-winding allowance) so towns can still be found.
+    const pts = Array.from({ length: 60 }, (_, i) => ({
+      lat: fromCoords.lat + ((toCoords.lat - fromCoords.lat) * i) / 59,
+      lng: fromCoords.lng + ((toCoords.lng - fromCoords.lng) * i) / 59,
+    }));
+    path = buildPath(pts, haversineKm(fromCoords, toCoords) * 1.25);
+    straightLine = true;
+    console.warn('[ai.service] Route service unavailable. Using the straight line between start and end.');
+  }
 
   const fallback = () => buildRouteBasedItinerary(from, to, safeDays, bikeType, tripType, path, fromCoords, toCoords);
 
@@ -423,23 +439,29 @@ Return ONLY a JSON object, no explanation, in this shape:
 type must be one of: fuel_stop, stay, attraction, meal, rest.`;
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.GROQ_API_KEY.trim()}` },
-      signal: AbortSignal.timeout(30000),
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 4096,
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      console.warn(`[ai.service] Groq returned ${response.status}. Using the real-route plan.`);
-      return fallback();
+    const models = [env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant']
+      .filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
+    let response: Response | null = null;
+    for (const model of models) {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.GROQ_API_KEY.trim()}` },
+        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          max_tokens: 4096,
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (r.ok) { response = r; console.log(`[ai.service] Groq model ${model} answered.`); break; }
+      const body = (await r.text()).slice(0, 300);
+      console.warn(`[ai.service] Groq ${model} returned ${r.status}: ${body}`);
+      // Wrong key or rate limit will not be fixed by another model; a missing/retired model will.
+      if (r.status === 401 || r.status === 403 || r.status === 429) break;
     }
+    if (!response) return fallback();
 
     const result = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const text = result.choices?.[0]?.message?.content ?? '';
@@ -453,7 +475,7 @@ type must be one of: fuel_stop, stay, attraction, meal, rest.`;
     }
     if (rawDays.length === 0) return fallback();
 
-    const verified = await verifyAiItinerary(rawDays, safeDays, path, tripType);
+    const verified = await verifyAiItinerary(rawDays, safeDays, path, tripType, straightLine);
     const kept = verified.reduce((n, d) => n + d.stops.length, 0);
     const asked = rawDays.reduce((n, d) => n + (Array.isArray(d.stops) ? d.stops.length : 0), 0);
     console.log(`[ai.service] AI stops verified: ${kept}/${asked}`);

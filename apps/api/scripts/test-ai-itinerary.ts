@@ -17,10 +17,17 @@ const towns = [
 ];
 let aiAnswer: unknown = null;
 let aiStatus = 200;
+let badModels: string[] = [];
+let osrmDown = false;
+let geoDown = false;
+let usedModels: string[] = [];
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input);
   const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status });
+  if (url.includes('router.project-osrm.org') && osrmDown) return json({}, 503);
+  if (geoDown && (url.includes('/search') || url.includes('photon.komoot.io') || url.includes('/reverse'))) return json({}, 403);
+  if (url.includes('photon.komoot.io')) return json({ features: [] });
   if (url.includes('router.project-osrm.org')) return json({ routes: [{ distance: 270000, geometry: { coordinates: line } }] });
   if (url.includes('/reverse')) {
     const q = new URL(url); const lat = +q.searchParams.get('lat')!, lng = +q.searchParams.get('lon')!;
@@ -36,6 +43,8 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return json([]);
   }
   if (url.includes('groq.com')) {
+    const model = JSON.parse(String(init?.body)).model as string; usedModels.push(model);
+    if (badModels.includes(model)) return json({ error: { message: 'model not found' } }, 404);
     if (aiStatus !== 200) return json({}, aiStatus);
     return json({ choices: [{ message: { content: JSON.stringify(aiAnswer) } }] });
   }
@@ -96,5 +105,23 @@ const realSetTimeout = globalThis.setTimeout;
   aiStatus = 500;
   const err = await generateItinerary('Salem', 'Munnar', 2, 'Bike', 'one_way', '');
   assert(err.length === 2 && err[1].stops.length > 0);
+  // 5. First model returns 404 (retired / no access): the next model is tried and its answer used.
+  aiStatus = 200; usedModels = []; badModels = ['llama-3.3-70b-versatile'];
+  aiAnswer = { days: [{ day: 1, stops: [{ place: 'Erode, Tamil Nadu', lat: 11.0, lng: 77.7, type: 'meal' }, { place: 'Pollachi, Tamil Nadu', lat: 10.65, lng: 77.0, type: 'stay' }, { place: 'Munnar, Kerala', lat: B.lat, lng: B.lng, type: 'stay' }] }, { day: 2, stops: [{ place: 'Marayoor, Kerala', lat: 10.27, lng: 77.16, type: 'attraction' }, { place: 'Munnar Tea Gardens, Kerala', lat: 10.1, lng: 77.06, type: 'attraction' }] }] };
+  const m = await generateItinerary('Salem', 'Munnar', 2, 'Bike', 'one_way', '');
+  assert(usedModels.length >= 2 && usedModels[0] === 'llama-3.3-70b-versatile', 'next model tried after a 404: ' + usedModels);
+  assert(m.flatMap((d) => d.stops).length >= 4, 'AI plan is used');
+  badModels = [];
+
+  // 6. Router down: still a plan, from real towns along the straight line.
+  env.GROQ_API_KEY = ''; osrmDown = true;
+  const nr = await generateItinerary('Salem', 'Munnar', 2, 'Bike', 'one_way', '');
+  assert(nr.every((d) => d.stops.length > 0), 'no empty days without the router');
+
+  // 7. Every geocoder and the router down: never an empty plan. The destination is still listed.
+  geoDown = true;
+  const nothing = await generateItinerary('Salem', 'Munnar', 1, 'Bike', 'one_way', '');
+  console.log('worst case:', JSON.stringify(nothing.map((d) => d.stops.map((s) => s.place))));
+  assert(nothing[0].stops.some((s) => /Munnar/.test(s.place)), 'destination is always present');
   console.log('ALL PASSED');
 })().catch((e) => { console.error(e); process.exit(1); });
