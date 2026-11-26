@@ -2626,7 +2626,7 @@ export default function RidePage() {
           ridersArrival={enrichedRidersArrival}
           currentUserId={user?.id}
           myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
-          mySpeedKmh={myPosRef.current ? 0 : 0}
+          mySpeedKmh={mySpeedKmh}
           isMyStale={myFreshness.isStale || myFreshness.isUnknown}
           myAgeLabel={myFreshness.ageLabel}
           onToggleMyArrival={handleToggleMyArrival}

@@ -126,8 +126,10 @@ export default function StopArrivalTracker({
             type="button"
             onClick={() => setExpanded(!expanded)}
             style={styles.btnToggle}
+            aria-label={expanded ? 'Hide rider status' : 'Show rider status'}
+            aria-expanded={expanded}
           >
-            {expanded ? '▲' : '▼'}
+            {expanded ? '▼' : '▲'}
           </button>
         </div>
       </div>
@@ -173,7 +175,7 @@ export default function StopArrivalTracker({
                     background: isArrived ? 'rgba(16, 185, 129, 0.15)' : '#111827',
                   }}
                 >
-                  <span style={{ fontSize: 13 }}>{isArrived ? <Icon name="check" /> : <Icon name="clock" />}</span>
+                  <span style={{ fontSize: 14, display: 'inline-flex', color: isArrived ? '#34d399' : '#9ca3af' }}>{isArrived ? <Icon name="check" /> : <Icon name="clock" />}</span>
                   <span style={{ fontWeight: 600, color: '#fff', fontSize: 12 }}>{r.userName}</span>
                   <span style={{ color: isArrived ? '#34d399' : (r.isStale ? '#f59e0b' : '#9ca3af'), fontSize: 11, marginLeft: 'auto' }}>
                     {isArrived
@@ -196,8 +198,9 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     backgroundColor: '#1f2937',
     borderBottom: '1px solid #374151',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-    zIndex: 900,
+    boxShadow: '0 -4px 12px rgba(0,0,0,0.3)',
+    position: 'relative',
+    zIndex: 1200,
     flexShrink: 0,
   },
   topBar: {
@@ -225,6 +228,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 18,
     border: '1px solid #374151',
     flexShrink: 0,
+    color: '#F0C23A',
   },
   stopTitleRow: {
     display: 'flex',
@@ -306,14 +310,24 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 'none',
     color: '#9ca3af',
-    padding: '4px',
-    fontSize: 10,
+    width: 40,
+    height: 40,
+    fontSize: 14,
     cursor: 'pointer',
   },
   expandedDrawer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: '100%',
+    maxHeight: '45vh',
+    overflowY: 'auto',
     background: '#111827',
     padding: '10px 14px 14px',
     borderTop: '1px solid #374151',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    boxShadow: '0 -8px 20px rgba(0,0,0,0.35)',
   },
   drawerHeader: {
     display: 'flex',
