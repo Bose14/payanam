@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
+import { geocodeBest } from '../hooks/usePlaceSearch';
 import PlaceInput from '../components/PlaceInput';
 import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
@@ -117,17 +118,7 @@ function getInsertPosition(dayStops: Stop[], newLat: number, newLng: number): nu
   return dayStops.length;
 }
 
-async function geocodePlace(name: string): Promise<{ lat: number; lng: number } | null> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1&countrycodes=in`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Payanam-App' } }
-    );
-    const data = await res.json();
-    if (data?.[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch { /* silent */ }
-  return null;
-}
+const geocodePlace = geocodeBest;
 
 function warmUpGeolocation(): void {
   if (typeof navigator === 'undefined' || !navigator.geolocation) return;
@@ -442,6 +433,7 @@ export default function TripDetailPage() {
     if (!lat || !lng) {
       const geo = await geocodePlace(addForm.place.trim());
       if (geo) { lat = geo.lat; lng = geo.lng; }
+      else showToast(`Couldn't find "${addForm.place.trim()}" on the map. Added without a pin. Pick a suggestion to place it.`);
     }
 
     const dayStops = stops.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
@@ -1075,7 +1067,7 @@ export default function TripDetailPage() {
                                   onSelect={(loc) => setAddForm(f => ({ ...f, place: loc.name, lat: loc.lat, lng: loc.lng }))}
                                   placeholder="Search location or landmark..."
                                 />
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                   <select
                                     value={addForm.item_type}
                                     onChange={e => setAddForm(f => ({ ...f, item_type: e.target.value }))}
@@ -1898,27 +1890,30 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--bg-subtle)',
     border: '1px solid var(--border-subtle)',
     borderRadius: 12,
-    padding: 16,
+    padding: 16, boxSizing: 'border-box', minWidth: 0,
   },
   selectInput: {
-    padding: '8px 12px',
+    width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, fontFamily: 'inherit',
+    padding: '10px 12px',
     background: 'var(--bg-card)',
     border: '1px solid var(--border-input)',
     borderRadius: 8,
     color: 'var(--text-primary)',
-    fontSize: 13,
+    fontSize: 16,
     outline: 'none',
   },
   textInput: {
-    padding: '8px 12px',
+    width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, fontFamily: 'inherit',
+    padding: '10px 12px',
     background: 'var(--bg-card)',
     border: '1px solid var(--border-input)',
     borderRadius: 8,
     color: 'var(--text-primary)',
-    fontSize: 13,
+    fontSize: 16,
     outline: 'none',
   },
   btnConfirmAdd: {
+    flex: 1, minHeight: 44,
     padding: '8px 16px',
     background: 'var(--btn-primary-bg)',
     color: 'var(--btn-primary-text)',
@@ -1929,6 +1924,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
   },
   btnCancelAdd: {
+    flex: 1, minHeight: 44,
     padding: '8px 14px',
     background: 'transparent',
     color: 'var(--text-secondary)',
