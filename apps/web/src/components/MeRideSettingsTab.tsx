@@ -313,7 +313,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                 style={{
                   padding: '6px 12px',
                   backgroundColor: 'var(--pz-bad)',
-                  color: '#FFFFFF',
+                  color: 'var(--pz-on-bad)',
                   border: 'none',
                   borderRadius: 8,
                   fontSize: 11,

@@ -368,8 +368,8 @@ export default function JoinRoomPage() {
             {/* Route Visualizer Card */}
             <div style={styles.routeContainer}>
               <div style={styles.routePoint}>
-                <span style={{ color: '#10b981', fontSize: 16 }}><Icon name="dot" /></span>
-                <div>
+                <span style={{ color: '#10b981', fontSize: 16, flexShrink: 0 }}><Icon name="dot" /></span>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={styles.routeLabel}>Origin</div>
                   <div style={styles.routePlace}>{preview.from_place}</div>
                 </div>
@@ -381,8 +381,8 @@ export default function JoinRoomPage() {
               </div>
 
               <div style={styles.routePoint}>
-                <span style={{ color: '#ef4444', fontSize: 16 }}><Icon name="flag" /></span>
-                <div>
+                <span style={{ color: '#ef4444', fontSize: 16, flexShrink: 0 }}><Icon name="flag" /></span>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={styles.routeLabel}>Destination</div>
                   <div style={styles.routePlace}>{preview.to_place}</div>
                 </div>
@@ -642,8 +642,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   routeContainer: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
     background: 'var(--bg-subtle)',
     border: '1px solid var(--border-subtle)',
     borderRadius: 14,
@@ -668,12 +669,10 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 800,
     color: 'var(--text-primary)',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    overflowWrap: 'anywhere',
   },
   routeConnector: {
-    display: 'flex',
+    display: 'none',
     alignItems: 'center',
     gap: 4,
     padding: '0 8px',

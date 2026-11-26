@@ -101,7 +101,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 36,
     padding: '6px 12px',
     backgroundColor: 'var(--pz-bad)',
-    color: '#FFFFFF',
+    color: 'var(--pz-on-bad)',
     border: 'none',
     borderRadius: 10,
     fontWeight: 900,

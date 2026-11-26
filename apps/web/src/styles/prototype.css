@@ -16,6 +16,8 @@
   --pz-accent: #e8b100;
   --pz-on-accent: #15171a;
   --pz-ok: #1e8a4c;
+  --pz-on-ok: #ffffff;
+  --pz-on-bad: #ffffff;
   --pz-warn: #b86e00;
   --pz-bad: #b3261e;
   --pz-stale: #7a7f87;
@@ -62,6 +64,8 @@
   --pz-accent: #f0c23a;
   --pz-on-accent: #111316;
   --pz-ok: #5cc68a;
+  --pz-on-ok: #0d1a12;
+  --pz-on-bad: #1c0b09;
   --pz-warn: #e8a943;
   --pz-bad: #f08a80;
   --pz-stale: #9ca2ab;
@@ -228,7 +232,7 @@ button:active:not(:disabled),
   padding: 0 4px;
   border-radius: 999px;
   background: var(--pz-bad);
-  color: #fff;
+  color: var(--pz-on-bad);
   font: 700 10px/16px Manrope, sans-serif;
   text-align: center;
 }
