@@ -12,7 +12,6 @@ import {
   CaptainAnnouncementModal,
   QuickStatusDrawer,
   PinStopModal,
-  StopArrivalTracker,
   createRiderMarkerIcon,
   RiderRosterRow,
   StopDetailSheet,
@@ -1970,19 +1969,6 @@ export default function RidePage() {
     return Object.values(ridersArrival).filter((r) => r.status === 'arrived').length;
   }, [ridersArrival]);
 
-  const enrichedRidersArrival = useMemo(() => {
-    const result: Record<string, RiderArrivalInfo> = {};
-    for (const [uid, arrival] of Object.entries(ridersArrival)) {
-      const riderMeta = ridersWithFreshness.find((r) => r.userId === uid);
-      result[uid] = {
-        ...arrival,
-        isStale: riderMeta ? (riderMeta.freshness.isStale || riderMeta.freshness.isUnknown) : false,
-        ageLabel: riderMeta?.freshness.ageLabel,
-      };
-    }
-    return result;
-  }, [ridersArrival, ridersWithFreshness]);
-
   const handleFocusRider = useCallback((rider: RiderRosterData) => {
     setFocusTarget([rider.lat, rider.lng]);
     setFollowing(false);
@@ -2392,30 +2378,6 @@ export default function RidePage() {
           onSaveFuel={(f) => { saveFuelState(sessionId, user.id, f); setFuelState(f); setReadyStep(null); }}
         />
       )}
-
-      {/* Stop Arrival & ETA Tracker Bar */}
-      {pinnedStop && (
-        <div style={{ order: 2, flexShrink: 0 }}>
-        <StopArrivalTracker
-          pinnedStop={pinnedStop}
-          ridersArrival={enrichedRidersArrival}
-          currentUserId={user?.id}
-          myDistanceKm={myLat && myLng ? haversineKm(myLat, myLng, pinnedStop.lat, pinnedStop.lng) : null}
-          mySpeedKmh={mySpeedKmh}
-          isMyStale={myFreshness.isStale || myFreshness.isUnknown}
-          myAgeLabel={myFreshness.ageLabel}
-          onToggleMyArrival={handleToggleMyArrival}
-          onOpenNavigation={(target) => {
-            setNavTarget(target);
-            setShowNavModal(true);
-          }}
-          onChangePin={isLead ? () => setShowPinModal(true) : undefined}
-          onClearPin={handleClearPin}
-          isLeader={isLead}
-        />
-        </div>
-      )}
-
 
       {/* Map tab — always rendered, shown/hidden via visibility so Leaflet doesn't break */}
       <div style={{
@@ -3076,6 +3038,13 @@ export default function RidePage() {
                 onOpenDetail={() => setShowStopDetailSheet(true)}
                 onOpenTellGroup={() => setShowTellGroupSheet(true)}
                 onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
+                mySpeedKmh={mySpeedKmh}
+                isMyStale={myFreshness.isStale || myFreshness.isUnknown}
+                myAgeLabel={myFreshness.ageLabel}
+                isMeArrived={user?.id ? ridersArrival[user.id]?.status === 'arrived' : false}
+                onToggleMyArrival={handleToggleMyArrival}
+                onOpenNavigation={() => { setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng }); setShowNavModal(true); }}
+                onChangeStop={isLead ? () => setShowPinModal(true) : undefined}
               />
             </div>
             )}
@@ -3103,6 +3072,13 @@ export default function RidePage() {
                   onOpenDetail={() => setShowStopDetailSheet(true)}
                   onOpenTellGroup={() => setShowTellGroupSheet(true)}
                   onPinNewStop={isLead ? () => setShowPinModal(true) : undefined}
+                  mySpeedKmh={mySpeedKmh}
+                  isMyStale={myFreshness.isStale || myFreshness.isUnknown}
+                  myAgeLabel={myFreshness.ageLabel}
+                  isMeArrived={user?.id ? ridersArrival[user.id]?.status === 'arrived' : false}
+                  onToggleMyArrival={handleToggleMyArrival}
+                  onOpenNavigation={() => { setNavTarget({ name: pinnedStop.name, lat: pinnedStop.lat, lng: pinnedStop.lng }); setShowNavModal(true); }}
+                  onChangeStop={isLead ? () => setShowPinModal(true) : undefined}
                 />
               </div>
             )}
@@ -3883,6 +3859,10 @@ export default function RidePage() {
         onChangeStop={isLead ? () => {
           setShowStopDetailSheet(false);
           setShowPinModal(true);
+        } : undefined}
+        onClearPin={isLead ? () => {
+          setShowStopDetailSheet(false);
+          handleClearPin();
         } : undefined}
       />
 
