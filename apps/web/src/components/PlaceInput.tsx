@@ -28,19 +28,19 @@ export default function PlaceInput({
   placeholder,
   style,
 }: PlaceInputProps) {
-  const { suggestions, search, clear } = usePlaceSearch();
+  const { suggestions, status, search, clear } = usePlaceSearch();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) {
         setOpen(false);
         clear();
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
   }, [clear]);
 
   const handleSelect = (s: { display_name: string; lat: string; lon: string }) => {
@@ -62,8 +62,13 @@ export default function PlaceInput({
           search(e.target.value);
           setOpen(true);
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && open && suggestions[0]) { e.preventDefault(); handleSelect(suggestions[0]); }
+        }}
         placeholder={placeholder}
         autoComplete="off"
+        autoCorrect="off"
+        enterKeyHint="search"
         style={{
           width: '100%',
           padding: '12px 14px',
@@ -71,13 +76,25 @@ export default function PlaceInput({
           border: '1px solid var(--border-input)',
           borderRadius: 10,
           color: 'var(--text-primary)',
-          fontSize: 14,
+          fontSize: 16,
           outline: 'none',
           boxSizing: 'border-box',
+          minWidth: 0,
           fontFamily: 'inherit',
           transition: 'border-color 0.15s ease, background-color 0.2s ease',
         }}
       />
+      {open && value.trim().length >= 3 && suggestions.length === 0 && status !== 'idle' && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6, padding: '10px 14px', zIndex: 9999,
+          background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 10,
+          fontSize: 13, color: 'var(--text-secondary)', boxShadow: 'var(--card-shadow)',
+        }}>
+          {status === 'loading' && 'Searching…'}
+          {status === 'done' && 'No places found. Try adding the town or district name.'}
+          {status === 'error' && 'Could not search right now. Check your connection and keep typing to retry.'}
+        </div>
+      )}
       {open && suggestions.length > 0 && (
         <ul style={{
           position: 'absolute',
