@@ -10,6 +10,7 @@ export interface MeRideSettingsTabProps {
   onToggleBatterySaver: (enabled: boolean) => void;
   wakeLockActive?: boolean;
   onToggleWakeLock?: () => void;
+  onLockScreen?: () => void;
   onReturnToRide: () => void;
   onEndRide?: () => void;
   isCaptain?: boolean;
@@ -22,6 +23,7 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
   onToggleBatterySaver,
   wakeLockActive,
   onToggleWakeLock,
+  onLockScreen,
   onReturnToRide,
   onEndRide,
   isCaptain,
@@ -169,6 +171,48 @@ export const MeRideSettingsTab: React.FC<MeRideSettingsTabProps> = ({
                     transform: wakeLockActive ? 'translateX(22px)' : 'translateX(2px)',
                   }}
                 />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Screen Touch Lock (Pouch & Pocket Protection) */}
+        {onLockScreen && (
+          <div style={styles.settingCard}>
+            <div style={styles.settingRow}>
+              <div style={styles.settingTextWrap}>
+                <div style={styles.settingLabelWrap}>
+                  <span style={styles.settingIcon}><Icon name="lock" /></span>
+                  <span style={styles.settingTitle}>Pouch & pocket touch lock</span>
+                </div>
+                <p style={styles.settingSub}>
+                  Blocks random ghost touches when phone is in a handlebar bag or pocket. Hold 1.2s to unlock.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onLockScreen();
+                  onReturnToRide();
+                }}
+                style={{
+                  padding: '7px 14px',
+                  backgroundColor: 'var(--pz-accent, #F0C23A)',
+                  color: 'var(--pz-on-accent, #111316)',
+                  border: 'none',
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <Icon name="lock" />
+                <span>Lock now</span>
               </button>
             </div>
           </div>

@@ -68,6 +68,7 @@ import {
   TrackingPausedBanner,
   PictureInPictureHud,
   PipRiderData,
+  ScreenTouchLockOverlay,
   backgroundTrackingEngine,
 } from '../components';
 import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem, BackgroundTrackingStatus } from '../components';
@@ -381,6 +382,35 @@ export default function RidePage() {
   const [navSteps, setNavSteps] = useState<NavStep[]>([]);
   const [endingRide, setEndingRide] = useState(false);
   const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [isScreenLocked, setIsScreenLocked] = useState(false);
+
+  const handleToggleScreenLock = useCallback(() => {
+    setIsScreenLocked((prev) => {
+      const next = !prev;
+      if (next) {
+        setToast('Screen locked: Accidental pouch touches blocked. Live navigation active.');
+        // Ensure wakeLock is active so phone screen doesn't turn off in pouch
+        if (!wakeLockActive && 'wakeLock' in navigator) {
+          (navigator as Navigator & { wakeLock?: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock?.request('screen')
+            .then((sentinel) => {
+              wakeLockRef.current = sentinel;
+              setWakeLockActive(true);
+            })
+            .catch(() => {});
+        }
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          try {
+            navigator.vibrate([30, 40]);
+          } catch {
+            /* ignore vibrate failure */
+          }
+        }
+      } else {
+        setToast('Screen unlocked');
+      }
+      return next;
+    });
+  }, [wakeLockActive]);
 
   // Feature P1: Background tracking reliability status
   const [trackingStatus, setTrackingStatus] = useState<BackgroundTrackingStatus>(
@@ -2132,6 +2162,9 @@ export default function RidePage() {
       <button type="button" onClick={() => setShowTellGroupSheet(true)} aria-label="Tell group" title="Tell group (quick message)" style={fabBtn}>
         <Icon name="megaphone" />
       </button>
+      <button type="button" onClick={handleToggleScreenLock} aria-label="Lock screen against pouch touches" title="Lock screen (prevent pouch touches)" style={{ ...fabBtn, color: 'var(--pz-accent, #F0C23A)' }}>
+        <Icon name="lock" />
+      </button>
       {!following && myLat && myLng && (
         <button type="button" onClick={() => { setFollowing(true); setFocusTarget(null); }} aria-label="Re-center on me" title="Re-center on me"
           style={{ ...fabBtn, color: 'var(--pz-warn)', borderColor: 'var(--pz-accent)' }}>
@@ -2857,6 +2890,20 @@ export default function RidePage() {
               }}
             >
               <Icon name="fuel" />
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleScreenLock}
+              aria-label="Lock screen against pouch touches"
+              title="Lock screen (prevent pouch touches)"
+              style={{
+                pointerEvents: 'auto', width: 38, height: 38, borderRadius: 999, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+                backgroundColor: 'rgba(27, 30, 35, 0.88)', backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.25)', color: 'var(--pz-accent, #F0C23A)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+              }}
+            >
+              <Icon name="lock" />
             </button>
             {wakeLockActive && (
               <div
@@ -3724,6 +3771,7 @@ export default function RidePage() {
           onToggleBatterySaver={handleToggleBatterySaver}
           wakeLockActive={wakeLockActive}
           onToggleWakeLock={() => setWakeLockActive((w) => !w)}
+          onLockScreen={handleToggleScreenLock}
           onReturnToRide={() => setTab('map')}
           onEndRide={handleEndRide}
           isCaptain={isLead}
@@ -3939,6 +3987,16 @@ export default function RidePage() {
           onNavigateToDiscover={() => setTab('discover')}
         />
       )}
+
+      {/* Screen Touch Lock Overlay (Pouch / Pocket / Bike Mount Ghost-Touch Blocker) */}
+      <ScreenTouchLockOverlay
+        isLocked={isScreenLocked}
+        onUnlock={() => setIsScreenLocked(false)}
+        currentSpeedKmh={mySpeedKmh}
+        tripTitle={session?.trips?.title}
+        pinnedStopName={pinnedStop?.name}
+        distToPinnedStopKm={distToPinnedStop}
+      />
     </div>
   );
 }

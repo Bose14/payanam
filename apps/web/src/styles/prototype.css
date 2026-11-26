@@ -103,6 +103,27 @@ body {
   color: var(--pz-ink);
 }
 
+/* ------------------------ mobile touch & fluidity ------------------------ */
+*, *::before, *::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, input, select, textarea, [role='button'], .pz-btn, .pz-tabs button, .pz-tabs a {
+  touch-action: manipulation;
+}
+
+button:active:not(:disabled),
+[role='button']:active,
+.pz-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform 0.08s ease;
+}
+
+.pz-main, .pz-shell, [data-scrollable='true'] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
 /* ------------------------------ app shell -------------------------------- */
 .pz-shell {
   position: relative;
