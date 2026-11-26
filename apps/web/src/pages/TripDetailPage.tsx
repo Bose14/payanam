@@ -256,6 +256,7 @@ export default function TripDetailPage() {
   };
 
   const tripIdRef = useRef<string | null>(null);
+  const daysRef = useRef<number | undefined>(undefined);
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userEditedRef = useRef(false);
 
@@ -314,7 +315,7 @@ export default function TripDetailPage() {
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
     setSaveStatus('saving');
     try {
-      await tripService.updateItinerary(tid, currentStops);
+      await tripService.updateItinerary(tid, currentStops, daysRef.current);
       setSaveStatus('saved');
     } catch {
       setSaveStatus('unsaved');
@@ -421,6 +422,32 @@ export default function TripDetailPage() {
       const dayItems = filtered.filter(s => s.day_number === day).sort((a, b) => a.order_index - b.order_index);
       return filtered.map(s => s.day_number !== day ? s : { ...s, order_index: dayItems.indexOf(s) + 1 });
     });
+  };
+
+  const addDay = () => {
+    if (!trip || trip.days >= 30) return;
+    const next = trip.days + 1;
+    daysRef.current = next;
+    userEditedRef.current = true;
+    setTrip({ ...trip, days: next });
+    setOpenDays(prev => new Set(prev).add(next));
+    setAddingToDay(next);
+    setAddForm({ place: '', item_type: 'attraction', description: '' });
+    // Touch stops so the debounced auto-save persists the new day count.
+    setStops(prev => [...prev]);
+    showToast(`Day ${next} added`);
+  };
+
+  const removeLastDay = () => {
+    if (!trip || trip.days <= 1) return;
+    if (stops.some(s => s.day_number === trip.days)) return;
+    const next = trip.days - 1;
+    daysRef.current = next;
+    userEditedRef.current = true;
+    setTrip({ ...trip, days: next });
+    setAddingToDay(null);
+    setStops(prev => [...prev]);
+    showToast(`Day ${trip.days} removed`);
   };
 
   const addStop = async (day: number) => {
@@ -1119,6 +1146,19 @@ export default function TripDetailPage() {
                 </div>
               );
             })}
+
+            {trip?.isOwner && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={addDay} disabled={trip.days >= 30} style={{ ...styles.btnAddStopTrigger, flex: 1, minHeight: 48 }}>
+                  + Add Day {trip.days + 1}
+                </button>
+                {trip.days > 1 && !stops.some(s => s.day_number === trip.days) && (
+                  <button type="button" onClick={removeLastDay} style={{ ...styles.btnCancelAdd, flex: '0 0 auto', padding: '8px 14px' }} aria-label={`Remove Day ${trip.days}`} title={`Remove Day ${trip.days}`}>
+                    Remove Day {trip.days}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
