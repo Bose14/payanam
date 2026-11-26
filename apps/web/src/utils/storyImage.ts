@@ -27,16 +27,6 @@ export function loadImageFile(file: File): Promise<HTMLImageElement> {
   });
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLines: number): string[] {
   const words = text.split(' ');
   const lines: string[] = [];
@@ -95,15 +85,14 @@ function drawRoute(ctx: CanvasRenderingContext2D, route: Array<[number, number]>
     ctx.beginPath();
     pts.forEach((p, i) => { const q = proj(p); if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); });
   };
-  path(); ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 16; ctx.stroke();
-  path(); ctx.strokeStyle = accent; ctx.lineWidth = 9; ctx.shadowColor = accent; ctx.shadowBlur = 24; ctx.stroke();
-  ctx.shadowBlur = 0;
+  path(); ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 15; ctx.stroke();
+  path(); ctx.strokeStyle = accent; ctx.lineWidth = 9; ctx.stroke();
   const a = proj(pts[0]);
   const b = proj(pts[pts.length - 1]);
-  ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = accent; ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.arc(a.x, a.y, 15, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#EF4444'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 5;
-  ctx.beginPath(); ctx.arc(b.x, b.y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#22C55E'; ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(a.x, a.y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.strokeStyle = accent; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.arc(b.x, b.y, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
 
@@ -132,119 +121,104 @@ export function drawStory(canvas: HTMLCanvasElement, o: StoryOptions) {
     g.addColorStop(0, stops[0]); g.addColorStop(1, stops[stops.length - 1]);
     ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   }
-  // Soft shading at the top and bottom keeps text readable on any photo.
-  const top = ctx.createLinearGradient(0, 0, 0, h * 0.28);
-  top.addColorStop(0, 'rgba(0,0,0,0.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = top; ctx.fillRect(0, 0, w, h * 0.28);
-  const bottom = ctx.createLinearGradient(0, h * 0.55, 0, h);
-  bottom.addColorStop(0, 'rgba(0,0,0,0)'); bottom.addColorStop(1, 'rgba(0,0,0,0.78)');
-  ctx.fillStyle = bottom; ctx.fillRect(0, h * 0.55, w, h * 0.45);
+  // Shading: darker at the top for the title and at the bottom for the numbers.
+  const top = ctx.createLinearGradient(0, 0, 0, h * 0.34);
+  top.addColorStop(0, 'rgba(0,0,0,0.62)'); top.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = top; ctx.fillRect(0, 0, w, h * 0.34);
+  const bottom = ctx.createLinearGradient(0, h * 0.42, 0, h);
+  bottom.addColorStop(0, 'rgba(0,0,0,0)'); bottom.addColorStop(1, 'rgba(0,0,0,0.82)');
+  ctx.fillStyle = bottom; ctx.fillRect(0, h * 0.42, w, h * 0.58);
 
-  // Top bar: brand and date.
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 46px ${F}`;
-  ctx.textAlign = 'left';
-  ctx.fillText('PAYANAM', pad, pad + 46);
-  ctx.font = `700 30px ${F}`;
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.textAlign = 'right';
-  ctx.fillText(o.summary.completedAt, w - pad, pad + 44);
-  ctx.textAlign = 'left';
-
-  // Expedition pill.
-  const pill = 'EXPEDITION COMPLETED';
-  ctx.font = `900 28px ${F}`;
-  const pw = ctx.measureText(pill).width + 56;
-  roundRect(ctx, pad, pad + 86, pw, 62, 31);
-  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill();
-  ctx.strokeStyle = accent; ctx.lineWidth = 3; ctx.stroke();
-  ctx.fillStyle = accent;
-  ctx.fillText(pill, pad + 28, pad + 86 + 42);
-
-  // Measure the panel first so it always fits its text.
   const c = o.customization;
-  const iw = w - pad * 2 - 80;
-  ctx.font = `900 56px ${F}`;
-  const titleLines = wrapLines(ctx, `${o.summary.fromPlace} → ${o.summary.toPlace}`, iw, 2);
-  const names = o.summary.sanitizedStopsList.filter(Boolean);
-  ctx.font = `600 29px ${F}`;
-  const nameLines = names.length > 1 ? wrapLines(ctx, names.join(' → '), iw, 2) : [];
-  const stats: Array<[string, string]> = [];
-  if (c.showDistance) stats.push([String(o.summary.totalDistanceKm), 'KM']);
-  if (c.showDays) stats.push([String(o.summary.daysCount), o.summary.daysCount === 1 ? 'DAY' : 'DAYS']);
-  if (c.showStops) stats.push([String(o.summary.stopsClearedCount), 'STOPS']);
-  if (c.showRiders && o.summary.coRidersCount > 1) stats.push([String(o.summary.coRidersCount), 'RIDERS']);
-  const bikeText = c.showBikeModel && o.summary.bikeModel ? o.summary.bikeModel : '';
-  ctx.font = `italic 600 30px ${F}`;
-  const noteLines = c.customNote ? wrapLines(ctx, `“${c.customNote}”`, iw, 2) : [];
-  const panelH = 40 + 36 + titleLines.length * 62 + (nameLines.length ? 14 + nameLines.length * 40 : 0)
-    + 36 + (stats.length ? 130 : 0) + (bikeText ? 62 : 0)
-    + (noteLines.length ? (bikeText ? 52 : 62) + (noteLines.length - 1) * 40 + 20 : 0) + 40;
-  const panelY = h - pad - panelH;
+  const isStory = o.format === 'story';
+  const shadow = () => { ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; };
+  const noShadow = () => { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
 
-  // Route line floats over the photo, like a map overlay.
-  if (o.showRoute && o.route && o.route.length > 1) {
-    const box = o.format === 'story'
-      ? { x: w * 0.45, y: pad + 200, w: w * 0.48, h: panelY - pad - 240 }
-      : { x: w * 0.5, y: pad + 190, w: w * 0.43, h: panelY - pad - 230 };
-    drawRoute(ctx, o.route, box, accent);
-  }
-
-  // Glass panel with the route names and the numbers.
-  const px = pad, pwid = w - pad * 2;
-  roundRect(ctx, px, panelY, pwid, panelH, 36);
-  ctx.fillStyle = 'rgba(8,10,12,0.62)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 2; ctx.stroke();
-
-  const ix = px + 40;
-  let y = panelY + 40;
-  ctx.fillStyle = accent;
-  ctx.fillRect(ix, y + 6, 44, 8);
+  // Top left: ride name and date. Top right: brand.
+  shadow();
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `900 56px ${F}`;
-  y += 36;
-  for (const l of titleLines) { y += 62; ctx.fillText(l, ix, y); }
+  ctx.font = `800 ${isStory ? 60 : 54}px ${F}`;
+  const titleLines = wrapLines(ctx, `${o.summary.fromPlace} → ${o.summary.toPlace}`, w - pad * 2, 2);
+  let ty = pad + 56;
+  for (const l of titleLines) { ctx.fillText(l, pad, ty); ty += isStory ? 68 : 62; }
+  ctx.font = `600 30px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(o.summary.completedAt, pad, ty + 4);
 
-  if (nameLines.length) {
-    ctx.font = `600 29px ${F}`;
-    ctx.fillStyle = 'rgba(255,255,255,0.78)';
-    y += 14;
-    for (const l of nameLines) { y += 40; ctx.fillText(l, ix, y); }
+  // Numbers: label above a big value, stacked at the bottom left.
+  type Stat = { label: string; value: string; unit?: string };
+  const stats: Stat[] = [];
+  if (c.showDistance) stats.push({ label: 'Distance', value: String(o.summary.totalDistanceKm), unit: 'km' });
+  if (c.showDays) stats.push({ label: o.summary.daysCount === 1 ? 'Day' : 'Days', value: String(o.summary.daysCount) });
+  if (c.showStops) stats.push({ label: 'Stops', value: String(o.summary.stopsClearedCount) });
+  if (c.showRiders && o.summary.coRidersCount > 1) stats.push({ label: 'Riders', value: String(o.summary.coRidersCount) });
+  const bike = c.showBikeModel && o.summary.bikeModel && !/^(motorcycle|bike|scooter)$/i.test(o.summary.bikeModel.trim()) ? o.summary.bikeModel : '';
+  const valueSize = isStory ? 120 : 92;
+  const labelSize = isStory ? 32 : 28;
+  const rowH = valueSize + labelSize + (isStory ? 30 : 22);
+
+  ctx.font = `italic 600 32px ${F}`;
+  const noteLines = c.customNote ? wrapLines(ctx, `“${c.customNote}”`, w - pad * 2, 2) : [];
+  const footerY = h - pad;
+  const noteH = noteLines.length ? noteLines.length * 42 + 30 : 0;
+  const bikeH = bike ? 50 : 0;
+  const blockBottom = footerY - 80 - noteH - bikeH;
+  const blockTop = blockBottom - stats.length * rowH;
+
+  stats.forEach((st, i) => {
+    const y0 = blockTop + i * rowH;
+    shadow();
+    ctx.fillStyle = 'rgba(255,255,255,0.88)';
+    ctx.font = `600 ${labelSize}px ${F}`;
+    ctx.fillText(st.label, pad, y0 + labelSize);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `800 ${valueSize}px ${F}`;
+    ctx.fillText(st.value, pad, y0 + labelSize + valueSize - 8);
+    if (st.unit) {
+      const vw = ctx.measureText(st.value).width;
+      ctx.font = `700 ${Math.round(valueSize * 0.4)}px ${F}`;
+      ctx.fillText(st.unit, pad + vw + 12, y0 + labelSize + valueSize - 8);
+    }
+  });
+
+  // Route line sits to the right of the numbers, like the map on a Strava share.
+  if (o.showRoute && o.route && o.route.length > 1 && stats.length) {
+    noShadow();
+    const bw = isStory ? 440 : 400;
+    const bh = Math.min(stats.length * rowH, isStory ? 640 : 480);
+    drawRoute(ctx, o.route, { x: w - pad - bw, y: blockBottom - bh - 10, w: bw, h: bh }, accent);
   }
 
-  y += 36;
-  if (stats.length) {
-    const gap = 16;
-    const bw = (iw - gap * (stats.length - 1)) / stats.length;
-    stats.forEach(([v, l], i) => {
-      const bx = ix + i * (bw + gap);
-      roundRect(ctx, bx, y, bw, 130, 22);
-      ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fill();
-      ctx.textAlign = 'center';
-      ctx.fillStyle = i === 0 ? accent : '#FFFFFF';
-      ctx.font = `900 58px ${F}`;
-      ctx.fillText(v, bx + bw / 2, y + 68);
-      ctx.fillStyle = 'rgba(255,255,255,0.72)';
-      ctx.font = `800 24px ${F}`;
-      ctx.fillText(l, bx + bw / 2, y + 108);
-    });
-    ctx.textAlign = 'left';
-    y += 130;
-  }
-
-  if (bikeText) {
-    y += 62;
-    ctx.font = `800 30px ${F}`;
+  let y = blockBottom + 20;
+  shadow();
+  if (bike) {
+    y += 34;
     ctx.fillStyle = accent;
-    ctx.fillText(bikeText, ix, y);
+    ctx.font = `800 32px ${F}`;
+    ctx.fillText(bike, pad, y);
+    y += 16;
   }
   if (noteLines.length) {
-    ctx.font = `italic 600 30px ${F}`;
     ctx.fillStyle = '#FFFFFF';
-    y += bikeText ? 52 : 62;
-    for (const l of noteLines) { ctx.fillText(l, ix, y); y += 40; }
+    ctx.font = `italic 600 32px ${F}`;
+    y += 44;
+    for (const l of noteLines) { ctx.fillText(l, pad, y); y += 42; }
   }
+
+  // Footer brand line.
+  noShadow();
+  ctx.fillStyle = accent;
+  ctx.fillRect(pad, footerY - 8, 56, 8);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = `900 28px ${F}`;
+  ctx.fillText('PAYANAM', pad + 76, footerY);
+  ctx.textAlign = 'right';
+  ctx.font = `600 26px ${F}`;
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillText('Ride with your convoy', w - pad, footerY);
+  ctx.textAlign = 'left';
 }
 
 export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
