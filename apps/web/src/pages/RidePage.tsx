@@ -2156,14 +2156,11 @@ export default function RidePage() {
       {isLead && !pinnedStop && (
         <button type="button" onClick={() => setShowPinModal(true)} aria-label="Add next stop" title="Add next stop"
           style={{ ...fabBtn, backgroundColor: 'var(--pz-accent)', borderColor: 'var(--pz-accent)', color: 'var(--pz-on-accent)' }}>
-          <Icon name="pin" />
+          <Icon name="plus" />
         </button>
       )}
       <button type="button" onClick={() => setShowTellGroupSheet(true)} aria-label="Tell group" title="Tell group (quick message)" style={fabBtn}>
         <Icon name="megaphone" />
-      </button>
-      <button type="button" onClick={handleToggleScreenLock} aria-label="Lock screen against pouch touches" title="Lock screen (prevent pouch touches)" style={{ ...fabBtn, color: 'var(--pz-accent, #F0C23A)' }}>
-        <Icon name="lock" />
       </button>
       {!following && myLat && myLng && (
         <button type="button" onClick={() => { setFollowing(true); setFocusTarget(null); }} aria-label="Re-center on me" title="Re-center on me"
