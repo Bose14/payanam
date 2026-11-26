@@ -72,15 +72,11 @@ export function getPlatformType(): 'ios' | 'android' | 'desktop' {
  * iOS WebKit strictly restricts canvas captureStream from popping out to OS level,
  * whereas Android Chrome and modern desktop browsers fully support it.
  */
-interface WebkitVideoPrototype {
-  webkitSetPresentationMode?: (mode: string) => void;
-}
-
 export function isNativePipSupported(): boolean {
   if (typeof document === 'undefined') return false;
+  // Apple iOS WebKit (Safari, Brave, Chrome on iOS) does not support OS-level Picture-in-Picture for canvas captureStream.
+  if (isPlatformIos()) return false;
   const hasVideoPip = 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
   const hasDocPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
-  const hasWebkitPip = typeof HTMLVideoElement !== 'undefined' &&
-    typeof (HTMLVideoElement.prototype as unknown as WebkitVideoPrototype).webkitSetPresentationMode === 'function';
-  return hasVideoPip || hasDocPip || hasWebkitPip;
+  return hasVideoPip || hasDocPip;
 }

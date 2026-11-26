@@ -2,7 +2,7 @@ import Icon from './Icon';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { PinnedStopData } from './PinStopModal';
-import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
+import { getPipPreferences, savePipPreferences, isPlatformIos } from '../utils/pipPreferences';
 
 interface WebkitHTMLVideoElement extends HTMLVideoElement {
   webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -115,13 +115,13 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     };
   }, [pinnedStop, distToPinnedStop, arrivedCount, totalRiders, riders, currentSpeedKmh, sosActive, activeAnnouncement, tripTitle]);
 
-  // Check if platform supports native video PiP (Desktop, Android Chrome, and modern iOS Safari)
+  // Check if platform supports native video PiP (Desktop, Android Chrome).
+  // Note: Apple iOS WebKit strictly forbids canvas captureStream from popping out to OS level.
   useEffect(() => {
-    const hasVideoPip = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
-    const hasDocPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
-    const hasWebkitPip = typeof HTMLVideoElement !== 'undefined' &&
-      typeof (HTMLVideoElement.prototype as unknown as WebkitHTMLVideoElement).webkitSetPresentationMode === 'function';
-    setNativePipAvailable(hasVideoPip || hasDocPip || hasWebkitPip);
+    const isIos = isPlatformIos();
+    const hasVideoPip = !isIos && typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
+    const hasDocPip = !isIos && typeof window !== 'undefined' && 'documentPictureInPicture' in window;
+    setNativePipAvailable(hasVideoPip || hasDocPip);
   }, []);
 
   // 60 FPS Canvas Drawing Engine — Compact Non-Intrusive Ribbon for Mobile Navigation (420 x 155)
@@ -462,14 +462,15 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     onPipStateChange?.(false);
   }, [onPipStateChange]);
 
-  // Open PiP HUD (Native OS PiP on supported Android/Desktop & iOS Safari; 60 FPS In-App ribbon as fallback)
+  // Open PiP HUD (Native OS PiP on supported Android/Desktop; 60 FPS In-App ribbon on iOS & fallback)
   const openPip = useCallback(async () => {
     const prefs = getPipPreferences();
-    const forceInApp = prefs.preferredMode === 'in_app';
+    const isIos = isPlatformIos();
+    const forceInApp = isIos || prefs.preferredMode === 'in_app';
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
-    // 1. Try Native OS PiP if available (Desktop, Android Chrome, and iOS Safari via user tap)
+    // 1. Try Native OS PiP if available (Desktop, Android Chrome)
     if (!forceInApp && nativePipAvailable && canvas && video) {
       try {
         if (!streamRef.current && typeof canvas.captureStream === 'function') {
@@ -480,25 +481,19 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
         await video.play();
 
-        const webkitVideo = video as unknown as WebkitHTMLVideoElement;
         if (typeof video.requestPictureInPicture === 'function') {
           await video.requestPictureInPicture();
-        } else if (typeof webkitVideo.webkitSetPresentationMode === 'function') {
-          webkitVideo.webkitSetPresentationMode('picture-in-picture');
-        } else {
-          throw new Error('Native PiP not supported on this browser');
+          setIsPipActive(true);
+          setIsFloatingInApp(false);
+          onPipStateChange?.(true);
+          return;
         }
-
-        setIsPipActive(true);
-        setIsFloatingInApp(false);
-        onPipStateChange?.(true);
-        return;
       } catch (err) {
         console.warn('[PiP HUD] Native OS PiP failed, opening 60 FPS Floating In-App HUD:', err);
       }
     }
 
-    // 2. Mobile & iOS Safari Guaranteed Fallback: 60 FPS Floating In-App Cockpit Ribbon
+    // 2. Mobile & iOS Guaranteed Fallback: 60 FPS Floating In-App Cockpit Ribbon
     setIsFloatingInApp(true);
     setIsPipActive(true);
     onPipStateChange?.(true);
@@ -606,6 +601,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           border: '1.5px solid rgba(240, 194, 58, 0.8)',
           borderRadius: 16,
           padding: 8,
+          boxSizing: 'border-box',
           boxShadow: '0 12px 36px rgba(0, 0, 0, 0.8), 0 0 15px rgba(240, 194, 58, 0.2)',
           display: 'flex',
           flexDirection: 'column',
