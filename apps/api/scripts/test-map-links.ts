@@ -32,6 +32,7 @@ let photon = false;
     // The exact case from the field: modern share link -> place URL with a name and NO coordinates.
     if (url === 'https://maps.app.goo.gl/Sen') return new Response(null, { status: 302, headers: { location: 'https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2!3m1!1s0x3babe:0x1f?utm_source=mstt_1&entry=gps' } });
     if (url.startsWith('https://www.google.com/maps/place/Senthir') && url.includes('utm_source')) return new Response('<html><head><title>Senthir bhavan - Google Maps</title><meta content="https://maps.google.com/maps/api/staticmap?center=11.5943%2C78.1796&amp;zoom=16&amp;size=256x256" itemprop="image"></head></html>', { status: 200 });
+    if (url === 'https://maps.app.goo.gl/Inter') return new Response('<html><script>var l="https:\\/\\/www.google.com\\/maps\\/place\\/Pykara+Falls\\/@11.46,76.58,17z\\/data\\u003d!3d11.4601!4d76.5802?entry\\u003dttu";</script></html>', { status: 200 });
     if (url === 'https://maps.app.goo.gl/NoCoords') return new Response(null, { status: 302, headers: { location: 'https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2' } });
     if (url.startsWith('https://www.google.com/maps/place/Senthir+bhavan,+NH79,+Tamil+Nadu+636119/data=!4m2') ) return new Response('<html><title>Senthir bhavan - Google Maps</title></html>', { status: 200 });
     if (url.includes('/search') && decodeURIComponent(url).includes('q=Senthir bhavan, NH79')) return json([]);
@@ -68,6 +69,9 @@ let photon = false;
   photon = true;
   p = await resolveMapLink('https://maps.app.goo.gl/NoCoords', fetcher);
   near(p.lat, 11.5943); near(p.lng, 78.1796); assert.ok(!p.approximate);
+  // A 200 interstitial page that only contains the place link inside a script.
+  p = await resolveMapLink('https://maps.app.goo.gl/Inter', fetcher);
+  assert.match(p.name, /Pykara/); near(p.lat, 11.4601);
   // SSRF guard: a redirect to another host is refused.
   await assert.rejects(() => resolveMapLink('https://maps.app.goo.gl/loop', fetcher), MapLinkError);
   await assert.rejects(() => resolveMapLink('hello', fetcher), MapLinkError);

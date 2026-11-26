@@ -15,8 +15,9 @@ export interface ResolvedPlace {
   approximate?: boolean;
 }
 
-// A normal browser identity: Google serves a fuller page (with the place's coordinates) to browsers.
-const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+// We identify ourselves honestly. Google's short links redirect for this identity, whereas a
+// browser identity gets a 40 KB interstitial page with no place in it.
+const UA = 'Mozilla/5.0 (compatible; PayanamBot/1.0; +https://payanam.app)';
 
 export class MapLinkError extends Error {}
 
@@ -97,7 +98,6 @@ async function followRedirects(startUrl: string, doFetch: Fetcher): Promise<{ ur
         'User-Agent': UA,
         'Accept-Language': 'en-IN,en;q=0.9',
         Accept: 'text/html,application/xhtml+xml',
-        Cookie: 'CONSENT=YES+cb; SOCS=CAI',
       },
       signal: AbortSignal.timeout(8000),
     });
@@ -237,6 +237,47 @@ async function reverseName(lat: number, lng: number, doFetch: Fetcher): Promise<
   } catch { return ''; }
 }
 
+/** Map links inside a page we were served (meta tags, scripts, JSON with escaped slashes). */
+function mapUrlsInHtml(html: string): string[] {
+  const text = html
+    .replace(/\\u003d/gi, '=').replace(/\\u0026/gi, '&').replace(/\\u002F/gi, '/').replace(/\\\//g, '/')
+    .replace(/&amp;/g, '&');
+  const found = text.match(/https?:\/\/(?:www\.|maps\.)?(?:google\.[a-z.]{2,6}\/maps|maps\.apple\.com)[^\s"'<>\\)]*/gi) ?? [];
+  const uniq: string[] = [];
+  for (const u of found) {
+    const clean = u.replace(/[.,;]+$/, '');
+    if (!uniq.includes(clean)) uniq.push(clean);
+  }
+  // Links that already carry a point first.
+  return uniq.sort((x, y) => Number(parseMapUrl(y)?.lat !== undefined) - Number(parseMapUrl(x)?.lat !== undefined)).slice(0, 4);
+}
+
+type Found = { name: string; lat?: number; lng?: number; source: 'google' | 'apple' };
+
+/** Follow one link and read what it gives: the final URL, the page, and map links inside the page. */
+async function explore(url: string, doFetch: Fetcher, depth = 0): Promise<Found | null> {
+  const landed = await followRedirects(url, doFetch);
+  const afterUrl = parseMapUrl(landed.url);
+  if (afterUrl && afterUrl.lat !== undefined) return afterUrl;
+
+  const page = fromHtml(landed.html);
+  const source: 'google' | 'apple' = afterUrl?.source ?? (new URL(landed.url).hostname.includes('apple') ? 'apple' : 'google');
+  const name = afterUrl?.name || page.name || mapUrlsInHtml(landed.html).map(parseMapUrl).find((r) => r?.name)?.name || '';
+  if (page.lat !== undefined && page.lng !== undefined) return { name, lat: page.lat, lng: page.lng, source };
+
+  const inner = depth < 2 ? mapUrlsInHtml(landed.html).filter((u) => u !== landed.url && u !== url) : [];
+  console.log(`[mapLink] ${landed.url.slice(0, 40)} title="${page.name}" inner=${inner.length}${inner[0] ? ' first=' + inner[0].slice(0, 90) : ''}`);
+  let best: Found | null = name ? { name, source } : null;
+  for (const u of inner) {
+    const direct = parseMapUrl(u);
+    if (direct && direct.lat !== undefined) return direct;
+    const deeper = await explore(u, doFetch, depth + 1).catch(() => null);
+    if (deeper && deeper.lat !== undefined) return deeper;
+    if (!best && deeper?.name) best = deeper;
+  }
+  return best;
+}
+
 export async function resolveMapLink(input: string, doFetch: Fetcher = fetch): Promise<ResolvedPlace> {
   const text = (input ?? '').trim();
   // People paste "Place name https://maps.app.goo.gl/xyz" straight from the share sheet.
@@ -248,19 +289,8 @@ export async function resolveMapLink(input: string, doFetch: Fetcher = fetch): P
   }
   if (!raw) throw new MapLinkError('Paste a Google Maps or Apple Maps link.');
 
-  let parsed = parseMapUrl(raw);
-  if (!parsed) {
-    const { url, html } = await followRedirects(raw, doFetch);
-    const afterUrl = parseMapUrl(url);
-    if (afterUrl && afterUrl.lat !== undefined) parsed = afterUrl;
-    else {
-      const page = fromHtml(html);
-      const source = afterUrl?.source ?? (new URL(url).hostname.includes('apple') ? 'apple' : 'google');
-      const name = afterUrl?.name || page.name;
-      if (page.lat !== undefined && page.lng !== undefined) parsed = { name, lat: page.lat, lng: page.lng, source };
-      else if (name) parsed = { name, source };
-    }
-  }
+  let parsed: Found | null = parseMapUrl(raw);
+  if (!parsed) parsed = await explore(raw, doFetch);
   if (!parsed) throw new MapLinkError('Could not read a place from that link. Open the place in Maps, tap Share, and paste that link.');
 
   if (parsed.lat === undefined) {
@@ -271,6 +301,7 @@ export async function resolveMapLink(input: string, doFetch: Fetcher = fetch): P
     }
     return { name: parsed.name, lat: g.lat, lng: g.lng, source: parsed.source, approximate: !g.exact };
   }
-  const name = parsed.name || (await reverseName(parsed.lat, parsed.lng, doFetch)) || 'Dropped pin';
-  return { name, lat: parsed.lat, lng: parsed.lng, source: parsed.source };
+  const { lat, lng } = parsed as { lat: number; lng: number };
+  const name = parsed.name || (await reverseName(lat, lng, doFetch)) || 'Dropped pin';
+  return { name, lat, lng, source: parsed.source };
 }
