@@ -1,6 +1,5 @@
 import React from 'react';
 import { PinnedStopData } from './PinStopModal';
-import Icon from './Icon';
 
 interface NextStopBottomDockProps {
   pinnedStop: PinnedStopData | null;
@@ -19,41 +18,9 @@ export const NextStopBottomDock: React.FC<NextStopBottomDockProps> = ({
   totalCount,
   onOpenDetail,
   onOpenTellGroup,
-  onPinNewStop,
 }) => {
-  if (!pinnedStop) {
-    return (
-      <div style={styles.dockCard}>
-        <div style={styles.unpinnedInfo} onClick={onPinNewStop}>
-          <div>
-            <h4 style={styles.stopName}>No target stop pinned</h4>
-            <p style={styles.stopSub}>{onPinNewStop ? 'Choose a waypoint so your group shares a target' : 'The captain will pin the next stop for the group'}</p>
-          </div>
-        </div>
-
-        <div style={styles.btnRow}>
-          {onPinNewStop && (
-            <button
-              type="button"
-              onClick={onPinNewStop}
-              style={styles.btnPrimary}
-            >
-              <span><Icon name="pin" /></span>
-              <span>Choose stop</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onOpenTellGroup}
-            style={styles.btnSecondary}
-          >
-            <span><Icon name="chat" /></span>
-            <span>Tell group</span>
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // With no target stop the captain uses the add-stop button on the map; nothing is shown here.
+  if (!pinnedStop) return null;
 
   return (
     <div style={styles.dockCard}>
