@@ -13,7 +13,6 @@ import {
   QuickStatusDrawer,
   PinStopModal,
   StopArrivalTracker,
-  StaleRidersAlertBanner,
   createRiderMarkerIcon,
   RiderRosterRow,
   StopDetailSheet,
@@ -1776,9 +1775,6 @@ export default function RidePage() {
   }, [itineraryStops, activeRoute, totalRouteDist]);
 
   // Stale and unknown riders (for alert banner)
-  const staleRiders = useMemo(() => {
-    return ridersWithFreshness.filter((r) => !r.isMe && (r.freshness.isStale || r.freshness.isUnknown));
-  }, [ridersWithFreshness]);
 
   // Pre-ride checklist and fuel range planner (each rider sets their own, stored on this device)
   const [readyStep, setReadyStep] = useState<'checklist' | 'fuel' | null>(null);
@@ -3069,13 +3065,6 @@ export default function RidePage() {
             overflow: 'hidden',
             backgroundColor: 'var(--pz-bg)',
           }}>
-            {/* Stale Riders Warning Banner */}
-            <StaleRidersAlertBanner
-              staleCount={staleRiders.length}
-              staleRiderNames={staleRiders.map((r) => r.userName)}
-              onClick={() => setTab('riders')}
-            />
-
             {/* Rider Roster List (Scrolls in available middle space) */}
             <div style={{
               flex: 1,
@@ -3685,12 +3674,6 @@ export default function RidePage() {
       {/* Riders panel — Convoy Roster with Last-seen Freshness & Hollow Markers */}
       {tab === 'riders' && (
         <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 14px', backgroundColor: 'var(--pz-bg)' }}>
-          {/* Stale Riders Warning Banner */}
-          <StaleRidersAlertBanner
-            staleCount={staleRiders.length}
-            staleRiderNames={staleRiders.map((r) => r.userName)}
-          />
-
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '8px 2px 10px' }}>
             <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--pz-muted)', letterSpacing: 0.8, textTransform: 'uppercase' }}>
               Convoy Roster ({ridersWithFreshness.length})
