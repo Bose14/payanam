@@ -2558,51 +2558,6 @@ export default function RidePage() {
                 })()}
           
           
-                {/* Dedicated Expedition Route Strip for Mobile Users View (shown when progress strip is hidden/inactive) */}
-                {session?.trips?.title && tab === 'map' && (!splitView || activeRoute.length <= 1) && (
-                  <div style={{
-                    backgroundColor: 'var(--pz-surface)',
-                    border: '1.5px solid var(--pz-line)',
-                    borderRadius: 14,
-                    margin: '2px 12px 6px',
-                    padding: '6px 12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 22,
-                        height: 22,
-                        borderRadius: 6,
-                        backgroundColor: 'var(--pz-warn-bg)',
-                        color: 'var(--pz-warn)',
-                        fontSize: 12,
-                        flexShrink: 0,
-                      }}>
-                        <Icon name="map" />
-                      </span>
-                      <span style={{
-                        fontSize: 13,
-                        fontWeight: 800,
-                        color: 'var(--text-primary)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        letterSpacing: -0.2,
-                      }}>
-                        {session.trips.title}
-                      </span>
-                    </div>
-          
-                  </div>
-                )}
           
                 {/* Floating HUD Toast */}
                 {toast && (
