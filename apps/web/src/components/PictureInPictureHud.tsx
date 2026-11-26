@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { PinnedStopData } from './PinStopModal';
 import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
@@ -733,30 +734,22 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         <button
           type="button"
           onClick={togglePip}
+          aria-label={isPipActive ? 'Close floating view' : 'Open floating view'}
+          title={isPipActive ? 'Close floating view' : 'Open floating view'}
           style={{
+            width: 38, height: 38, borderRadius: 999, flexShrink: 0,
             backgroundColor: isPipActive ? 'var(--pz-warn-bg)' : 'rgba(27, 30, 35, 0.88)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             border: isPipActive ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid rgba(255,255,255,0.25)',
             color: isPipActive ? 'var(--pz-accent, #F0C23A)' : '#FFFFFF',
-            borderRadius: 20,
-            padding: '7px 12px',
-            fontSize: 11,
-            fontWeight: 800,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
+            fontSize: 18, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
-            opacity: 1,
-            touchAction: 'manipulation',
-            pointerEvents: 'auto',
-            transition: 'all 0.15s ease',
+            touchAction: 'manipulation', pointerEvents: 'auto', transition: 'all 0.15s ease',
           }}
-          title={isPipActive ? 'Close Picture-in-Picture HUD' : 'Open 60 FPS Picture-in-Picture Convoy HUD'}
         >
-          <span>📺</span>
-          <span>{isPipActive ? 'Pop out on' : 'Pop out'}</span>
+          <Icon name="eye" />
         </button>
       )}
     </>
