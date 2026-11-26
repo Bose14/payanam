@@ -39,9 +39,9 @@ const STEPS: Record<Platform, { meta: string; steps: React.ReactNode[] }> = {
   ios: {
     meta: 'iPhone & iPad (iOS 14+)',
     steps: [
-      <>In Payanam, tap the <b>floating view (👁️)</b> button in the top-left map controls.</>,
-      <>The <b>Convoy Floating HUD</b> instantly opens on your screen, showing your live speed, riders ahead & behind, and next stop.</>,
-      <><b>Apple iOS Note:</b> Apple does not allow any web browser (Brave, Safari, Chrome) to float dynamic web screens over other apps when minimized. Use <b>Pouch Touch Lock (🔒)</b> to keep the screen active on your bike mount or pouch with zero accidental touches!</>,
+      <>In iPhone <b>Settings &gt; General &gt; Picture in Picture</b>, ensure <b>Start PiP Automatically</b> is ON.</>,
+      <>In Payanam, tap the <b>floating view (👁️)</b> button. Payanam connects to Apple WebKit's native PiP presentation engine.</>,
+      <>Swipe up to minimize: the floating convoy HUD stays on screen! If your browser restricts it, Payanam shows the floating HUD inside the app.</>,
     ],
   },
   desktop: {
@@ -71,7 +71,7 @@ export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, sty
       onTestPip();
       setTestResult('Floating view opened. Look for the small window on screen.');
     } else if (platform === 'ios') {
-      setTestResult('Ready. On iPhone, Apple restricts Picture-in-Picture to video media files, so Payanam shows the floating HUD inside the app.');
+      setTestResult('Ready. On iPhone, Payanam connects to Apple WebKit Picture-in-Picture presentation engine.');
     } else if (typeof document !== 'undefined' && document.pictureInPictureEnabled) {
       setTestResult('Your browser supports floating over other apps. Make sure Picture-in-picture is allowed in phone settings.');
     } else {
