@@ -35,6 +35,7 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
   const [resolving, setResolving] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [pinnedFrom, setPinnedFrom] = useState<'google' | 'apple' | null>(null);
+  const [approx, setApprox] = useState(false);
 
   const resolve = async (value: string) => {
     const v = value.trim();
@@ -45,6 +46,7 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
       const p = await placeService.resolveLink(v);
       onChange({ ...draft, place: p.name, lat: p.lat, lng: p.lng });
       setPinnedFrom(p.source);
+      setApprox(!!p.approximate);
       setLink('');
     } catch (e) {
       setLinkError((e as Error).message);
@@ -65,7 +67,7 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
   };
 
   const hasPin = draft.lat !== undefined && draft.lng !== undefined;
-  const clearPin = () => { setPinnedFrom(null); onChange({ ...draft, place: '', lat: undefined, lng: undefined }); };
+  const clearPin = () => { setPinnedFrom(null); setApprox(false); onChange({ ...draft, place: '', lat: undefined, lng: undefined }); };
 
   return (
     <div style={S.card}>
@@ -84,7 +86,13 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
           <div style={S.row}>
             <input
               value={link}
-              onChange={(e) => { setLink(e.target.value); setLinkError(''); }}
+              onChange={(e) => {
+                const v = e.target.value;
+                setLink(v);
+                setLinkError('');
+                // A link dropped in all at once (long-press Paste, autofill) is read straight away.
+                if (looksLikeLink(v) && v.length - link.length > 12 && !resolving) resolve(v);
+              }}
               onPaste={(e) => {
                 const t = e.clipboardData.getData('text');
                 if (looksLikeLink(t)) { e.preventDefault(); setLink(t); resolve(t); }
@@ -125,7 +133,9 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
               aria-label="Stop name"
             />
             <div style={S.pinnedSub}>
-              Pinned{pinnedFrom ? ` from ${pinnedFrom === 'apple' ? 'Apple Maps' : 'Google Maps'}` : ''} · {draft.lat!.toFixed(4)}, {draft.lng!.toFixed(4)}
+              {approx
+                ? 'Approximate spot found from the name. Check it on the map.'
+                : `Pinned${pinnedFrom ? ` from ${pinnedFrom === 'apple' ? 'Apple Maps' : 'Google Maps'}` : ''} · ${draft.lat!.toFixed(4)}, ${draft.lng!.toFixed(4)}`}
             </div>
           </div>
           <button type="button" onClick={clearPin} style={S.iconBtn} aria-label="Remove pin and choose another" title="Choose another"><Icon name="close" /></button>

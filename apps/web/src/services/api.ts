@@ -264,7 +264,7 @@ export const tripService = {
   },
 };
 
-export interface ResolvedMapPlace { name: string; lat: number; lng: number; source: 'google' | 'apple' }
+export interface ResolvedMapPlace { name: string; lat: number; lng: number; source: 'google' | 'apple'; approximate?: boolean }
 
 export const placeService = {
   /** Reads a pasted Google Maps or Apple Maps link (short links included) into a named point. */

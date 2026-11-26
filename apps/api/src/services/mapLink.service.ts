@@ -11,9 +11,12 @@ export interface ResolvedPlace {
   lat: number;
   lng: number;
   source: 'google' | 'apple';
+  /** True when the point came from a name search, not from the link itself. */
+  approximate?: boolean;
 }
 
-const UA = 'Mozilla/5.0 (compatible; PayanamBot/1.0; +https://payanam.app)';
+// A normal browser identity: Google serves a fuller page (with the place's coordinates) to browsers.
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 export class MapLinkError extends Error {}
 
@@ -90,42 +93,95 @@ async function followRedirects(startUrl: string, doFetch: Fetcher): Promise<{ ur
     if (!isAllowedHost(host)) throw new MapLinkError('That link is not a Google Maps or Apple Maps link.');
     const res = await doFetch(url, {
       redirect: 'manual',
-      headers: { 'User-Agent': UA, 'Accept-Language': 'en' },
-      signal: AbortSignal.timeout(7000),
+      headers: {
+        'User-Agent': UA,
+        'Accept-Language': 'en-IN,en;q=0.9',
+        Accept: 'text/html,application/xhtml+xml',
+        Cookie: 'CONSENT=YES+cb; SOCS=CAI',
+      },
+      signal: AbortSignal.timeout(8000),
     });
     const loc = res.headers.get('location');
     if (res.status >= 300 && res.status < 400 && loc) {
       url = new URL(loc, url).href;
+      // Google may route through a consent page; the real target is in its `continue` parameter.
+      const next = new URL(url);
+      if (next.hostname === 'consent.google.com' && next.searchParams.get('continue')) url = next.searchParams.get('continue')!;
       // Parse as soon as a hop carries a point; no need to load the page.
       if (parseMapUrl(url)?.lat !== undefined) return { url, html: '' };
       continue;
     }
-    const html = res.ok ? (await res.text()).slice(0, 400_000) : '';
+    const html = res.ok ? (await res.text()).slice(0, 900_000) : '';
     return { url, html };
   }
   throw new MapLinkError('That link redirects too many times.');
 }
 
-function fromHtml(html: string): { name: string; lat?: number; lng?: number } {
-  const meta = (prop: string) =>
-    html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1] ??
-    html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${prop}["']`, 'i'))?.[1];
-  const lat = parseFloat(meta('place:location:latitude') ?? '');
-  const lng = parseFloat(meta('place:location:longitude') ?? '');
-  const title = (meta('og:title') ?? html.match(/<title>([^<]+)<\/title>/i)?.[1] ?? '')
-    .replace(/&amp;/g, '&').replace(/ - Google Maps$/i, '').replace(/\s*[—-]\s*Apple Maps$/i, '').trim();
-  const name = /^(google maps|maps|apple maps)$/i.test(title) ? '' : title.slice(0, 120);
-  return validCoord(lat, lng) ? { name, lat, lng } : { name };
+/** Every place a Google or Apple place page is known to carry its coordinates. Most exact first. */
+function coordsFromHtml(html: string): { lat: number; lng: number } | null {
+  const text = html.replace(/&amp;/g, '&').replace(/\\u003d/g, '=').replace(/\\u0026/g, '&').replace(/%2C/gi, ',');
+  const tries: Array<[RegExp, 'latlng' | 'lnglat']> = [
+    [/place:location:latitude["'][^>]*content=["'](-?\d+(?:\.\d+)?)["'][\s\S]{0,200}?place:location:longitude["'][^>]*content=["'](-?\d+(?:\.\d+)?)/i, 'latlng'],
+    [/staticmap\?center=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i, 'latlng'],
+    [/[?&]center=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i, 'latlng'],
+    [/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/, 'latlng'],
+    [/APP_INITIALIZATION_STATE=\[\[\[-?[\d.eE+-]+,(-?\d+\.\d+),(-?\d+\.\d+)\]/, 'lnglat'],
+    [/\[null,null,(-?\d{1,2}\.\d{3,}),(-?\d{1,3}\.\d{3,})\]/, 'latlng'],
+    [/@(-?\d{1,2}\.\d{3,}),(-?\d{1,3}\.\d{3,})/, 'latlng'],
+  ];
+  for (const [re, order] of tries) {
+    const m = text.match(re);
+    if (!m) continue;
+    const a = parseFloat(m[1]);
+    const b = parseFloat(m[2]);
+    const lat = order === 'latlng' ? a : b;
+    const lng = order === 'latlng' ? b : a;
+    if (validCoord(lat, lng)) return { lat, lng };
+  }
+  return null;
 }
 
-async function geocodeName(name: string, doFetch: Fetcher): Promise<{ lat: number; lng: number } | null> {
+function fromHtml(html: string): { name: string; lat?: number; lng?: number } {
+  const meta = (prop: string) =>
+    html.match(new RegExp(`<meta[^>]+(?:property|name|itemprop)=["']${prop}["'][^>]+content=["']([^"']+)["']`, 'i'))?.[1] ??
+    html.match(new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name|itemprop)=["']${prop}["']`, 'i'))?.[1];
+  const title = (meta('og:title') ?? html.match(/<title>([^<]+)<\/title>/i)?.[1] ?? '')
+    .replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/ - Google Maps$/i, '').replace(/\s*[—-]\s*Apple Maps$/i, '').trim();
+  const name = /^(google maps|maps|apple maps|before you continue.*)$/i.test(title) ? '' : title.slice(0, 120);
+  const pt = coordsFromHtml(html);
+  return pt ? { name, ...pt } : { name };
+}
+
+async function geocodeOnce(q: string, doFetch: Fetcher): Promise<{ lat: number; lng: number } | null> {
   try {
-    const res = await doFetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`, {
+    const res = await doFetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, {
       headers: { 'User-Agent': 'Payanam-App/1.0', 'Accept-Language': 'en' }, signal: AbortSignal.timeout(5000),
     });
     const d = (await res.json()) as Array<{ lat: string; lon: string }>;
     if (d?.[0]) return { lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon) };
-  } catch { /* fall through */ }
+  } catch { /* try the next wording */ }
+  return null;
+}
+
+/**
+ * Looks a place name up. Full street addresses often fail on OpenStreetMap, so we also try the
+ * name with the postcode removed, then the area, then the postcode alone. The first hit wins.
+ */
+async function geocodeName(name: string, doFetch: Fetcher): Promise<{ lat: number; lng: number; exact: boolean } | null> {
+  const parts = name.split(',').map((p) => p.trim()).filter(Boolean);
+  const pin = name.match(/\b\d{6}\b/)?.[0];
+  const noPin = name.replace(/\b\d{6}\b/, '').replace(/\s+,/g, ',').trim();
+  const first = await geocodeOnce(name, doFetch) ?? (noPin !== name ? await geocodeOnce(noPin, doFetch) : null);
+  if (first) return { ...first, exact: true };
+  const variants = [
+    parts.length > 2 ? parts.slice(0, 2).join(', ') + (parts.length > 3 ? '' : '') : '',
+    parts.length > 1 ? parts.slice(1).join(', ').replace(/\b\d{6}\b/, '').trim() : '',
+    pin ? `${pin}, India` : '',
+  ].filter((v) => v && v !== name && v !== noPin);
+  for (const v of variants) {
+    const hit = await geocodeOnce(v, doFetch);
+    if (hit) return { ...hit, exact: false };
+  }
   return null;
 }
 
@@ -169,8 +225,11 @@ export async function resolveMapLink(input: string, doFetch: Fetcher = fetch): P
 
   if (parsed.lat === undefined) {
     const g = await geocodeName(parsed.name, doFetch);
-    if (!g) throw new MapLinkError(`Found "${parsed.name}" but could not locate it. Share the exact pin from Maps instead.`);
-    return { name: parsed.name, lat: g.lat, lng: g.lng, source: parsed.source };
+    if (!g) {
+      console.warn('[mapLink] no coordinates found for', parsed.name);
+      throw new MapLinkError(`Found "${parsed.name}" but could not place it on the map. Search for it by name below, or open it in Maps, drop a pin on the exact spot, tap Share and paste that link.`);
+    }
+    return { name: parsed.name, lat: g.lat, lng: g.lng, source: parsed.source, approximate: !g.exact };
   }
   const name = parsed.name || (await reverseName(parsed.lat, parsed.lng, doFetch)) || 'Dropped pin';
   return { name, lat: parsed.lat, lng: parsed.lng, source: parsed.source };
