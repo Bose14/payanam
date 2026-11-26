@@ -2,7 +2,7 @@ import Icon from './Icon';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { PinnedStopData } from './PinStopModal';
-import { getPipPreferences, savePipPreferences, isPlatformIos } from '../utils/pipPreferences';
+import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
 
 interface WebkitHTMLVideoElement extends HTMLVideoElement {
   webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -44,6 +44,35 @@ function formatDist(meters?: number): string {
   if (meters == null || isNaN(meters)) return '--';
   if (meters < 1000) return `${Math.round(meters)}m`;
   return `${(meters / 1000).toFixed(1)}k`;
+}
+
+function getCanvasStreamWithAudio(canvas: HTMLCanvasElement): MediaStream | null {
+  if (typeof canvas.captureStream !== 'function') return null;
+  try {
+    const stream = canvas.captureStream(30);
+    // Inject a silent audio track so Apple iOS WebKit media pipeline treats it as a full video/audio media stream
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (AudioCtx) {
+        const audioCtx = new AudioCtx();
+        const osc = audioCtx.createOscillator();
+        osc.frequency.value = 0; // 0 Hz (silence)
+        const dest = audioCtx.createMediaStreamDestination();
+        osc.connect(dest);
+        osc.start();
+        const silentTrack = dest.stream.getAudioTracks()[0];
+        if (silentTrack) {
+          stream.addTrack(silentTrack);
+        }
+      }
+    } catch {
+      // ignore audio context failures
+    }
+    return stream;
+  } catch (err) {
+    console.warn('[PiP HUD] Failed to capture canvas stream:', err);
+    return null;
+  }
 }
 
 function drawRoundRect(
@@ -115,13 +144,29 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     };
   }, [pinnedStop, distToPinnedStop, arrivedCount, totalRiders, riders, currentSpeedKmh, sosActive, activeAnnouncement, tripTitle]);
 
-  // Check if platform supports native video PiP (Desktop, Android Chrome).
-  // Note: Apple iOS WebKit strictly forbids canvas captureStream from popping out to OS level.
+  // Check if platform supports native video PiP (Desktop, Android Chrome, and Apple iOS WebKit)
   useEffect(() => {
-    const isIos = isPlatformIos();
-    const hasVideoPip = !isIos && typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
-    const hasDocPip = !isIos && typeof window !== 'undefined' && 'documentPictureInPicture' in window;
-    setNativePipAvailable(hasVideoPip || hasDocPip);
+    const hasVideoPip = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document && Boolean(document.pictureInPictureEnabled);
+    const hasDocPip = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
+    const hasWebkitPip = typeof HTMLVideoElement !== 'undefined' &&
+      typeof (HTMLVideoElement.prototype as unknown as WebkitHTMLVideoElement).webkitSetPresentationMode === 'function';
+    setNativePipAvailable(hasVideoPip || hasDocPip || hasWebkitPip);
+  }, []);
+
+  // Pre-attach canvas stream to video element so playback pipeline is active before user clicks
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!canvas || !video) return;
+
+    if (!streamRef.current) {
+      const stream = getCanvasStreamWithAudio(canvas);
+      if (stream) {
+        streamRef.current = stream;
+        video.srcObject = stream;
+        video.play().catch(() => {/* ignore autoplay rejection */});
+      }
+    }
   }, []);
 
   // 60 FPS Canvas Drawing Engine — Compact Non-Intrusive Ribbon for Mobile Navigation (420 x 155)
@@ -450,6 +495,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
   // Close PiP HUD (both native OS PiP and in-app floating ribbon)
   const closePip = useCallback(async () => {
+    const video = videoRef.current;
     if (typeof document !== 'undefined' && document.pictureInPictureElement) {
       try {
         await document.exitPictureInPicture();
@@ -457,30 +503,69 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         // ignore
       }
     }
+    if (video) {
+      const webkitVideo = video as unknown as WebkitHTMLVideoElement;
+      if (typeof webkitVideo.webkitSetPresentationMode === 'function' && webkitVideo.webkitPresentationMode === 'picture-in-picture') {
+        try {
+          webkitVideo.webkitSetPresentationMode('inline');
+        } catch {
+          // ignore
+        }
+      }
+    }
     setIsFloatingInApp(false);
     setIsPipActive(false);
     onPipStateChange?.(false);
   }, [onPipStateChange]);
 
-  // Open PiP HUD (Native OS PiP on supported Android/Desktop; 60 FPS In-App ribbon on iOS & fallback)
+  // Open PiP HUD (Native OS PiP on supported Android/Desktop & Apple iOS WebKit; 60 FPS In-App ribbon as fallback)
   const openPip = useCallback(async () => {
     const prefs = getPipPreferences();
-    const isIos = isPlatformIos();
-    const forceInApp = isIos || prefs.preferredMode === 'in_app';
+    const forceInApp = prefs.preferredMode === 'in_app';
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
-    // 1. Try Native OS PiP if available (Desktop, Android Chrome)
+    // 1. Try Native OS PiP if available (Desktop, Android Chrome, and Apple iOS WebKit)
     if (!forceInApp && nativePipAvailable && canvas && video) {
       try {
-        if (!streamRef.current && typeof canvas.captureStream === 'function') {
-          const stream = canvas.captureStream(30);
-          streamRef.current = stream;
-          video.srcObject = stream;
+        if (!streamRef.current) {
+          const stream = getCanvasStreamWithAudio(canvas);
+          if (stream) {
+            streamRef.current = stream;
+            video.srcObject = stream;
+          }
         }
 
-        await video.play();
+        try {
+          await video.play();
+        } catch {
+          // ignore
+        }
 
+        const webkitVideo = video as unknown as WebkitHTMLVideoElement;
+
+        // Path A: Apple iOS WebKit presentation mode (Safari, Brave on iOS)
+        if (typeof webkitVideo.webkitSetPresentationMode === 'function') {
+          try {
+            webkitVideo.webkitSetPresentationMode('picture-in-picture');
+            setTimeout(() => {
+              if (webkitVideo.webkitPresentationMode === 'picture-in-picture') {
+                setIsPipActive(true);
+                setIsFloatingInApp(false);
+                onPipStateChange?.(true);
+              } else {
+                setIsFloatingInApp(true);
+                setIsPipActive(true);
+                onPipStateChange?.(true);
+              }
+            }, 300);
+            return;
+          } catch (err) {
+            console.warn('[PiP HUD] Apple WebKit presentation mode failed:', err);
+          }
+        }
+
+        // Path B: Standard W3C requestPictureInPicture (Chrome, Edge, Android)
         if (typeof video.requestPictureInPicture === 'function') {
           await video.requestPictureInPicture();
           setIsPipActive(true);
@@ -708,20 +793,22 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         />
       </div>
 
-      {/* Hidden Video element feeding Native PiP window if triggered */}
+      {/* Video element feeding Native PiP window (must remain within viewport DOM bounds for Apple WebKit) */}
       <video
         ref={videoRef}
         muted
         playsInline
         autoPlay
+        aria-hidden="true"
         style={{
           position: 'fixed',
-          top: -9999,
-          left: -9999,
-          width: 10,
-          height: 10,
-          opacity: 0.01,
+          bottom: 0,
+          right: 0,
+          width: 4,
+          height: 4,
+          opacity: 0.001,
           pointerEvents: 'none',
+          zIndex: -1,
         }}
       />
 
