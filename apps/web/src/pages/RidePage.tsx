@@ -2820,48 +2820,36 @@ export default function RidePage() {
               <button
                 type="button"
                 onClick={() => setSplitView(!splitView)}
+                aria-label={splitView ? 'Full map' : 'Map and riders'}
+                title={splitView ? 'Full map' : 'Map and riders'}
                 style={{
-                  backgroundColor: 'rgba(27, 30, 35, 0.88)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255,255,255,0.25)',
-                  color: '#FFFFFF',
-                  borderRadius: 20,
-                  padding: '7px 14px',
-                  fontSize: 11,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
+                  width: 38, height: 38, borderRadius: 999, flexShrink: 0, fontSize: 18,
+                  backgroundColor: 'rgba(27, 30, 35, 0.88)', backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.25)', color: '#FFFFFF', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
                 }}
-                title="Toggle split roster and map view"
               >
-                <Icon name="map" /><span>{splitView ? 'Full map' : 'Map + riders'}</span>
+                <Icon name={splitView ? 'map' : 'users'} />
               </button>
 
               <button
                 type="button"
                 onClick={() => setShowServicePins(!showServicePins)}
+                aria-pressed={showServicePins}
+                aria-label={showServicePins ? 'Hide services on map' : 'Show services on map'}
+                title={showServicePins ? 'Hide services on map' : 'Show services (fuel, repair, food, rest, stay) on map'}
                 style={{
+                  width: 38, height: 38, borderRadius: 999, flexShrink: 0, fontSize: 18,
                   backgroundColor: showServicePins ? 'var(--pz-warn-bg)' : 'rgba(27, 30, 35, 0.88)',
                   backdropFilter: 'blur(10px)',
-                  border: showServicePins ? '1.5px solid var(--pz-accent, var(--pz-accent))' : '1px solid var(--pz-line, var(--pz-line))',
-                  color: showServicePins ? 'var(--pz-accent, var(--pz-accent))' : '#FFFFFF',
-                  borderRadius: 20,
-                  padding: '7px 12px',
-                  fontSize: 11,
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
+                  border: showServicePins ? '1.5px solid var(--pz-accent, #F0C23A)' : '1px solid rgba(255,255,255,0.25)',
+                  color: showServicePins ? 'var(--pz-accent, #F0C23A)' : '#FFFFFF', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
                 }}
-                title="Toggle nearby services (fuel, repair, food, rest, stay) pins on map"
               >
-                <span><Icon name="wrench" /></span>
-                <span>Services</span>
+                <Icon name="wrench" />
               </button>
 
               {/* 60 FPS Picture-in-Picture Convoy Floating HUD */}
