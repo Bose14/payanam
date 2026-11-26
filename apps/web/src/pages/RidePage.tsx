@@ -2688,6 +2688,9 @@ export default function RidePage() {
         {/* Map Section (Card style in Split View, 100% edge-to-edge in Full Map) */}
         <div className="warm-map-container" style={{
           order: 1,
+          width: splitView ? 'auto' : '100%',
+          alignSelf: 'stretch',
+          boxSizing: 'border-box',
           flex: splitView ? '0 0 clamp(240px, 42vh, 400px)' : '1 1 auto',
           height: splitView ? 'clamp(240px, 42vh, 400px)' : '100%',
           minHeight: 0,
