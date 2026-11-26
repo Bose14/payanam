@@ -16,7 +16,7 @@ const STORAGE_KEY = 'payanam_pip_preferences';
 const DEFAULT_PREFERENCES: PipPreferences = {
   autoOpenOnRide: true,
   preferredMode: 'auto',
-  dockPosition: 'top',
+  dockPosition: 'bottom',
 };
 
 export function getPipPreferences(): PipPreferences {
@@ -28,7 +28,7 @@ export function getPipPreferences(): PipPreferences {
     return {
       autoOpenOnRide: parsed.autoOpenOnRide !== undefined ? Boolean(parsed.autoOpenOnRide) : true,
       preferredMode: parsed.preferredMode === 'in_app' || parsed.preferredMode === 'native' ? parsed.preferredMode : 'auto',
-      dockPosition: parsed.dockPosition === 'bottom' ? 'bottom' : 'top',
+      dockPosition: parsed.dockPosition === 'top' ? 'top' : 'bottom',
     };
   } catch {
     return DEFAULT_PREFERENCES;
