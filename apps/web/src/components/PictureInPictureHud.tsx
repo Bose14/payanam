@@ -1,5 +1,6 @@
 import Icon from './Icon';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { PinnedStopData } from './PinStopModal';
 import { getPipPreferences, savePipPreferences } from '../utils/pipPreferences';
 
@@ -573,6 +574,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
   return (
     <>
+      {createPortal(<>
       {/* 60 FPS Floating In-App HUD Ribbon Container (Single Persistent DOM Node) */}
       <div
         style={{
@@ -726,6 +728,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           pointerEvents: 'none',
         }}
       />
+
+      </>, document.body)}
 
       {/* Custom or Default Trigger Button */}
       {renderTrigger ? (
