@@ -2849,7 +2849,7 @@ export default function RidePage() {
           </div>
 
           {/* Re-center button */}
-          {!following && myLat && myLng && (
+          {splitView && !following && myLat && myLng && (
             <button
               onClick={() => { setFollowing(true); setFocusTarget(null); }}
               style={{
@@ -2873,36 +2873,6 @@ export default function RidePage() {
               title="Re-center on me"
             >
               <Icon name="pin" />
-            </button>
-          )}
-
-          {/* Feature G: One-tap Tell group floating button on Ride tab */}
-          {!splitView && !pinnedStop && (
-            <button
-              type="button"
-              onClick={() => setShowTellGroupSheet(true)}
-              style={{
-                position: 'absolute',
-                bottom: 20,
-                left: 12,
-                zIndex: 1000,
-                backgroundColor: 'var(--pz-accent)',
-                color: 'var(--pz-on-accent)',
-                border: 'none',
-                borderRadius: 24,
-                padding: '10px 18px',
-                fontSize: 13,
-                fontWeight: 900,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
-              }}
-              title="Tell group presets"
-            >
-              <span><Icon name="megaphone" /></span>
-              <span>Tell group</span>
             </button>
           )}
 
@@ -3056,7 +3026,7 @@ export default function RidePage() {
           </div>
         )}
 
-        {/* In Full Map View: Float dock above bottom navigation bar */}
+        {/* In Full Map View: one bottom stack so action buttons and the dock never overlap */}
         {!splitView && (
           <div style={{
             position: 'absolute',
@@ -3065,7 +3035,41 @@ export default function RidePage() {
             right: 0,
             zIndex: 1000,
             pointerEvents: 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
           }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '0 12px', pointerEvents: 'none' }}>
+              {!pinnedStop ? (
+                <button
+                  type="button"
+                  onClick={() => setShowTellGroupSheet(true)}
+                  style={{
+                    pointerEvents: 'auto', backgroundColor: 'var(--pz-accent)', color: 'var(--pz-on-accent)', border: 'none',
+                    borderRadius: 24, padding: '10px 18px', fontSize: 13, fontWeight: 900, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 18px rgba(0, 0, 0, 0.4)',
+                  }}
+                  title="Tell group presets"
+                >
+                  <span><Icon name="megaphone" /></span>
+                  <span>Tell group</span>
+                </button>
+              ) : <span />}
+              {!following && myLat && myLng && (
+                <button
+                  onClick={() => { setFollowing(true); setFocusTarget(null); }}
+                  style={{
+                    pointerEvents: 'auto', backgroundColor: 'var(--pz-surface)', border: '2px solid var(--pz-accent)', color: 'var(--pz-warn)',
+                    borderRadius: '50%', width: 40, height: 40, fontSize: 18, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0, 0, 0, 0.4)',
+                  }}
+                  title="Re-center on me"
+                  aria-label="Re-center on me"
+                >
+                  <Icon name="pin" />
+                </button>
+              )}
+            </div>
             <div style={{ pointerEvents: 'auto' }}>
               <NextStopBottomDock
                 pinnedStop={pinnedStop}
