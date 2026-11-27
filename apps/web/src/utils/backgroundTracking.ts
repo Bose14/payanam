@@ -2,7 +2,7 @@
 // Runs foreground keepalive, monitors position heartbeat, detects when OS pauses tracking,
 // generates the Ride tab pause warning, and logs support diagnostics.
 
-export interface TrackingDiagnosticsLog {
+interface TrackingDiagnosticsLog {
   timestamp: string;
   level: 'INFO' | 'WARN' | 'ERROR';
   message: string;

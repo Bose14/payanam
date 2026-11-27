@@ -1,3 +1,4 @@
+import { useToast } from '../hooks/useToast';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { tripService } from '../services/api';
 import Icon from './Icon';
@@ -113,7 +114,7 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [toast, setToast] = useState('');
+  const [toast, showToast] = useToast();
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settlingSplitId, setSettlingSplitId] = useState<string | null>(null);
@@ -151,11 +152,6 @@ export default function ExpenseTracker({ tripId, currentUserId, tripTitle = 'Roa
     split_among: [] as string[],
     custom_splits: {} as Record<string, string>,
   });
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3500);
-  };
 
   const loadData = useCallback(async () => {
     setLoading(true);

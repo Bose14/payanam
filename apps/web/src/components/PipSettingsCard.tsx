@@ -8,7 +8,7 @@ import {
   PipModePreference,
 } from '../utils/pipPreferences';
 
-export interface PipSettingsCardProps {
+interface PipSettingsCardProps {
   onTestPip?: () => void;
   style?: React.CSSProperties;
 }
@@ -53,7 +53,7 @@ const STEPS: Record<Platform, { meta: string; steps: React.ReactNode[] }> = {
   },
 };
 
-export const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, style }) => {
+const PipSettingsCard: React.FC<PipSettingsCardProps> = ({ onTestPip, style }) => {
   const [prefs, setPrefs] = useState(() => getPipPreferences());
   const [platform, setPlatform] = useState<Platform>(() => getPlatformType() as Platform);
   const [testActive, setTestActive] = useState(false);

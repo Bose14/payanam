@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePlaceSearch } from '../hooks/usePlaceSearch';
 
-export interface PlaceLocation {
+interface PlaceLocation {
   name: string;
   lat: number;
   lng: number;

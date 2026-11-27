@@ -48,7 +48,7 @@ const TABS: TabDef[] = [
   { key: 'me', label: 'Me', to: '/me', also: ['/profile'] },
 ];
 
-export function activeTabKey(pathname: string): string {
+function activeTabKey(pathname: string): string {
   const hit = TABS.find((t) => [t.to, ...t.also].some((p) => pathname === p || pathname.startsWith(`${p}/`)));
   return hit?.key ?? 'ride';
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import Icon from './Icon';
 
-export interface QuickStatusOption {
+interface QuickStatusOption {
   value: string;
   label: string;
   icon: string;
@@ -10,7 +10,7 @@ export interface QuickStatusOption {
   description: string;
 }
 
-export const ONE_TAP_STATUS_OPTIONS: QuickStatusOption[] = [
+const ONE_TAP_STATUS_OPTIONS: QuickStatusOption[] = [
   {
     value: 'Rolling Smooth',
     label: 'Rolling Smooth',

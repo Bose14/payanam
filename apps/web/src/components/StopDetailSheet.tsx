@@ -2,7 +2,7 @@ import React from 'react';
 import { PinnedStopData } from './PinStopModal';
 import { FreshnessInfo } from '../utils/lastSeen';
 
-export interface RiderWithFreshness {
+interface RiderWithFreshness {
   userId: string;
   userName: string;
   isMe: boolean;
@@ -492,4 +492,3 @@ const styles: Record<string, React.CSSProperties> = {
   },
 };
 
-export default StopDetailSheet;

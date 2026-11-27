@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ItineraryProposal } from '../utils/itineraryProposals';
 import Icon from './Icon';
 

@@ -3,7 +3,7 @@ import Icon from './Icon';
 import PlaceInput from './PlaceInput';
 import { placeService, type RoutePlace } from '../services/api';
 
-export interface WaypointDraft {
+interface WaypointDraft {
   place: string;
   item_type: string;
   description: string;

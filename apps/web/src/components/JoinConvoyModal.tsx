@@ -8,7 +8,7 @@ interface JoinConvoyModalProps {
   initialCode?: string;
 }
 
-export const JoinConvoyModal: React.FC<JoinConvoyModalProps> = ({
+const JoinConvoyModal: React.FC<JoinConvoyModalProps> = ({
   isOpen,
   onClose,
   initialCode = '',

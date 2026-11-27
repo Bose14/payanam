@@ -1,3 +1,4 @@
+import { useToast } from '../hooks/useToast';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +22,7 @@ export default function ProfilePage() {
   const [, setProfile] = useState<RiderProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState('');
+  const [toast, showNotification] = useToast();
   const [showSosModal, setShowSosModal] = useState(false);
 
   // Form states
@@ -39,11 +40,6 @@ export default function ProfilePage() {
   const [ridingStyle, setRidingStyle] = useState('Adventure / Touring');
   const [city, setCity] = useState('');
   const [bio, setBio] = useState('');
-
-  const showNotification = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3500);
-  };
 
   useEffect(() => {
     profileService

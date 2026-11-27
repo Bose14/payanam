@@ -2,7 +2,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import env from './environment';
 
 let supabaseServiceClient: SupabaseClient | null = null;
-let supabaseAnonClient: SupabaseClient | null = null;
 
 export function initializeDatabase(): void {
   const isPlaceholderKey =
@@ -27,9 +26,6 @@ export function initializeDatabase(): void {
       },
     });
   }
-  if (!supabaseAnonClient) {
-    supabaseAnonClient = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-  }
 }
 
 export function getDatabase(): SupabaseClient {
@@ -39,9 +35,3 @@ export function getDatabase(): SupabaseClient {
   return supabaseServiceClient;
 }
 
-export function getAnonDatabase(): SupabaseClient {
-  if (!supabaseAnonClient) {
-    throw new Error('Anon database not initialized. Call initializeDatabase() first.');
-  }
-  return supabaseAnonClient;
-}

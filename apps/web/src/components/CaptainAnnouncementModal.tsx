@@ -3,12 +3,8 @@ import {
   CAPTAIN_ANNOUNCEMENT_PRESETS,
   OPTIONAL_LINE_SUGGESTIONS,
   CAPTAIN_SENT_VIBRATION_PATTERN,
-  CaptainAnnouncementPreset,
 } from '../utils/captainAnnouncement';
 import Icon from './Icon';
-
-export type AnnouncementPreset = CaptainAnnouncementPreset;
-export const ANNOUNCEMENT_PRESETS = CAPTAIN_ANNOUNCEMENT_PRESETS;
 
 interface CaptainAnnouncementModalProps {
   isOpen: boolean;

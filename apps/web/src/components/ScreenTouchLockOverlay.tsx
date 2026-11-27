@@ -345,4 +345,3 @@ export const ScreenTouchLockOverlay: React.FC<ScreenTouchLockOverlayProps> = ({
   );
 };
 
-export default ScreenTouchLockOverlay;

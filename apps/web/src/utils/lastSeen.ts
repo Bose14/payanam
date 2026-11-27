@@ -11,7 +11,7 @@
  * - Thresholds are configurable.
  */
 
-export type FreshnessStatus = 'live' | 'stale' | 'unknown';
+type FreshnessStatus = 'live' | 'stale' | 'unknown';
 
 export interface FreshnessConfig {
   liveThresholdMs?: number;  // Default: 30,000 ms (30 seconds)
@@ -33,10 +33,10 @@ export interface FreshnessInfo {
   markerType: 'solid' | 'hollow' | 'dimmed';
 }
 
-export const DEFAULT_LIVE_THRESHOLD_MS = 30 * 1000;      // 30 seconds
-export const DEFAULT_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_LIVE_THRESHOLD_MS = 30 * 1000;      // 30 seconds
+const DEFAULT_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
-export function formatAgeString(seconds: number): string {
+function formatAgeString(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return 'unknown';
   if (seconds < 10) return 'just now';
   if (seconds < 60) return `${Math.floor(seconds)}s ago`;
@@ -148,36 +148,6 @@ export function getFreshness(
     badgeBorderColor: '#6b7280',
     badgeBgColor: 'rgba(107, 114, 128, 0.12)',
     markerType: 'dimmed',
-  };
-}
-
-/**
- * Derived values rule:
- * An ETA or arrival that depends on a stale/unknown position shows "Unknown", not a guess.
- */
-export function formatDerivedETA(
-  etaMinutes: number | null | undefined,
-  freshness: FreshnessInfo,
-  riderName?: string
-): { display: string; subtext: string; isUnknown: boolean } {
-  // If position is stale (> 30s) or unknown (> 5min), DO NOT GUESS ETA
-  if (freshness.isUnknown || freshness.isStale || etaMinutes == null) {
-    const ownerName = riderName ? `${riderName}'s` : 'Rider';
-    const subtext = freshness.ageSecs === Infinity
-      ? 'No position received'
-      : `${ownerName} position is ${freshness.ageLabel} old`;
-
-    return {
-      display: 'Unknown',
-      subtext,
-      isUnknown: true,
-    };
-  }
-
-  return {
-    display: etaMinutes < 1 ? '< 1 min' : `~${Math.round(etaMinutes)} min`,
-    subtext: riderName ? `${riderName}'s ETA` : 'Your ETA',
-    isUnknown: false,
   };
 }
 

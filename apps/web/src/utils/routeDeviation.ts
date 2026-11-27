@@ -14,8 +14,8 @@ export interface DeviationConfig {
   durationMs?: number;      // Default: 120,000 ms (2 minutes)
 }
 
-export const DEFAULT_DEVIATION_THRESHOLD_METERS = 300;
-export const DEFAULT_DEVIATION_DURATION_MS = 2 * 60 * 1000; // 2 minutes
+const DEFAULT_DEVIATION_THRESHOLD_METERS = 300;
+const DEFAULT_DEVIATION_DURATION_MS = 2 * 60 * 1000; // 2 minutes
 
 export interface RiderDeviationTracker {
   userId: string;

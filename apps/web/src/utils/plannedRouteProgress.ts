@@ -10,7 +10,7 @@
 
 import { getHaversineDistanceMeters, pointToSegmentDistanceMeters } from './routeDeviation';
 
-export type RouteProgressStatus = 'ahead' | 'on_plan' | 'behind' | 'off_route' | 'unknown';
+type RouteProgressStatus = 'ahead' | 'on_plan' | 'behind' | 'off_route' | 'unknown';
 
 export interface RouteProgressInfo {
   distanceAlongMeters: number;

@@ -10,9 +10,6 @@
 
 const STORAGE_KEY = 'payanam_battery_saver_enabled';
 
-export const NORMAL_TRACKING_INTERVAL_MS = 10 * 1000;       // 10 seconds default
-export const BATTERY_SAVER_TRACKING_INTERVAL_MS = 30 * 1000; // 30 seconds battery-saver rate
-
 /**
  * Reads battery saver preference from localStorage (safely handles SSR / storage blocks).
  */
@@ -35,12 +32,5 @@ export function setBatterySaverPreference(enabled: boolean): void {
   } catch {
     /* ignore storage quota or private mode issues */
   }
-}
-
-/**
- * Returns the effective location update rate based on battery saver mode.
- */
-export function getEffectiveTrackingInterval(batterySaver: boolean): number {
-  return batterySaver ? BATTERY_SAVER_TRACKING_INTERVAL_MS : NORMAL_TRACKING_INTERVAL_MS;
 }
 

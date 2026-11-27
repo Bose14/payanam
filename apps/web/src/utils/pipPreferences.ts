@@ -48,7 +48,7 @@ export function savePipPreferences(prefs: Partial<PipPreferences>): PipPreferenc
   return updated;
 }
 
-export function isPlatformIos(): boolean {
+function isPlatformIos(): boolean {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
   const isIosDevice = /iPad|iPhone|iPod/.test(ua);
@@ -56,7 +56,7 @@ export function isPlatformIos(): boolean {
   return isIosDevice || isIpadOs;
 }
 
-export function isPlatformAndroid(): boolean {
+function isPlatformAndroid(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /Android/.test(navigator.userAgent || '');
 }

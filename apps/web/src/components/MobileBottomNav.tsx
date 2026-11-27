@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-export const MobileBottomNav: React.FC = () => {
+const MobileBottomNav: React.FC = () => {
   const location = useLocation();
 
   const isActive = (path: string) => {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
 import { getPosition, GeoError, GEO_MESSAGES } from '../utils/geolocate';
+import Stepper from '../components/Stepper';
 import PlaceInput from '../components/PlaceInput';
 import Navbar from '../components/Navbar';
 import Icon from '../components/Icon';
@@ -301,30 +302,7 @@ export default function CreateTripPage() {
             {mode !== 'direct' && (
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Number of Days</label>
-              <div style={styles.stepperBox}>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, days: Math.max(1, f.days - 1) }))}
-                  style={styles.stepperBtn}
-                  aria-label="Decrease days"
-                >
-                  –
-                </button>
-                <div style={styles.stepperValue}>
-                  <strong style={{ fontSize: 17, fontWeight: 800 }}>{form.days}</strong>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                    {form.days === 1 ? 'Day' : 'Days'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, days: Math.min(14, f.days + 1) }))}
-                  style={styles.stepperBtn}
-                  aria-label="Increase days"
-                >
-                  +
-                </button>
-              </div>
+              <Stepper value={form.days} min={1} max={14} label="days" unit={(n) => (n === 1 ? 'Day' : 'Days')} onChange={(days) => setForm(f => ({ ...f, days }))} />
             </div>
             )}
 
@@ -342,28 +320,7 @@ export default function CreateTripPage() {
             {/* Group size */}
             <div style={styles.fieldGroup}>
               <label style={styles.label}>How many riders in this trip? (including you)</label>
-              <div style={styles.stepperBox}>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, max_members: Math.max(2, f.max_members - 1) }))}
-                  style={styles.stepperBtn}
-                  aria-label="Decrease riders"
-                >
-                  –
-                </button>
-                <div style={styles.stepperValue}>
-                  <strong style={{ fontSize: 17, fontWeight: 800 }}>{form.max_members}</strong>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>Riders</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, max_members: Math.min(100, f.max_members + 1) }))}
-                  style={styles.stepperBtn}
-                  aria-label="Increase riders"
-                >
-                  +
-                </button>
-              </div>
+              <Stepper value={form.max_members} min={2} max={100} label="riders" unit="Riders" onChange={(max_members) => setForm(f => ({ ...f, max_members }))} />
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6 }}>
                 Once this many riders have joined, nobody else can join with the code or link. You can see who joined on the trip page.
               </div>
@@ -600,40 +557,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     cursor: 'pointer',
     textAlign: 'center',
-  },
-  stepperBox: {
-    display: 'flex',
-    alignItems: 'center',
-    background: 'var(--bg-subtle)',
-    border: '1px solid var(--border-input)',
-    borderRadius: 10,
-    padding: 4,
-    maxWidth: 240,
-    width: '100%',
-  },
-  stepperBtn: {
-    width: 38,
-    height: 38,
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border-subtle)',
-    color: 'var(--text-primary)',
-    fontSize: 18,
-    fontWeight: 800,
-    borderRadius: 8,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperValue: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    whiteSpace: 'nowrap',
-    fontSize: 15,
-    color: 'var(--text-primary)',
   },
   vehicleGrid: {
     display: 'grid',

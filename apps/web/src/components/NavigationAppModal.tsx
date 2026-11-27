@@ -8,7 +8,7 @@ import {
 } from '../utils/navigationHandoff';
 import Icon from './Icon';
 
-export interface NavigationTarget {
+interface NavigationTarget {
   name: string;
   lat: number;
   lng: number;

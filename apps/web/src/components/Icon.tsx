@@ -66,8 +66,6 @@ const PATHS: Record<string, string> = {
   arrowRight: '<path d="M4 12h16M14 6l6 6-6 6"/>',
 };
 
-export type IconName = keyof typeof PATHS;
-
 interface IconProps {
   name: string;
   size?: number | string;
