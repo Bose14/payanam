@@ -16,9 +16,9 @@ interface WindowWithDocPiP extends Window {
   };
 }
 
-const HUD_WIDTH = 420;
-const HUD_HEIGHT = 155;
-const HUD_SCALE = 3; // 3x HiDPI (1260 x 465) for crisp text & sharp stream capture
+const HUD_WIDTH = 240;
+const HUD_HEIGHT = 380;
+const HUD_SCALE = 3; // 3x HiDPI (720 x 1140) vertical cockpit for crisp text & sharp stream capture
 
 export interface PipRiderData {
   userId: string;
@@ -29,6 +29,7 @@ export interface PipRiderData {
   isLive?: boolean;
   isStale?: boolean;
   staleAgeLabel?: string;
+  quickStatus?: string;
   distanceKm?: number;
   progressPercent?: number;
   distanceAlongMeters?: number;
@@ -43,9 +44,14 @@ export interface PictureInPictureHudProps {
   totalRiders: number;
   riders: PipRiderData[];
   currentSpeedKmh: number;
+  fuelRangeKm?: number | null;
+  isOffRoute?: boolean;
+  offRouteMeters?: number | null;
   sosActive?: boolean;
   activeAnnouncement?: { message: string; urgency?: string; icon?: string } | null;
   tripTitle?: string;
+  onQuickStatus?: (status: string) => void;
+  onFocusApp?: () => void;
   renderTrigger?: (props: { isPipActive: boolean; togglePip: () => void; isSupported: boolean }) => React.ReactNode;
   onPipStateChange?: (active: boolean) => void;
 }
@@ -107,14 +113,20 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   totalRiders,
   riders,
   currentSpeedKmh,
+  fuelRangeKm = null,
+  isOffRoute = false,
+  offRouteMeters = null,
   sosActive = false,
   activeAnnouncement = null,
   tripTitle = 'Payanam Convoy',
+  onQuickStatus,
+  onFocusApp,
   renderTrigger,
   onPipStateChange,
 }) => {
   const [isPipActive, setIsPipActive] = useState(false);
   const [isFloatingInApp, setIsFloatingInApp] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
   const [hudDockPosition, setHudDockPosition] = useState<'top' | 'bottom'>(
     () => getPipPreferences().dockPosition
   );
@@ -137,6 +149,9 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     totalRiders,
     riders,
     currentSpeedKmh,
+    fuelRangeKm,
+    isOffRoute,
+    offRouteMeters,
     sosActive,
     activeAnnouncement,
     tripTitle,
@@ -150,11 +165,14 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       totalRiders,
       riders,
       currentSpeedKmh,
+      fuelRangeKm,
+      isOffRoute,
+      offRouteMeters,
       sosActive,
       activeAnnouncement,
       tripTitle,
     };
-  }, [pinnedStop, distToPinnedStop, arrivedCount, totalRiders, riders, currentSpeedKmh, sosActive, activeAnnouncement, tripTitle]);
+  }, [pinnedStop, distToPinnedStop, arrivedCount, totalRiders, riders, currentSpeedKmh, fuelRangeKm, isOffRoute, offRouteMeters, sosActive, activeAnnouncement, tripTitle]);
 
   // Check if platform supports native video PiP (Desktop, Android Chrome, and Apple iOS WebKit)
   useEffect(() => {
@@ -181,7 +199,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     }
   }, []);
 
-  // 60 FPS Canvas Drawing Engine — Compact Non-Intrusive Ribbon for Mobile Navigation (420 x 155)
+  // 60 FPS Canvas Drawing Engine — Vertical Cockpit HUD (240 x 380 logical @ 3x HiDPI)
   const drawFrame = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, time: number) => {
     const {
       pinnedStop: stop,
@@ -190,259 +208,313 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       totalRiders: total,
       riders: riderList,
       currentSpeedKmh: speed,
+      fuelRangeKm: fuelKm,
+      isOffRoute: offRoute,
+      offRouteMeters: offMeters,
       sosActive: sos,
       activeAnnouncement: announcement,
     } = stateRef.current;
+
+    const FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
     // Background: Deep Obsidian
     ctx.fillStyle = '#090B0E';
     ctx.fillRect(0, 0, width, height);
 
-    // Sleek Border: Flashing red on SOS, otherwise subtle gold border
+    // Outer Border: Flashing red on SOS/Off-route, otherwise subtle gold
     ctx.lineWidth = 2;
-    ctx.strokeStyle = sos ? '#EF4444' : 'rgba(240, 194, 58, 0.35)';
+    ctx.strokeStyle = sos ? '#EF4444' : offRoute ? '#F59E0B' : 'rgba(240, 194, 58, 0.45)';
     ctx.strokeRect(1, 1, width - 2, height - 2);
 
-    // =========================================================================
-    // 1. TOP HEADER BAR: Speedometer, Next Stop, Live status & Clock (0 - 36px)
-    // =========================================================================
     const pulse = (Math.sin(time / 180) + 1) / 2;
     const liveRiders = riderList.filter((r) => r.isLive !== false).length;
 
-    // Live Dot
+    // =========================================================================
+    // 1. TOP STATUS BAR: Live Indicator & Clock (y: 0 - 28px)
+    // =========================================================================
     ctx.fillStyle = '#10B981';
     ctx.beginPath();
-    ctx.arc(16, 20, 3.5 + pulse * 1.5, 0, Math.PI * 2);
+    ctx.arc(14, 15, 3 + pulse * 1.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Speedometer (Hero display)
-    const roundedSpeed = Math.round(speed || 0);
     ctx.textAlign = 'left';
-    ctx.font = '900 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(`${roundedSpeed}`, 28, 27);
-
-    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = '#F0C23A';
-    ctx.fillText('KM/H', 62, 26);
-
-    ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = `800 10.5px ${FONT}`;
     ctx.fillStyle = '#10B981';
-    ctx.fillText(`● ${liveRiders}/${total} LIVE`, 104, 25);
+    ctx.fillText(`${liveRiders}/${Math.max(total, 1)} LIVE`, 23, 19);
 
-    // Next Stop Compact Pill (Center-Right)
-    if (stop) {
-      const stopIcon = stop.type === 'fuel' ? '⛽' : stop.type === 'food' ? '🍲' : '📌';
-      const distStr = stopDist != null ? `${stopDist.toFixed(1)}k` : '';
-      const stopShort = stop.name.length > 14 ? `${stop.name.slice(0, 12)}…` : stop.name;
-
-      ctx.textAlign = 'right';
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#F0C23A';
-      ctx.fillText(`${stopIcon} ${stopShort} ${distStr} (${arrived}/${Math.max(total, 1)})`, width - 64, 25);
-    }
-
-    // Digital Clock (Right)
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     ctx.textAlign = 'right';
-    ctx.font = '600 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = `600 10.5px ${FONT}`;
     ctx.fillStyle = '#9CA3AF';
-    ctx.fillText(timeStr, width - 12, 25);
+    ctx.fillText(timeStr, width - 10, 19);
 
-    // Divider
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#181E27';
     ctx.beginPath();
-    ctx.moveTo(10, 36);
-    ctx.lineTo(width - 10, 36);
+    ctx.moveTo(10, 28);
+    ctx.lineTo(width - 10, 28);
     ctx.stroke();
 
     // =========================================================================
-    // 2. DUAL SPLIT COLUMNS: Ahead (Left) vs Behind (Right) (40 - 115px)
+    // 2. HERO SPEEDOMETER + FUEL RANGE + GROUP AVG (y: 30 - 82px)
     // =========================================================================
+    const roundedSpeed = Math.round(speed || 0);
+    ctx.textAlign = 'left';
+    ctx.font = `900 32px ${FONT}`;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(`${roundedSpeed}`, 12, 64);
+
+    ctx.font = `800 9.5px ${FONT}`;
+    ctx.fillStyle = '#F0C23A';
+    ctx.fillText('KM/H', 14, 77);
+
+    // Fuel Range Pill (Top-Right of Hero row)
+    const fuelColor = fuelKm == null ? '#9CA3AF' : fuelKm <= 15 ? '#EF4444' : fuelKm <= 35 ? '#F59E0B' : '#10B981';
+    const fuelBg = fuelKm == null ? '#12161E' : fuelKm <= 15 ? 'rgba(239, 68, 68, 0.18)' : fuelKm <= 35 ? 'rgba(245, 158, 11, 0.16)' : 'rgba(16, 185, 129, 0.15)';
+    ctx.fillStyle = fuelBg;
+    ctx.strokeStyle = fuelColor;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    drawRoundRect(ctx, 118, 35, 110, 22, 11);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.font = `800 10.5px ${FONT}`;
+    ctx.fillStyle = fuelColor;
+    ctx.fillText(fuelKm != null ? `⛽ ${Math.round(fuelKm)} km left` : '⛽ Fuel unset', 173, 50);
+
+    // Group Average Speed (Below Fuel Pill)
+    const activeSpeeds = riderList.map((r) => r.speedKmh ?? 0).filter((s) => s > 2);
+    const avgSpeed = activeSpeeds.length > 0
+      ? Math.round(activeSpeeds.reduce((a, b) => a + b, 0) / activeSpeeds.length)
+      : roundedSpeed;
+    const speedDelta = roundedSpeed - avgSpeed;
+    const deltaLabel = activeSpeeds.length > 1 && Math.abs(speedDelta) >= 5
+      ? ` (${speedDelta > 0 ? '+' : ''}${speedDelta})`
+      : '';
+
+    ctx.textAlign = 'right';
+    ctx.font = `700 10px ${FONT}`;
+    ctx.fillStyle = '#9CA3AF';
+    ctx.fillText(`AVG ${avgSpeed} km/h${deltaLabel}`, width - 12, 74);
+
+    // =========================================================================
+    // 3. PRIORITY ALERT / CONVOY PACING BANNER (y: 84 - 114px)
+    // =========================================================================
+    const ridersAhead = riderList
+      .filter((r) => !r.isMe && (r.relativePosition === 'ahead' || ((r.relativeDistanceMeters ?? 0) > 0 && r.relativePosition !== 'behind')))
+      .sort((a, b) => (a.relativeDistanceMeters ?? 0) - (b.relativeDistanceMeters ?? 0));
+
+    const ridersBehind = riderList
+      .filter((r) => !r.isMe && (r.relativePosition === 'behind' || ((r.relativeDistanceMeters ?? 0) < 0)))
+      .sort((a, b) => (a.relativeDistanceMeters ?? 0) - (b.relativeDistanceMeters ?? 0));
+
+    const quickRider = riderList.find((r) => !r.isMe && r.quickStatus && r.quickStatus.trim().length > 0);
+    const maxBehindDist = ridersBehind.reduce((m, r) => Math.max(m, r.relativeDistanceMeters ?? 0), 0);
+    const maxAheadDist = ridersAhead.reduce((m, r) => Math.max(m, r.relativeDistanceMeters ?? 0), 0);
+
+    let bannerBg = 'rgba(16, 185, 129, 0.12)';
+    let bannerBorder = 'rgba(16, 185, 129, 0.4)';
+    let bannerColor = '#10B981';
+    let bannerText = '✓ Convoy tight · In sync';
+
     if (sos) {
-      // 🚨 Full Emergency Override Mode
       const sosPulse = (Math.sin(time / 120) + 1) / 2;
-      ctx.fillStyle = `rgba(239, 68, 68, ${0.2 + sosPulse * 0.3})`;
-      ctx.strokeStyle = '#EF4444';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = 'center';
-      ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#EF4444';
-      ctx.fillText('🚨 SOS: FELLOW RIDER NEEDS HELP!', width / 2, 70);
-
-      ctx.font = 'bold 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText('Emergency reported on road · Check group coordinates', width / 2, 92);
+      bannerBg = `rgba(239, 68, 68, ${0.22 + sosPulse * 0.28})`;
+      bannerBorder = '#EF4444';
+      bannerColor = '#FFFFFF';
+      bannerText = '🚨 SOS: RIDER NEEDS HELP!';
+    } else if (offRoute) {
+      bannerBg = 'rgba(239, 68, 68, 0.22)';
+      bannerBorder = '#EF4444';
+      bannerColor = '#FCA5A5';
+      bannerText = offMeters ? `↪️ OFF ROUTE · ${Math.round(offMeters)}m` : '↪️ OFF ROUTE · Check map';
     } else if (announcement) {
-      // 📢 Captain Announcement Override
-      ctx.fillStyle = 'rgba(240, 194, 58, 0.16)';
-      ctx.strokeStyle = '#F0C23A';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#F0C23A';
-      ctx.fillText('📢 CAPTAIN CALL:', 20, 64);
-
-      ctx.font = 'bold 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(announcement.message.slice(0, 44), 20, 88);
-    } else {
-      // Normal Dual Split Mode
-      const colWidth = (width - 28) / 2; // ~196px each
-      const leftColX = 10;
-      const rightColX = leftColX + colWidth + 8;
-      const cardHeight = 72;
-
-      // Filter riders relative to me
-      const ridersAhead = riderList
-        .filter((r) => !r.isMe && (r.relativePosition === 'ahead' || ((r.relativeDistanceMeters ?? 0) > 0 && r.relativePosition !== 'behind')))
-        .sort((a, b) => (a.relativeDistanceMeters ?? 0) - (b.relativeDistanceMeters ?? 0));
-
-      const ridersBehind = riderList
-        .filter((r) => !r.isMe && (r.relativePosition === 'behind' || ((r.relativeDistanceMeters ?? 0) < 0)))
-        .sort((a, b) => (a.relativeDistanceMeters ?? 0) - (b.relativeDistanceMeters ?? 0));
-
-      // --- LEFT COLUMN: AHEAD (▲) ---
-      ctx.fillStyle = '#12161E';
-      ctx.strokeStyle = '#1D2431';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      drawRoundRect(ctx, leftColX, 40, colWidth, cardHeight, 6);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.font = '900 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#10B981';
-      ctx.fillText(`▲ IN FRONT (${ridersAhead.length})`, leftColX + 8, 54);
-
-      if (ridersAhead.length === 0) {
-        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#F0C23A';
-        ctx.fillText('👑 You lead convoy', leftColX + 8, 76);
-        ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#9CA3AF';
-        ctx.fillText('No riders ahead', leftColX + 8, 94);
-      } else {
-        // Up to 2 riders stacked
-        const r1 = ridersAhead[0];
-        const r2 = ridersAhead[1];
-
-        // Rider 1
-        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#FFFFFF';
-        const tag1 = r1.isCaptain ? '👑 ' : '';
-        const name1 = r1.userName.length > 8 ? `${r1.userName.slice(0, 7)}…` : r1.userName;
-        ctx.fillText(`${tag1}${name1}`, leftColX + 8, 73);
-
-        ctx.textAlign = 'right';
-        ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#10B981';
-        ctx.fillText(`${formatDist(r1.relativeDistanceMeters)} ▲`, leftColX + colWidth - 8, 73);
-
-        // Rider 2 (or speed subtitle if only 1 rider)
-        if (r2) {
-          ctx.textAlign = 'left';
-          ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#FFFFFF';
-          const tag2 = r2.isCaptain ? '👑 ' : '';
-          const name2 = r2.userName.length > 8 ? `${r2.userName.slice(0, 7)}…` : r2.userName;
-          ctx.fillText(`${tag2}${name2}`, leftColX + 8, 97);
-
-          ctx.textAlign = 'right';
-          ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#10B981';
-          ctx.fillText(`${formatDist(r2.relativeDistanceMeters)} ▲`, leftColX + colWidth - 8, 97);
-        } else if (r1.speedKmh != null && r1.speedKmh > 0) {
-          ctx.textAlign = 'left';
-          ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#9CA3AF';
-          ctx.fillText(`Riding at ${Math.round(r1.speedKmh)} km/h`, leftColX + 8, 94);
-        }
-      }
-
-      // --- RIGHT COLUMN: BEHIND (▼) ---
-      ctx.fillStyle = '#12161E';
-      ctx.strokeStyle = '#1D2431';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      drawRoundRect(ctx, rightColX, 40, colWidth, cardHeight, 6);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.textAlign = 'left';
-      ctx.font = '900 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#F59E0B';
-      ctx.fillText(`▼ BEHIND (${ridersBehind.length})`, rightColX + 8, 54);
-
-      if (ridersBehind.length === 0) {
-        ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#E5E7EB';
-        ctx.fillText('🏁 You are at tail', rightColX + 8, 76);
-        ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#9CA3AF';
-        ctx.fillText('Sweep position', rightColX + 8, 94);
-      } else {
-        const r1 = ridersBehind[0];
-        const r2 = ridersBehind[1];
-
-        // Rider 1
-        const isLag1 = (r1.relativeDistanceMeters ?? 0) > 1200;
-        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = '#FFFFFF';
-        const tag1 = isLag1 ? '⚠️ ' : r1.isCaptain ? '👑 ' : '';
-        const name1 = r1.userName.length > 8 ? `${r1.userName.slice(0, 7)}…` : r1.userName;
-        ctx.fillText(`${tag1}${name1}`, rightColX + 8, 73);
-
-        ctx.textAlign = 'right';
-        ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = isLag1 ? '#EF4444' : '#F59E0B';
-        ctx.fillText(`${formatDist(r1.relativeDistanceMeters)} ▼`, rightColX + colWidth - 8, 73);
-
-        // Rider 2
-        if (r2) {
-          const isLag2 = (r2.relativeDistanceMeters ?? 0) > 1200;
-          ctx.textAlign = 'left';
-          ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#FFFFFF';
-          const tag2 = isLag2 ? '⚠️ ' : r2.isCaptain ? '👑 ' : '';
-          const name2 = r2.userName.length > 8 ? `${r2.userName.slice(0, 7)}…` : r2.userName;
-          ctx.fillText(`${tag2}${name2}`, rightColX + 8, 97);
-
-          ctx.textAlign = 'right';
-          ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = isLag2 ? '#EF4444' : '#F59E0B';
-          ctx.fillText(`${formatDist(r2.relativeDistanceMeters)} ▼`, rightColX + colWidth - 8, 97);
-        } else if (r1.speedKmh != null && r1.speedKmh > 0) {
-          ctx.textAlign = 'left';
-          ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = '#9CA3AF';
-          ctx.fillText(`Riding at ${Math.round(r1.speedKmh)} km/h`, rightColX + 8, 94);
-        }
-      }
+      bannerBg = 'rgba(240, 194, 58, 0.18)';
+      bannerBorder = '#F0C23A';
+      bannerColor = '#F0C23A';
+      bannerText = `📢 ${announcement.message.slice(0, 26)}`;
+    } else if (quickRider && quickRider.quickStatus) {
+      bannerBg = 'rgba(245, 158, 11, 0.18)';
+      bannerBorder = '#F59E0B';
+      bannerColor = '#FCD34D';
+      const firstName = quickRider.userName.split(' ')[0].slice(0, 8);
+      bannerText = `💬 ${firstName}: ${quickRider.quickStatus.slice(0, 18)}`;
+    } else if (maxBehindDist > 1200) {
+      bannerBg = 'rgba(245, 158, 11, 0.16)';
+      bannerBorder = '#F59E0B';
+      bannerColor = '#FBBF24';
+      bannerText = `⚠️ Tail +${formatDist(maxBehindDist)} · Ease pace`;
+    } else if (maxAheadDist > 1200) {
+      bannerBg = 'rgba(59, 130, 246, 0.16)';
+      bannerBorder = '#3B82F6';
+      bannerColor = '#93C5FD';
+      bannerText = `⚡ Lead +${formatDist(maxAheadDist)} ahead`;
     }
 
+    ctx.fillStyle = bannerBg;
+    ctx.strokeStyle = bannerBorder;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    drawRoundRect(ctx, 10, 84, width - 20, 28, 7);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.font = `800 10.5px ${FONT}`;
+    ctx.fillStyle = bannerColor;
+    ctx.fillText(bannerText, width / 2, 102);
+
     // =========================================================================
-    // 3. MICRO CONVOY RAIL TICKER (122 - 148px)
+    // 4. NEXT PINNED STOP + ETA CARD (y: 118 - 156px)
     // =========================================================================
-    const railY = 135;
-    const railLeft = 20;
-    const railRight = width - 20;
+    ctx.fillStyle = '#12161E';
+    ctx.strokeStyle = '#1D2431';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    drawRoundRect(ctx, 10, 118, width - 20, 38, 7);
+    ctx.fill();
+    ctx.stroke();
+
+    if (stop) {
+      const stopIcon = stop.type === 'fuel' ? '⛽' : stop.type === 'food' ? '🍲' : '📌';
+      const stopShort = stop.name.length > 18 ? `${stop.name.slice(0, 16)}…` : stop.name;
+
+      ctx.textAlign = 'left';
+      ctx.font = `800 11px ${FONT}`;
+      ctx.fillStyle = '#F0C23A';
+      ctx.fillText(`${stopIcon} ${stopShort}`, 18, 134);
+
+      ctx.textAlign = 'right';
+      ctx.font = `800 10.5px ${FONT}`;
+      ctx.fillStyle = '#E5E7EB';
+      ctx.fillText(`${arrived}/${Math.max(total, 1)}`, width - 18, 134);
+
+      const paceKmh = Math.max(roundedSpeed, avgSpeed, 35);
+      const etaMins = stopDist != null ? Math.max(1, Math.round((stopDist / paceKmh) * 60)) : null;
+      const distLabel = stopDist != null ? `${stopDist.toFixed(1)} km` : 'Distance --';
+      const etaLabel = etaMins != null ? ` · ~${etaMins}m ETA` : '';
+
+      ctx.textAlign = 'left';
+      ctx.font = `600 10px ${FONT}`;
+      ctx.fillStyle = '#9CA3AF';
+      ctx.fillText(`${distLabel}${etaLabel}`, 18, 149);
+    } else {
+      ctx.textAlign = 'left';
+      ctx.font = `700 10.5px ${FONT}`;
+      ctx.fillStyle = '#9CA3AF';
+      ctx.fillText('📌 No stop pinned', 18, 135);
+      ctx.font = `500 9.5px ${FONT}`;
+      ctx.fillText('Free ride mode active', 18, 149);
+    }
+
+    // Helper to render a vertical rider section (IN FRONT or BEHIND)
+    const drawRiderSection = (
+      title: string,
+      titleColor: string,
+      list: PipRiderData[],
+      yStart: number,
+      arrow: '▲' | '▼',
+      emptyPrimary: string,
+      emptyPrimaryColor: string,
+      emptySub: string,
+      isBehindSection: boolean
+    ) => {
+      const cardH = 84;
+      ctx.fillStyle = '#12161E';
+      ctx.strokeStyle = '#1D2431';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      drawRoundRect(ctx, 10, yStart, width - 20, cardH, 7);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.font = `900 10px ${FONT}`;
+      ctx.fillStyle = titleColor;
+      ctx.fillText(`${arrow} ${title} (${list.length})`, 18, yStart + 16);
+
+      if (list.length === 0) {
+        ctx.font = `700 11px ${FONT}`;
+        ctx.fillStyle = emptyPrimaryColor;
+        ctx.fillText(emptyPrimary, 18, yStart + 42);
+        ctx.font = `500 9.5px ${FONT}`;
+        ctx.fillStyle = '#9CA3AF';
+        ctx.fillText(emptySub, 18, yStart + 59);
+        return;
+      }
+
+      list.slice(0, 2).forEach((r, idx) => {
+        const rowY = yStart + 38 + idx * 24;
+        const isLag = isBehindSection && (r.relativeDistanceMeters ?? 0) > 1200;
+        const tag = isLag ? '⚠️ ' : r.isCaptain ? '👑 ' : '';
+        const name = r.userName.length > 10 ? `${r.userName.slice(0, 9)}…` : r.userName;
+
+        ctx.textAlign = 'left';
+        ctx.font = `700 11px ${FONT}`;
+        ctx.fillStyle = r.isStale ? '#9CA3AF' : '#FFFFFF';
+        ctx.fillText(`${tag}${name}`, 18, rowY);
+
+        // Stale age badge or speed tag in middle-right
+        if (r.isStale) {
+          ctx.textAlign = 'right';
+          ctx.font = `600 9px ${FONT}`;
+          ctx.fillStyle = '#9CA3AF';
+          ctx.fillText(r.staleAgeLabel ? `🕒 ${r.staleAgeLabel}` : '🕒 stale', width - 68, rowY);
+        } else if (r.speedKmh != null && r.speedKmh > 0) {
+          ctx.textAlign = 'right';
+          ctx.font = `600 9px ${FONT}`;
+          ctx.fillStyle = '#9CA3AF';
+          ctx.fillText(`${Math.round(r.speedKmh)}k/h`, width - 68, rowY);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.font = `900 11px ${FONT}`;
+        ctx.fillStyle = isBehindSection ? (isLag ? '#EF4444' : '#F59E0B') : '#10B981';
+        ctx.fillText(`${formatDist(r.relativeDistanceMeters)} ${arrow}`, width - 18, rowY);
+      });
+    };
+
+    // =========================================================================
+    // 5. VERTICAL RIDER STACK: IN FRONT (y: 162 - 246px)
+    // =========================================================================
+    drawRiderSection(
+      'IN FRONT',
+      '#10B981',
+      ridersAhead,
+      162,
+      '▲',
+      '👑 You lead convoy',
+      '#F0C23A',
+      'No riders ahead',
+      false
+    );
+
+    // =========================================================================
+    // 6. VERTICAL RIDER STACK: BEHIND (y: 252 - 336px)
+    // =========================================================================
+    drawRiderSection(
+      'BEHIND',
+      '#F59E0B',
+      ridersBehind,
+      252,
+      '▼',
+      '🏁 You are at tail',
+      '#E5E7EB',
+      'Sweep position',
+      true
+    );
+
+    // =========================================================================
+    // 7. MICRO CONVOY RAIL TICKER (y: 342 - 372px)
+    // =========================================================================
+    const railY = 360;
+    const railLeft = 18;
+    const railRight = width - 18;
     const railWidth = railRight - railLeft;
 
-    // Track rail line
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#181E27';
     ctx.lineCap = 'round';
@@ -451,13 +523,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     ctx.lineTo(railRight, railY);
     ctx.stroke();
 
-    // Rider Pips along rail with YOU highlighted
     riderList.forEach((r, idx) => {
       const pct = Math.min(96, Math.max(4, r.progressPercent ?? (20 + idx * 18)));
       const pipX = railLeft + (railWidth * pct) / 100;
 
       if (r.isMe) {
-        // Pulsing glow for YOU
         ctx.fillStyle = 'rgba(240, 194, 58, 0.25)';
         ctx.beginPath();
         ctx.arc(pipX, railY, 7 + pulse * 2, 0, Math.PI * 2);
@@ -468,13 +538,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         ctx.arc(pipX, railY, 4.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // "YOU" Label
         ctx.textAlign = 'center';
-        ctx.font = '900 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = `900 8.5px ${FONT}`;
         ctx.fillStyle = '#F0C23A';
         ctx.fillText('YOU', pipX, railY - 8);
       } else {
-        ctx.fillStyle = r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? '#10B981' : '#3B82F6';
+        ctx.fillStyle = r.isStale ? '#6B7280' : r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? '#10B981' : '#3B82F6';
         ctx.beginPath();
         ctx.arc(pipX, railY, 3.5, 0, Math.PI * 2);
         ctx.fill();
@@ -561,11 +630,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
-    // 0. Try Document Picture-in-Picture first (Desktop Chrome/Edge: crisp HTML window, ZERO video controls!)
+    // 0. Try Document Picture-in-Picture first (Desktop Chrome/Edge: crisp vertical HTML window, ZERO video controls!)
     const docPip = typeof window !== 'undefined' ? (window as WindowWithDocPiP).documentPictureInPicture : undefined;
     if (!forceInApp && docPip && typeof docPip.requestWindow === 'function') {
       try {
-        const pipWin = await docPip.requestWindow({ width: HUD_WIDTH, height: HUD_HEIGHT });
+        const pipWin = await docPip.requestWindow({ width: HUD_WIDTH, height: HUD_HEIGHT + 40 });
         docPipWindowRef.current = pipWin;
 
         pipWin.document.title = 'Payanam Live HUD';
@@ -573,15 +642,66 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         pipWin.document.body.style.padding = '0';
         pipWin.document.body.style.backgroundColor = '#090B0E';
         pipWin.document.body.style.overflow = 'hidden';
+        pipWin.document.body.style.display = 'flex';
+        pipWin.document.body.style.flexDirection = 'column';
+        pipWin.document.body.style.height = '100vh';
+        pipWin.document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
         const docCanvas = pipWin.document.createElement('canvas');
         docCanvas.width = HUD_WIDTH * HUD_SCALE;
         docCanvas.height = HUD_HEIGHT * HUD_SCALE;
-        docCanvas.style.width = '100vw';
-        docCanvas.style.height = '100vh';
+        docCanvas.style.width = '100%';
+        docCanvas.style.flex = '1';
+        docCanvas.style.minHeight = '0';
         docCanvas.style.display = 'block';
         pipWin.document.body.appendChild(docCanvas);
         docPipCanvasRef.current = docCanvas;
+
+        // Interactive 1-tap glove-friendly quick-action bar at the bottom of Document PiP
+        const actionBar = pipWin.document.createElement('div');
+        actionBar.style.display = 'flex';
+        actionBar.style.gap = '4px';
+        actionBar.style.padding = '5px 8px';
+        actionBar.style.backgroundColor = '#0D1016';
+        actionBar.style.borderTop = '1px solid #1E2430';
+        actionBar.style.flexShrink = '0';
+
+        const actions: { label: string; onClick: () => void; accent?: boolean }[] = [
+          { label: '✋ Wait', onClick: () => onQuickStatus?.('Wait up!') },
+          { label: '⛽ Fuel', onClick: () => onQuickStatus?.('Need fuel') },
+          { label: '👍 OK', onClick: () => onQuickStatus?.('All good') },
+          {
+            label: '🗺️ Map',
+            accent: true,
+            onClick: () => {
+              onFocusApp?.();
+              try {
+                pipWin.close();
+              } catch {
+                // ignore
+              }
+            },
+          },
+        ];
+
+        actions.forEach((act) => {
+          const btn = pipWin.document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = act.label;
+          btn.style.flex = '1';
+          btn.style.padding = '5px 4px';
+          btn.style.borderRadius = '8px';
+          btn.style.border = act.accent ? '1px solid #F0C23A' : '1px solid rgba(255,255,255,0.14)';
+          btn.style.backgroundColor = act.accent ? 'rgba(240, 194, 58, 0.16)' : 'rgba(255,255,255,0.06)';
+          btn.style.color = act.accent ? '#F0C23A' : '#FFFFFF';
+          btn.style.fontSize = '10.5px';
+          btn.style.fontWeight = '700';
+          btn.style.cursor = 'pointer';
+          btn.addEventListener('click', act.onClick);
+          actionBar.appendChild(btn);
+        });
+
+        pipWin.document.body.appendChild(actionBar);
 
         pipWin.addEventListener('pagehide', () => {
           docPipWindowRef.current = null;
@@ -656,7 +776,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     setIsFloatingInApp(true);
     setIsPipActive(true);
     onPipStateChange?.(true);
-  }, [nativePipAvailable, onPipStateChange]);
+  }, [nativePipAvailable, onPipStateChange, onQuickStatus, onFocusApp]);
 
   // Toggle handler for button taps
   const togglePip = useCallback(() => {
@@ -729,18 +849,17 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   return (
     <>
       {createPortal(<>
-      {/* 60 FPS Floating In-App HUD Ribbon Container (Single Persistent DOM Node) */}
+      {/* 60 FPS Vertical Floating In-App HUD Container (Single Persistent DOM Node) */}
       <div
         style={{
           position: 'fixed',
           ...(isFloatingInApp
             ? {
                 ...(hudDockPosition === 'bottom'
-                  ? { bottom: 'calc(160px + env(safe-area-inset-bottom, 0px))' }
-                  : { top: 'calc(118px + env(safe-area-inset-top, 0px))' }),
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 'min(94vw, 420px)',
+                  ? { bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }
+                  : { top: 'calc(76px + env(safe-area-inset-top, 0px))' }),
+                right: 12,
+                width: 'min(78vw, 256px)',
                 zIndex: 9999,
                 opacity: 1,
                 pointerEvents: 'auto',
@@ -749,7 +868,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
             : {
                 top: -9999,
                 left: -9999,
-                width: 420,
+                width: 256,
                 opacity: 0,
                 pointerEvents: 'none',
                 visibility: 'hidden',
@@ -759,7 +878,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           WebkitBackdropFilter: 'blur(16px)',
           border: '1.5px solid rgba(240, 194, 58, 0.8)',
           borderRadius: 16,
-          padding: 8,
+          padding: 7,
           boxSizing: 'border-box',
           boxShadow: '0 12px 36px rgba(0, 0, 0, 0.8), 0 0 15px rgba(240, 194, 58, 0.2)',
           display: 'flex',
@@ -769,43 +888,50 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           transition: 'opacity 0.15s ease',
         }}
       >
-        {/* Header strip: Title, Dock position switch, Close */}
+        {/* Header strip: Title, Compact toggle, Dock position switch, Close */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '2px 4px',
+            padding: '2px 2px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 13 }}>📺</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 12 }}>📺</span>
             <span
               style={{
-                fontSize: 10.5,
+                fontSize: 10,
                 fontWeight: 900,
-                letterSpacing: 0.8,
+                letterSpacing: 0.6,
                 textTransform: 'uppercase',
-                color: 'var(--pz-accent, #F0C23A)',
+                color: '#F0C23A',
               }}
             >
-              Convoy Floating HUD
-            </span>
-            <span
-              style={{
-                fontSize: 9.5,
-                fontWeight: 700,
-                backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                color: '#10B981',
-                borderRadius: 10,
-                padding: '1px 6px',
-              }}
-            >
-              60 FPS
+              Live HUD
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              type="button"
+              onClick={() => setIsCompact((v) => !v)}
+              style={{
+                background: isCompact ? 'rgba(240, 194, 58, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                border: isCompact ? '1px solid #F0C23A' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: isCompact ? '#F0C23A' : '#FFFFFF',
+                borderRadius: 8,
+                padding: '3px 6px',
+                fontSize: 10,
+                fontWeight: 700,
+                cursor: 'pointer',
+                touchAction: 'manipulation',
+              }}
+              title={isCompact ? 'Expand full HUD' : 'Compact view'}
+            >
+              {isCompact ? '⤢ Full' : '⤡ Mini'}
+            </button>
+
             <button
               type="button"
               onClick={handleDockToggle}
@@ -814,7 +940,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
                 border: '1px solid rgba(255, 255, 255, 0.15)',
                 color: '#FFFFFF',
                 borderRadius: 8,
-                padding: '3px 8px',
+                padding: '3px 6px',
                 fontSize: 10,
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -822,20 +948,20 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
               }}
               title={hudDockPosition === 'bottom' ? 'Dock to top' : 'Dock to bottom'}
             >
-              {hudDockPosition === 'bottom' ? '⬆ Dock Top' : '⬇ Dock Bottom'}
+              {hudDockPosition === 'bottom' ? '⬆' : '⬇'}
             </button>
 
             <button
               type="button"
               onClick={closePip}
               style={{
-                width: 26,
-                height: 26,
+                width: 24,
+                height: 24,
                 borderRadius: '50%',
                 background: 'rgba(239, 68, 68, 0.2)',
                 border: '1px solid #EF4444',
                 color: '#EF4444',
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 900,
                 cursor: 'pointer',
                 display: 'flex',
@@ -852,19 +978,67 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           </div>
         </div>
 
-        {/* Persistent 60 FPS Canvas in 3x HiDPI Ribbon Ratio */}
-        <canvas
-          ref={canvasRef}
-          width={HUD_WIDTH * HUD_SCALE}
-          height={HUD_HEIGHT * HUD_SCALE}
+        {/* Persistent 60 FPS Canvas in 3x HiDPI Vertical Ratio (cropped in Mini mode) */}
+        <div
           style={{
             width: '100%',
-            height: 'auto',
-            display: 'block',
-            borderRadius: 12,
-            background: '#090B0E',
+            overflow: 'hidden',
+            borderRadius: 10,
+            maxHeight: isCompact ? 114 : 420,
+            transition: 'max-height 0.18s ease',
           }}
-        />
+        >
+          <canvas
+            ref={canvasRef}
+            width={HUD_WIDTH * HUD_SCALE}
+            height={HUD_HEIGHT * HUD_SCALE}
+            style={{
+              width: '100%',
+              height: 'auto',
+              display: 'block',
+              background: '#090B0E',
+            }}
+          />
+        </div>
+
+        {/* Interactive 1-Tap Glove-Friendly Quick Actions */}
+        {onQuickStatus && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button
+              type="button"
+              onClick={() => onQuickStatus('Wait up!')}
+              style={{
+                flex: 1, padding: '5px 2px', borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.06)',
+                color: '#FFFFFF', fontSize: 10, fontWeight: 700, cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              ✋ Wait
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickStatus('Need fuel')}
+              style={{
+                flex: 1, padding: '5px 2px', borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.06)',
+                color: '#FFFFFF', fontSize: 10, fontWeight: 700, cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              ⛽ Fuel
+            </button>
+            <button
+              type="button"
+              onClick={() => onQuickStatus('All good')}
+              style={{
+                flex: 1, padding: '5px 2px', borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.14)', background: 'rgba(255,255,255,0.06)',
+                color: '#FFFFFF', fontSize: 10, fontWeight: 700, cursor: 'pointer', touchAction: 'manipulation',
+              }}
+            >
+              👍 OK
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Video element feeding Native PiP window (must remain within viewport DOM bounds for Apple WebKit) */}

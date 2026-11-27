@@ -1923,6 +1923,7 @@ export default function RidePage() {
         isLive: r.freshness.isLive,
         isStale: r.freshness.isStale || r.freshness.isUnknown,
         staleAgeLabel: r.freshness.ageLabel,
+        quickStatus: r.quickStatus,
         distanceKm: r.lat && r.lng && myLat && myLng ? haversineKm(myLat, myLng, r.lat, r.lng) : undefined,
         progressPercent: progressInfo?.progressPercent ?? 30,
         distanceAlongMeters: progressInfo?.distanceAlongMeters,
@@ -2844,7 +2845,7 @@ export default function RidePage() {
                 <Icon name="wrench" />
               </button>
 
-              {/* 60 FPS Picture-in-Picture Convoy Floating HUD */}
+              {/* 60 FPS Vertical Picture-in-Picture Convoy Floating HUD */}
               <PictureInPictureHud
                 pinnedStop={pinnedStop}
                 distToPinnedStop={distToPinnedStop}
@@ -2852,9 +2853,17 @@ export default function RidePage() {
                 totalRiders={ridersWithFreshness.length}
                 riders={pipRiders}
                 currentSpeedKmh={mySpeedKmh}
+                fuelRangeKm={fuelState ? rangeLeftKm(fuelState, myAlong) : null}
+                isOffRoute={Boolean(user?.id && deviationTrackers[user.id]?.isDeviated)}
+                offRouteMeters={user?.id ? (deviationTrackers[user.id]?.distanceMeters ?? null) : null}
                 sosActive={sosActive}
                 activeAnnouncement={activeAnnouncement ? { message: activeAnnouncement.message, urgency: activeAnnouncement.urgency, icon: activeAnnouncement.icon } : null}
                 tripTitle={session?.trips?.title}
+                onQuickStatus={pickStatus}
+                onFocusApp={() => {
+                  window.focus();
+                  setTab('map');
+                }}
               />
             </div>
 
