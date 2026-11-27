@@ -82,7 +82,8 @@ export default function CreateTripPage() {
       setForm(f => ({ ...f, [field]: name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`, [latField]: lat, [lngField]: lng }));
     } catch (e) {
       const reason = e instanceof GeoError ? e.reason : 'unavailable';
-      setLocError({ field, msg: GEO_MESSAGES[reason] });
+      const detail = e instanceof GeoError && e.detail ? ` (${e.detail.slice(0, 140)})` : '';
+      setLocError({ field, msg: GEO_MESSAGES[reason] + (reason === 'denied' ? '' : detail) });
     } finally {
       setSpin(false);
     }
