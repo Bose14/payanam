@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tripService } from '../services/api';
+import { getPosition, GeoError, GEO_MESSAGES } from '../utils/geolocate';
 import PlaceInput from '../components/PlaceInput';
 import Navbar from '../components/Navbar';
 import Icon from '../components/Icon';
@@ -66,24 +67,25 @@ export default function CreateTripPage() {
   const [gettingFrom, setGettingFrom] = useState(false);
   const [gettingTo, setGettingTo] = useState(false);
 
-  const useCurrentLocation = (field: 'from_place' | 'to_place') => {
+  const [locError, setLocError] = useState<{ field: 'from_place' | 'to_place'; msg: string } | null>(null);
+
+  const useCurrentLocation = async (field: 'from_place' | 'to_place') => {
     const setSpin = field === 'from_place' ? setGettingFrom : setGettingTo;
     const latField = field === 'from_place' ? 'from_lat' : 'to_lat';
     const lngField = field === 'from_place' ? 'from_lng' : 'to_lng';
     setSpin(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        const name = await reverseGeocode(lat, lng);
-        setForm(f => ({ ...f, [field]: name, [latField]: lat, [lngField]: lng }));
-        setSpin(false);
-      },
-      () => {
-        setSpin(false);
-        setError('Location permission denied. Please enable GPS in your browser and try again.');
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    setLocError(null);
+    try {
+      const pos = await getPosition();
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const name = await reverseGeocode(lat, lng).catch(() => '');
+      setForm(f => ({ ...f, [field]: name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`, [latField]: lat, [lngField]: lng }));
+    } catch (e) {
+      const reason = e instanceof GeoError ? e.reason : 'unavailable';
+      setLocError({ field, msg: GEO_MESSAGES[reason] });
+    } finally {
+      setSpin(false);
+    }
   };
 
   const handleSwapPlaces = () => {
@@ -258,6 +260,7 @@ export default function CreateTripPage() {
                 >
                   {gettingFrom ? 'Finding GPS...' : 'Use My Location'}
                 </button>
+                {locError?.field === 'from_place' && <div role="alert" style={styles.locError}>{locError.msg}</div>}
               </div>
 
               {/* Swap Button */}
@@ -289,6 +292,7 @@ export default function CreateTripPage() {
                 >
                   {gettingTo ? 'Finding GPS...' : 'Use My Location'}
                 </button>
+                {locError?.field === 'to_place' && <div role="alert" style={styles.locError}>{locError.msg}</div>}
               </div>
             </div>
 
@@ -584,6 +588,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     flexShrink: 0,
   },
+  locError: { marginTop: 8, fontSize: 12, lineHeight: 1.45, color: 'var(--pz-bad, #ef4444)' },
   gpsBtn: {
     background: 'var(--bg-subtle)',
     border: '1px solid var(--border-card)',

@@ -1,3 +1,4 @@
+import { getPosition, GeoError } from '../utils/geolocate';
 import { enablePush } from '../utils/push';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -204,11 +205,10 @@ export default function WelcomePage() {
       setPerms((p) => ({ ...p, loc: 'denied' }));
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      () => setPerms((p) => ({ ...p, loc: 'allowed' })),
-      () => setPerms((p) => ({ ...p, loc: 'denied' })),
-      { enableHighAccuracy: true, timeout: 15000 },
-    );
+    // Only a real refusal counts as "denied". A slow GPS fix leaves it undecided so it can be retried.
+    getPosition()
+      .then(() => setPerms((p) => ({ ...p, loc: 'allowed' })))
+      .catch((e) => setPerms((p) => ({ ...p, loc: e instanceof GeoError && e.reason !== 'denied' && e.reason !== 'unsupported' ? 'unknown' : 'denied' })));
   };
 
   const askNotifications = async () => {
