@@ -311,10 +311,11 @@ export default function TripDetailPage() {
         .finally(() => { busy = false; });
     };
 
-    const stopListening = listenTrip(id, (ev) => { if (ev === 'join-request') check(); });
-    const timer = setInterval(check, 120000);
+    // No timer: a request arrives as a realtime message. The list is also fetched when the channel
+    // connects (covers anything missed while offline) and when the app comes back to the front.
+    const stopListening = listenTrip(id, (ev) => { if (ev === 'join-request') check(); }, check);
     document.addEventListener('visibilitychange', check);
-    return () => { stopped = true; stopListening(); clearInterval(timer); document.removeEventListener('visibilitychange', check); };
+    return () => { stopped = true; stopListening(); document.removeEventListener('visibilitychange', check); };
   }, [id, trip?.isOwner]);
 
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {

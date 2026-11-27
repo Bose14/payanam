@@ -105,7 +105,8 @@ export default function JoinRoomPage() {
   }, [inviteCode, user]);
 
   // While the request is pending, the leader's answer arrives as a realtime message and the
-  // server is asked once. A slow check every 30 s covers a dropped connection.
+  // server is asked once. It is also asked when the channel connects and when the app comes back
+  // to the front. No timer.
   useEffect(() => {
     if (pageState !== 'pending' || !inviteCode || !user) return;
     let done = false;
@@ -124,12 +125,12 @@ export default function JoinRoomPage() {
           done = true;
           setPageState('rejected');
         }
-      } catch { /* silent retry on the next message or timer */ }
+      } catch { /* retried on the next message, reconnect or when the app returns */ }
     };
-    const stop = tripId ? listenTrip(tripId, (ev) => { if (ev === 'join-response') void check(); }) : () => {};
-    const timer = setInterval(() => void check(), 30000);
+    const stop = tripId ? listenTrip(tripId, (ev) => { if (ev === 'join-response') void check(); }, () => void check()) : () => {};
+    void check();
     document.addEventListener('visibilitychange', check);
-    return () => { done = true; stop(); clearInterval(timer); document.removeEventListener('visibilitychange', check); };
+    return () => { done = true; stop(); document.removeEventListener('visibilitychange', check); };
   }, [pageState, inviteCode, user, tripId, navigate]);
 
   const handleRequestJoin = async () => {

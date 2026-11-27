@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useLiveRefresh } from '../../lib/userEvents';
+import { useCallback, useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { chatService } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
@@ -59,20 +60,13 @@ export default function AppShell() {
   const current = activeTabKey(pathname);
   const [unread, setUnread] = useState(0);
 
-  // Unread count for the Chat tab badge.
-  useEffect(() => {
-    let alive = true;
-    // Checked when the screen changes and when the app comes back to the front. A slow check every
-    // 2 minutes while visible keeps the badge honest if a message arrives while nothing else happens.
-    const tick = () => {
-      if (document.visibilityState !== 'visible') return;
-      chatService.unread(false).then((n) => alive && setUnread(n)).catch(() => {});
-    };
-    tick();
-    const id = setInterval(tick, 120000);
-    document.addEventListener('visibilitychange', tick);
-    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', tick); };
-  }, [pathname]);
+  // Unread count for the Chat tab badge: refreshed when the server pings that a chat changed, when the
+  // screen changes, and on a slow timer in case the connection dropped.
+  const loadUnread = useCallback(() => {
+    chatService.unread(false).then(setUnread).catch(() => {});
+  }, []);
+  useLiveRefresh(loadUnread, { events: ['chat'], slowMs: 300000, fastMs: 60000 });
+  useEffect(() => { loadUnread(); }, [pathname, loadUnread]);
 
   const modeLabel = mode === 'auto' ? 'Auto' : mode === 'day' ? 'Light' : 'Dark';
 

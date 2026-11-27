@@ -2,6 +2,12 @@ import { getDatabase } from '../config/database';
 import { ForbiddenError } from '../utils/errors';
 import { getTripMemberIds } from './trip.service';
 import { sendPush } from './push.service';
+import { broadcastToUsers } from './realtime.service';
+
+/** Tell everyone on the trip that a ride started or ended, so their Ride tab updates without asking on a timer. */
+async function pingTrip(tripId: string): Promise<void> {
+  try { await broadcastToUsers(await getTripMemberIds(tripId), 'ride', { tripId }); } catch { /* best effort */ }
+}
 
 export async function startRide(tripId: string, userId: string) {
   const db = getDatabase();
@@ -14,16 +20,18 @@ export async function startRide(tripId: string, userId: string) {
     .insert({ trip_id: tripId, started_by: userId, status: 'active' })
     .select().single();
   if (error) throw new Error(error.message);
+  void pingTrip(tripId);
   return data;
 }
 
 export async function endRide(sessionId: string, userId: string) {
   const db = getDatabase();
-  const { data: session } = await db.from('ride_sessions').select('started_by').eq('id', sessionId).single();
+  const { data: session } = await db.from('ride_sessions').select('started_by, trip_id').eq('id', sessionId).single();
   if (!session || session.started_by !== userId) throw new Error('Not authorized');
   await db.from('ride_sessions')
     .update({ status: 'ended', ended_at: new Date().toISOString() })
     .eq('id', sessionId);
+  void pingTrip(session.trip_id as string);
 }
 
 export async function getActiveSession(tripId: string) {

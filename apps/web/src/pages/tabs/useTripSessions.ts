@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useLiveRefresh } from '../../lib/userEvents';
 import { tripService } from '../../services/api';
 
 interface TripRow {
@@ -41,14 +42,8 @@ export function useTripSessions() {
     }
   }, []);
 
-  useEffect(() => {
-    // Loaded when the Ride tab opens, and again when the person returns to the app. No timer.
-    void load();
-    const onShow = () => { if (document.visibilityState === 'visible') void load(); };
-    document.addEventListener('visibilitychange', onShow);
-    window.addEventListener('focus', onShow);
-    return () => { document.removeEventListener('visibilitychange', onShow); window.removeEventListener('focus', onShow); };
-  }, [load]);
+  // Loaded when the Ride tab opens, when the app returns, and when the server pings that a ride started or ended.
+  useLiveRefresh(load, { events: ['ride'], slowMs: 600000, fastMs: 60000 });
 
   return { items, loading, error, reload: load };
 }

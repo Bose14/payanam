@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../../lib/userEvents';
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -12,19 +13,6 @@ type Filter = 'All' | 'Unread' | 'Trips' | 'Groups' | 'Direct';
 
 function clock(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function useLivePolling(fn: () => void, ms: number) {
-  const ref = useRef(fn);
-  ref.current = fn;
-  useEffect(() => {
-    // Only while the chat is on screen: a hidden tab does not ask, and asks once on return.
-    const run = () => { if (document.visibilityState === 'visible') ref.current(); };
-    run();
-    const id = setInterval(run, ms);
-    document.addEventListener('visibilitychange', run);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', run); };
-  }, [ms]);
 }
 
 const QUICK_REPLIES = ['OK', 'Coming', 'Reached', 'Waiting', 'Wait', 'Fuel', 'Break', 'Slow', 'Help', 'Thanks'];
@@ -147,7 +135,8 @@ function Thread({
     }
   }, [conv.key]);
 
-  useLivePolling(load, 5000);
+  // New messages arrive as a ping from the server. The timer only covers a dropped connection.
+  useLiveRefresh(load, { events: ['chat'], match: (p) => p.key === conv.key, slowMs: 60000, fastMs: 5000 });
   useEffect(() => { bottom.current?.scrollIntoView({ block: 'end' }); }, [msgs.length]);
 
   const send = async (text: string) => {
@@ -640,9 +629,8 @@ export default function ChatTab() {
 
   const load = useCallback(async () => {
     try {
-      const [c, p] = await Promise.all([chatService.conversations(), chatService.contacts().catch(() => [])]);
+      const c = await chatService.conversations();
       setConvs(c);
-      setContacts(p);
       setError('');
     } catch (e) {
       setError(apiMessage(e, 'Could not load your chats.'));
@@ -651,7 +639,9 @@ export default function ChatTab() {
     }
   }, []);
 
-  useLivePolling(load, 10000);
+  useLiveRefresh(load, { events: ['chat'], slowMs: 60000, fastMs: 10000 });
+  // People you ride with change rarely: loaded once, not with every refresh.
+  useEffect(() => { chatService.contacts().then(setContacts).catch(() => {}); }, []);
 
   // /chat?trip=<tripId> (links from other screens) opens that trip's chat.
   const legacyTrip = params.get('trip');
