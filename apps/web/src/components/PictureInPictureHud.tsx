@@ -16,9 +16,9 @@ interface WindowWithDocPiP extends Window {
   };
 }
 
-const HUD_WIDTH = 240;
-const HUD_HEIGHT = 380;
-const HUD_SCALE = 3; // 3x HiDPI (720 x 1140) vertical cockpit for crisp text & sharp stream capture
+const HUD_WIDTH = 196;
+const HUD_HEIGHT = 310;
+const HUD_SCALE = 3; // 3x HiDPI (588 x 930) slim vertical cockpit for minimal map obstruction
 
 export interface PipRiderData {
   userId: string;
@@ -126,7 +126,9 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 }) => {
   const [isPipActive, setIsPipActive] = useState(false);
   const [isFloatingInApp, setIsFloatingInApp] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
+  const [isCompact, setIsCompact] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
   const [hudDockPosition, setHudDockPosition] = useState<'top' | 'bottom'>(
     () => getPipPreferences().dockPosition
   );
@@ -230,44 +232,44 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const liveRiders = riderList.filter((r) => r.isLive !== false).length;
 
     // =========================================================================
-    // 1. TOP STATUS BAR: Live Indicator & Clock (y: 0 - 28px)
+    // 1. TOP STATUS BAR: Live Indicator & Clock (y: 0 - 24px)
     // =========================================================================
     ctx.fillStyle = '#10B981';
     ctx.beginPath();
-    ctx.arc(14, 15, 3 + pulse * 1.4, 0, Math.PI * 2);
+    ctx.arc(12, 13, 2.8 + pulse * 1.2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.textAlign = 'left';
-    ctx.font = `800 10.5px ${FONT}`;
+    ctx.font = `800 9.5px ${FONT}`;
     ctx.fillStyle = '#10B981';
-    ctx.fillText(`${liveRiders}/${Math.max(total, 1)} LIVE`, 23, 19);
+    ctx.fillText(`${liveRiders}/${Math.max(total, 1)} LIVE`, 20, 16.5);
 
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     ctx.textAlign = 'right';
-    ctx.font = `600 10.5px ${FONT}`;
+    ctx.font = `600 9.5px ${FONT}`;
     ctx.fillStyle = '#9CA3AF';
-    ctx.fillText(timeStr, width - 10, 19);
+    ctx.fillText(timeStr, width - 8, 16.5);
 
     ctx.lineWidth = 1;
     ctx.strokeStyle = '#181E27';
     ctx.beginPath();
-    ctx.moveTo(10, 28);
-    ctx.lineTo(width - 10, 28);
+    ctx.moveTo(8, 24);
+    ctx.lineTo(width - 8, 24);
     ctx.stroke();
 
     // =========================================================================
-    // 2. HERO SPEEDOMETER + FUEL RANGE + GROUP AVG (y: 30 - 82px)
+    // 2. HERO SPEEDOMETER + FUEL RANGE + GROUP AVG (y: 25 - 70px)
     // =========================================================================
     const roundedSpeed = Math.round(speed || 0);
     ctx.textAlign = 'left';
-    ctx.font = `900 32px ${FONT}`;
+    ctx.font = `900 28px ${FONT}`;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(`${roundedSpeed}`, 12, 64);
+    ctx.fillText(`${roundedSpeed}`, 10, 55);
 
-    ctx.font = `800 9.5px ${FONT}`;
+    ctx.font = `800 8.5px ${FONT}`;
     ctx.fillStyle = '#F0C23A';
-    ctx.fillText('KM/H', 14, 77);
+    ctx.fillText('KM/H', 11, 66);
 
     // Fuel Range Pill (Top-Right of Hero row)
     const fuelColor = fuelKm == null ? '#9CA3AF' : fuelKm <= 15 ? '#EF4444' : fuelKm <= 35 ? '#F59E0B' : '#10B981';
@@ -276,14 +278,14 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     ctx.strokeStyle = fuelColor;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    drawRoundRect(ctx, 118, 35, 110, 22, 11);
+    drawRoundRect(ctx, 90, 29, 98, 20, 10);
     ctx.fill();
     ctx.stroke();
 
     ctx.textAlign = 'center';
-    ctx.font = `800 10.5px ${FONT}`;
+    ctx.font = `800 9.5px ${FONT}`;
     ctx.fillStyle = fuelColor;
-    ctx.fillText(fuelKm != null ? `⛽ ${Math.round(fuelKm)} km left` : '⛽ Fuel unset', 173, 50);
+    ctx.fillText(fuelKm != null ? `⛽ ${Math.round(fuelKm)} km` : '⛽ Fuel unset', 139, 42.5);
 
     // Group Average Speed (Below Fuel Pill)
     const activeSpeeds = riderList.map((r) => r.speedKmh ?? 0).filter((s) => s > 2);
@@ -296,12 +298,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       : '';
 
     ctx.textAlign = 'right';
-    ctx.font = `700 10px ${FONT}`;
+    ctx.font = `700 9px ${FONT}`;
     ctx.fillStyle = '#9CA3AF';
-    ctx.fillText(`AVG ${avgSpeed} km/h${deltaLabel}`, width - 12, 74);
+    ctx.fillText(`AVG ${avgSpeed} km/h${deltaLabel}`, width - 10, 64);
 
     // =========================================================================
-    // 3. PRIORITY ALERT / CONVOY PACING BANNER (y: 84 - 114px)
+    // 3. PRIORITY ALERT / CONVOY PACING BANNER (y: 72 - 96px)
     // =========================================================================
     const ridersAhead = riderList
       .filter((r) => !r.isMe && (r.relativePosition === 'ahead' || ((r.relativeDistanceMeters ?? 0) > 0 && r.relativePosition !== 'behind')))
@@ -335,18 +337,18 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       bannerBg = 'rgba(240, 194, 58, 0.18)';
       bannerBorder = '#F0C23A';
       bannerColor = '#F0C23A';
-      bannerText = `📢 ${announcement.message.slice(0, 26)}`;
+      bannerText = `📢 ${announcement.message.slice(0, 22)}`;
     } else if (quickRider && quickRider.quickStatus) {
       bannerBg = 'rgba(245, 158, 11, 0.18)';
       bannerBorder = '#F59E0B';
       bannerColor = '#FCD34D';
-      const firstName = quickRider.userName.split(' ')[0].slice(0, 8);
-      bannerText = `💬 ${firstName}: ${quickRider.quickStatus.slice(0, 18)}`;
+      const firstName = quickRider.userName.split(' ')[0].slice(0, 7);
+      bannerText = `💬 ${firstName}: ${quickRider.quickStatus.slice(0, 14)}`;
     } else if (maxBehindDist > 1200) {
       bannerBg = 'rgba(245, 158, 11, 0.16)';
       bannerBorder = '#F59E0B';
       bannerColor = '#FBBF24';
-      bannerText = `⚠️ Tail +${formatDist(maxBehindDist)} · Ease pace`;
+      bannerText = `⚠️ Tail +${formatDist(maxBehindDist)} · Ease`;
     } else if (maxAheadDist > 1200) {
       bannerBg = 'rgba(59, 130, 246, 0.16)';
       bannerBorder = '#3B82F6';
@@ -358,59 +360,59 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     ctx.strokeStyle = bannerBorder;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    drawRoundRect(ctx, 10, 84, width - 20, 28, 7);
+    drawRoundRect(ctx, 8, 72, width - 16, 23, 6);
     ctx.fill();
     ctx.stroke();
 
     ctx.textAlign = 'center';
-    ctx.font = `800 10.5px ${FONT}`;
+    ctx.font = `800 9.5px ${FONT}`;
     ctx.fillStyle = bannerColor;
-    ctx.fillText(bannerText, width / 2, 102);
+    ctx.fillText(bannerText, width / 2, 87);
 
     // =========================================================================
-    // 4. NEXT PINNED STOP + ETA CARD (y: 118 - 156px)
+    // 4. NEXT PINNED STOP + ETA CARD (y: 99 - 131px)
     // =========================================================================
     ctx.fillStyle = '#12161E';
     ctx.strokeStyle = '#1D2431';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    drawRoundRect(ctx, 10, 118, width - 20, 38, 7);
+    drawRoundRect(ctx, 8, 99, width - 16, 32, 6);
     ctx.fill();
     ctx.stroke();
 
     if (stop) {
       const stopIcon = stop.type === 'fuel' ? '⛽' : stop.type === 'food' ? '🍲' : '📌';
-      const stopShort = stop.name.length > 18 ? `${stop.name.slice(0, 16)}…` : stop.name;
+      const stopShort = stop.name.length > 15 ? `${stop.name.slice(0, 14)}…` : stop.name;
 
       ctx.textAlign = 'left';
-      ctx.font = `800 11px ${FONT}`;
+      ctx.font = `800 9.5px ${FONT}`;
       ctx.fillStyle = '#F0C23A';
-      ctx.fillText(`${stopIcon} ${stopShort}`, 18, 134);
+      ctx.fillText(`${stopIcon} ${stopShort}`, 14, 112.5);
 
       ctx.textAlign = 'right';
-      ctx.font = `800 10.5px ${FONT}`;
+      ctx.font = `800 9.5px ${FONT}`;
       ctx.fillStyle = '#E5E7EB';
-      ctx.fillText(`${arrived}/${Math.max(total, 1)}`, width - 18, 134);
+      ctx.fillText(`${arrived}/${Math.max(total, 1)}`, width - 14, 112.5);
 
       const paceKmh = Math.max(roundedSpeed, avgSpeed, 35);
       const etaMins = stopDist != null ? Math.max(1, Math.round((stopDist / paceKmh) * 60)) : null;
-      const distLabel = stopDist != null ? `${stopDist.toFixed(1)} km` : 'Distance --';
+      const distLabel = stopDist != null ? `${stopDist.toFixed(1)} km` : 'Dist --';
       const etaLabel = etaMins != null ? ` · ~${etaMins}m ETA` : '';
 
       ctx.textAlign = 'left';
-      ctx.font = `600 10px ${FONT}`;
+      ctx.font = `600 9px ${FONT}`;
       ctx.fillStyle = '#9CA3AF';
-      ctx.fillText(`${distLabel}${etaLabel}`, 18, 149);
+      ctx.fillText(`${distLabel}${etaLabel}`, 14, 125);
     } else {
       ctx.textAlign = 'left';
-      ctx.font = `700 10.5px ${FONT}`;
+      ctx.font = `700 9.5px ${FONT}`;
       ctx.fillStyle = '#9CA3AF';
-      ctx.fillText('📌 No stop pinned', 18, 135);
-      ctx.font = `500 9.5px ${FONT}`;
-      ctx.fillText('Free ride mode active', 18, 149);
+      ctx.fillText('📌 No stop pinned', 14, 113);
+      ctx.font = `500 8.5px ${FONT}`;
+      ctx.fillText('Free ride mode active', 14, 125);
     }
 
-    // Helper to render a vertical rider section (IN FRONT or BEHIND)
+    // Helper to render a slim vertical rider section (IN FRONT or BEHIND)
     const drawRiderSection = (
       title: string,
       titleColor: string,
@@ -422,48 +424,48 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       emptySub: string,
       isBehindSection: boolean
     ) => {
-      const cardH = 84;
+      const cardH = 68;
       ctx.fillStyle = '#12161E';
       ctx.strokeStyle = '#1D2431';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      drawRoundRect(ctx, 10, yStart, width - 20, cardH, 7);
+      drawRoundRect(ctx, 8, yStart, width - 16, cardH, 6);
       ctx.fill();
       ctx.stroke();
 
       // Left colored accent stripe for instant 0.3s glance differentiation
       ctx.fillStyle = titleColor;
       ctx.beginPath();
-      drawRoundRect(ctx, 10, yStart + 6, 3, cardH - 12, 1.5);
+      drawRoundRect(ctx, 8, yStart + 5, 2.5, cardH - 10, 1.2);
       ctx.fill();
 
       // Header row
       ctx.textAlign = 'left';
-      ctx.font = `900 10px ${FONT}`;
+      ctx.font = `900 9px ${FONT}`;
       ctx.fillStyle = titleColor;
-      ctx.fillText(`${arrow} ${title} (${list.length})`, 20, yStart + 16);
+      ctx.fillText(`${arrow} ${title} (${list.length})`, 16, yStart + 13.5);
 
       if (list.length > 2) {
         ctx.textAlign = 'right';
-        ctx.font = `700 9px ${FONT}`;
+        ctx.font = `700 8.5px ${FONT}`;
         ctx.fillStyle = '#9CA3AF';
-        ctx.fillText(`+${list.length - 2} more`, width - 16, yStart + 16);
+        ctx.fillText(`+${list.length - 2} more`, width - 13, yStart + 13.5);
       }
 
       if (list.length === 0) {
         ctx.textAlign = 'left';
-        ctx.font = `700 11px ${FONT}`;
+        ctx.font = `700 10px ${FONT}`;
         ctx.fillStyle = emptyPrimaryColor;
-        ctx.fillText(emptyPrimary, 20, yStart + 44);
-        ctx.font = `500 9.5px ${FONT}`;
+        ctx.fillText(emptyPrimary, 16, yStart + 36);
+        ctx.font = `500 8.5px ${FONT}`;
         ctx.fillStyle = '#9CA3AF';
-        ctx.fillText(emptySub, 20, yStart + 61);
+        ctx.fillText(emptySub, 16, yStart + 50);
         return;
       }
 
       list.slice(0, 2).forEach((r, idx) => {
-        const rowTop = yStart + 23 + idx * 29;
-        const rowH = 26;
+        const rowTop = yStart + 19 + idx * 23;
+        const rowH = 21;
         const isLag = isBehindSection && (r.relativeDistanceMeters ?? 0) > 1200;
         const accentColor = r.isStale
           ? '#6B7280'
@@ -474,74 +476,74 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         // Subtle row card container
         ctx.fillStyle = '#171D28';
         ctx.beginPath();
-        drawRoundRect(ctx, 18, rowTop, width - 34, rowH, 5);
+        drawRoundRect(ctx, 14, rowTop, width - 26, rowH, 4.5);
         ctx.fill();
 
         // Avatar initial circle
-        const cx = 29;
+        const cx = 23;
         const cy = rowTop + rowH / 2;
         ctx.fillStyle = r.isCaptain ? '#F0C23A' : accentColor;
         ctx.beginPath();
-        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
         ctx.fill();
 
         const initial = (r.userName || '?').trim().charAt(0).toUpperCase();
         ctx.textAlign = 'center';
-        ctx.font = `900 9px ${FONT}`;
+        ctx.font = `900 8px ${FONT}`;
         ctx.fillStyle = '#090B0E';
-        ctx.fillText(initial, cx, cy + 3);
+        ctx.fillText(initial, cx, cy + 2.8);
 
         // Rider name + status prefix
-        const prefix = isLag ? '⚠️ ' : r.isCaptain ? '👑 ' : '';
-        const maxLen = prefix ? 8 : 10;
+        const prefix = isLag ? '⚠️' : r.isCaptain ? '👑' : '';
+        const maxLen = prefix ? 7 : 9;
         const cleanName = r.userName.length > maxLen ? `${r.userName.slice(0, maxLen - 1)}…` : r.userName;
         ctx.textAlign = 'left';
-        ctx.font = `700 10.5px ${FONT}`;
+        ctx.font = `700 9.5px ${FONT}`;
         ctx.fillStyle = r.isStale ? '#9CA3AF' : '#FFFFFF';
-        ctx.fillText(`${prefix}${cleanName}`, 42, rowTop + 16.5);
+        ctx.fillText(`${prefix}${cleanName}`, 33, rowTop + 13.5);
 
         // Speed or Stale age tag (aligned cleanly left of the distance pill)
         if (r.isStale) {
           ctx.textAlign = 'right';
-          ctx.font = `600 8.5px ${FONT}`;
+          ctx.font = `600 8px ${FONT}`;
           ctx.fillStyle = '#9CA3AF';
-          ctx.fillText(r.staleAgeLabel ? `🕒${r.staleAgeLabel}` : '🕒stale', width - 70, rowTop + 16);
+          ctx.fillText(r.staleAgeLabel ? `🕒${r.staleAgeLabel}` : '🕒stale', width - 58, rowTop + 13.5);
         } else if (r.speedKmh != null && r.speedKmh > 0) {
           ctx.textAlign = 'right';
-          ctx.font = `600 8.5px ${FONT}`;
+          ctx.font = `600 8px ${FONT}`;
           ctx.fillStyle = '#9CA3AF';
-          ctx.fillText(`${Math.round(r.speedKmh)}k/h`, width - 70, rowTop + 16);
+          ctx.fillText(`${Math.round(r.speedKmh)}k`, width - 58, rowTop + 13.5);
         }
 
         // Distance badge pill on the right
-        const pillW = 48;
-        const pillH = 18;
-        const pillX = width - 16 - pillW - 2;
-        const pillY = rowTop + 4;
+        const pillW = 42;
+        const pillH = 15;
+        const pillX = width - 14 - pillW;
+        const pillY = rowTop + 3;
         ctx.fillStyle = r.isStale
           ? 'rgba(107, 114, 128, 0.2)'
           : isBehindSection
             ? (isLag ? 'rgba(239, 68, 68, 0.22)' : 'rgba(245, 158, 11, 0.16)')
             : 'rgba(16, 185, 129, 0.16)';
         ctx.beginPath();
-        drawRoundRect(ctx, pillX, pillY, pillW, pillH, 4);
+        drawRoundRect(ctx, pillX, pillY, pillW, pillH, 3.5);
         ctx.fill();
 
         ctx.textAlign = 'center';
-        ctx.font = `900 10px ${FONT}`;
+        ctx.font = `900 9px ${FONT}`;
         ctx.fillStyle = accentColor;
-        ctx.fillText(`${formatDist(r.relativeDistanceMeters)} ${arrow}`, pillX + pillW / 2, rowTop + 16.5);
+        ctx.fillText(`${formatDist(r.relativeDistanceMeters)} ${arrow}`, pillX + pillW / 2, rowTop + 13.5);
       });
     };
 
     // =========================================================================
-    // 5. VERTICAL RIDER STACK: IN FRONT (y: 162 - 246px)
+    // 5. VERTICAL RIDER STACK: IN FRONT (y: 135 - 203px)
     // =========================================================================
     drawRiderSection(
       'IN FRONT',
       '#10B981',
       ridersAhead,
-      162,
+      135,
       '▲',
       '👑 You lead convoy',
       '#F0C23A',
@@ -550,13 +552,13 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     );
 
     // =========================================================================
-    // 6. VERTICAL RIDER STACK: BEHIND (y: 252 - 336px)
+    // 6. VERTICAL RIDER STACK: BEHIND (y: 207 - 275px)
     // =========================================================================
     drawRiderSection(
       'BEHIND',
       '#F59E0B',
       ridersBehind,
-      252,
+      207,
       '▼',
       '🏁 You are at tail',
       '#E5E7EB',
@@ -565,11 +567,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     );
 
     // =========================================================================
-    // 7. MICRO CONVOY RAIL TICKER (y: 342 - 372px)
+    // 7. MICRO CONVOY RAIL TICKER (y: 280 - 306px)
     // =========================================================================
-    const railY = 360;
-    const railLeft = 18;
-    const railRight = width - 18;
+    const railY = 295;
+    const railLeft = 14;
+    const railRight = width - 14;
     const railWidth = railRight - railLeft;
 
     ctx.lineWidth = 3;
@@ -691,7 +693,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const docPip = typeof window !== 'undefined' ? (window as WindowWithDocPiP).documentPictureInPicture : undefined;
     if (!forceInApp && docPip && typeof docPip.requestWindow === 'function') {
       try {
-        const pipWin = await docPip.requestWindow({ width: HUD_WIDTH, height: HUD_HEIGHT + 40 });
+        const pipWin = await docPip.requestWindow({ width: HUD_WIDTH, height: HUD_HEIGHT + 36 });
         docPipWindowRef.current = pipWin;
 
         pipWin.document.title = 'Payanam Live HUD';
@@ -704,31 +706,50 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         pipWin.document.body.style.height = '100vh';
         pipWin.document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
+        const canvasWrap = pipWin.document.createElement('div');
+        canvasWrap.style.width = '100%';
+        canvasWrap.style.flex = '1';
+        canvasWrap.style.minHeight = '0';
+        canvasWrap.style.overflow = 'hidden';
+
         const docCanvas = pipWin.document.createElement('canvas');
         docCanvas.width = HUD_WIDTH * HUD_SCALE;
         docCanvas.height = HUD_HEIGHT * HUD_SCALE;
         docCanvas.style.width = '100%';
-        docCanvas.style.flex = '1';
-        docCanvas.style.minHeight = '0';
+        docCanvas.style.height = 'auto';
         docCanvas.style.display = 'block';
-        pipWin.document.body.appendChild(docCanvas);
+        canvasWrap.appendChild(docCanvas);
+        pipWin.document.body.appendChild(canvasWrap);
         docPipCanvasRef.current = docCanvas;
 
         // Interactive 1-tap glove-friendly quick-action bar at the bottom of Document PiP
         const actionBar = pipWin.document.createElement('div');
         actionBar.style.display = 'flex';
-        actionBar.style.gap = '4px';
-        actionBar.style.padding = '5px 8px';
+        actionBar.style.gap = '3px';
+        actionBar.style.padding = '4px 6px';
         actionBar.style.backgroundColor = '#0D1016';
         actionBar.style.borderTop = '1px solid #1E2430';
         actionBar.style.flexShrink = '0';
 
-        const actions: { label: string; onClick: () => void; accent?: boolean }[] = [
-          { label: '✋ Wait', onClick: () => onQuickStatus?.('Wait up!') },
-          { label: '⛽ Fuel', onClick: () => onQuickStatus?.('Need fuel') },
-          { label: '👍 OK', onClick: () => onQuickStatus?.('All good') },
+        let isDocMini = false;
+        const actions: { label: string; onClick: (btn: HTMLButtonElement) => void; accent?: boolean }[] = [
+          { label: '✋', onClick: () => onQuickStatus?.('Wait up!') },
+          { label: '⛽', onClick: () => onQuickStatus?.('Need fuel') },
+          { label: '👍', onClick: () => onQuickStatus?.('All good') },
           {
-            label: '🗺️ Map',
+            label: '⤡ Mini',
+            onClick: (btn) => {
+              isDocMini = !isDocMini;
+              btn.textContent = isDocMini ? '⤢ Full' : '⤡ Mini';
+              try {
+                pipWin.resizeTo(HUD_WIDTH, isDocMini ? 140 : HUD_HEIGHT + 36);
+              } catch {
+                // ignore resize restrictions
+              }
+            },
+          },
+          {
+            label: '🗺️',
             accent: true,
             onClick: () => {
               onFocusApp?.();
@@ -745,16 +766,16 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           const btn = pipWin.document.createElement('button');
           btn.type = 'button';
           btn.textContent = act.label;
-          btn.style.flex = '1';
-          btn.style.padding = '5px 4px';
-          btn.style.borderRadius = '8px';
+          btn.style.flex = act.label.includes('Mini') ? '1.6' : '1';
+          btn.style.padding = '4px 2px';
+          btn.style.borderRadius = '7px';
           btn.style.border = act.accent ? '1px solid #F0C23A' : '1px solid rgba(255,255,255,0.14)';
           btn.style.backgroundColor = act.accent ? 'rgba(240, 194, 58, 0.16)' : 'rgba(255,255,255,0.06)';
           btn.style.color = act.accent ? '#F0C23A' : '#FFFFFF';
-          btn.style.fontSize = '10.5px';
+          btn.style.fontSize = '10px';
           btn.style.fontWeight = '700';
           btn.style.cursor = 'pointer';
-          btn.addEventListener('click', act.onClick);
+          btn.addEventListener('click', () => act.onClick(btn));
           actionBar.appendChild(btn);
         });
 
@@ -915,8 +936,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
                 ...(hudDockPosition === 'bottom'
                   ? { bottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }
                   : { top: 'calc(76px + env(safe-area-inset-top, 0px))' }),
-                right: 12,
-                width: 'min(78vw, 256px)',
+                right: 10,
+                width: 'min(62vw, 212px)',
                 zIndex: 9999,
                 opacity: 1,
                 pointerEvents: 'auto',
@@ -925,7 +946,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
             : {
                 top: -9999,
                 left: -9999,
-                width: 256,
+                width: 212,
                 opacity: 0,
                 pointerEvents: 'none',
                 visibility: 'hidden',
@@ -1041,7 +1062,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
             width: '100%',
             overflow: 'hidden',
             borderRadius: 10,
-            maxHeight: isCompact ? 114 : 420,
+            maxHeight: isCompact ? 98 : 340,
             transition: 'max-height 0.18s ease',
           }}
         >
