@@ -130,7 +130,8 @@ export const tripService = {
     from_lng?: number | null;
     to_lat?: number | null;
     to_lng?: number | null;
-    itinerary_mode?: 'ai' | 'manual';
+    itinerary_mode?: 'ai' | 'manual' | 'direct';
+    tea_stop?: boolean;
     max_members?: number;
   }) => {
     const response = await api.post('/api/trips', data);

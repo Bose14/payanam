@@ -23,6 +23,7 @@ const elements = [
   el(8, 0.40, 0.45, { name: 'Far Away Falls', natural: 'waterfall' }),      // ~50 km off the road
   el(9, 0.60, 0.05, { name: 'Roadside Restaurant', amenity: 'restaurant' }),
   el(10, 0.55, 0, { amenity: 'restaurant' }),                              // no name
+  el(12, 0.48, 0.005, { name: 'Tea Point', amenity: 'cafe' }),
   el(11, 0.95, 0.01, { name: 'Munnar View Hotel', tourism: 'hotel' }),
 ];
 let aiIds: unknown = null;
@@ -86,7 +87,7 @@ const realSetTimeout = globalThis.setTimeout;
   assert(names.includes('Hogenakkal Falls') && names.includes('Fort Hill'), 'near places kept');
   assert(!names.includes('Roadside Restaurant'), 'restaurant 5 km off is not on the route');
   assert(pois.every((p, i) => i === 0 || pois[i - 1].km <= p.km), 'sorted by position along the road');
-  assert(pois.length === 8, 'count ' + pois.length);
+  assert(pois.length === 9, 'count ' + pois.length);
 
   // 3. Itinerary with no AI: stops come only from those places, in order, and a stay ends each day.
   const plan = await generateItinerary('Salem', 'Munnar', 2, 'Bike', 'one_way', '');
@@ -99,6 +100,14 @@ const realSetTimeout = globalThis.setTimeout;
   assert(/Munnar/.test(plan[1].stops[plan[1].stops.length - 1].place), 'ends at the destination');
   const km = plan[0].stops.map((s) => pois.find((p) => p.name === s.place)?.km).filter((k): k is number => k !== undefined);
   assert(km.every((k, i) => i === 0 || km[i - 1] <= k), 'forward order on day 1');
+
+  // 3b. Point to point: nothing, or exactly one tea stop in the middle of the ride.
+  const { buildDirectItinerary } = await import('../src/services/ai.service');
+  const none = await buildDirectItinerary('Salem', 'Munnar', {}, false);
+  assert(none.plan[0].stops.length === 0 && !none.teaStopFound, 'no stops when not asked');
+  const tea = await buildDirectItinerary('Salem', 'Munnar', {}, true);
+  console.log('tea stop:', tea.plan[0].stops.map((x) => x.place + ' ' + x.type).join(','));
+  assert(tea.plan[0].stops.length === 1 && tea.plan[0].stops[0].place === 'Tea Point' && tea.plan[0].stops[0].type === 'rest', 'one cafe near the middle');
 
   // 4. With AI: it picks by id. An id that is not a candidate is ignored.
   env.GROQ_API_KEY = 'k'.repeat(20);

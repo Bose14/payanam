@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendSuccess, sendError } from '../utils/response';
-import { generateItinerary } from '../services/ai.service';
+import { generateItinerary, buildDirectItinerary } from '../services/ai.service';
 import {
   createTrip,
   getUserTrips,
@@ -30,6 +30,7 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       bike_type = 'motorcycle', trip_type = 'one_way', preferences = '',
       from_lat = null, from_lng = null, to_lat = null, to_lng = null,
       itinerary_mode = 'ai',
+      tea_stop = false,
       max_members,
     } = req.body;
 
@@ -38,16 +39,18 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       return sendError(res, 'Enter the number of riders in the group (2 to 100)', 400, 'VALIDATION_ERROR');
     }
 
-    if (itinerary_mode !== 'ai' && itinerary_mode !== 'manual') {
-      return sendError(res, "itinerary_mode must be 'ai' or 'manual'", 400, 'VALIDATION_ERROR');
+    if (itinerary_mode !== 'ai' && itinerary_mode !== 'manual' && itinerary_mode !== 'direct') {
+      return sendError(res, "itinerary_mode must be 'ai', 'manual' or 'direct'", 400, 'VALIDATION_ERROR');
     }
+    const direct = itinerary_mode === 'direct';
 
     if (!from_place || !to_place || !days) {
       return sendError(res, 'from_place, to_place, and days are required', 400, 'VALIDATION_ERROR');
     }
 
-    const parsedDays = Math.max(1, Math.min(Number(days) || 1, 14));
-    const typeLabel = trip_type === 'round_trip' ? '↺' : trip_type === 'loop' ? '⟳' : '→';
+    const parsedDays = direct ? 1 : Math.max(1, Math.min(Number(days) || 1, 14));
+    const tripKind = direct ? 'one_way' : trip_type;
+    const typeLabel = tripKind === 'round_trip' ? '↺' : tripKind === 'loop' ? '⟳' : '→';
     const title = `${from_place} ${typeLabel} ${to_place} (${parsedDays}d)`;
     const trip = await createTrip(userId, {
       title,
@@ -59,8 +62,8 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       to_lng,
       days: parsedDays,
       bike_type,
-      trip_type,
-      preferences,
+      trip_type: tripKind,
+      preferences: direct ? '' : preferences,
       max_members: maxMembers,
     });
     console.log('[createTrip] trip created:', trip.id);
@@ -81,9 +84,17 @@ export async function createTripHandler(req: Request, res: Response, next: NextF
       console.log('[createTrip] itinerary generated, days:', itinerary.length);
       await saveItinerary(trip.id, itinerary, { from_place, from_lat, from_lng, to_place, to_lat, to_lng });
     }
+    let teaStopFound = false;
+    if (direct) {
+      // Point to point: just the start and the destination, plus one tea stop if asked and one exists.
+      const built = await buildDirectItinerary(from_place, to_place, { fromLat: from_lat, fromLng: from_lng, toLat: to_lat, toLng: to_lng }, tea_stop === true);
+      itinerary = built.plan;
+      teaStopFound = built.teaStopFound;
+      await saveItinerary(trip.id, itinerary, { from_place, from_lat, from_lng, to_place, to_lat, to_lng });
+    }
     const room = await createRoom(trip.id, userId);
 
-    return sendSuccess(res, { trip, itinerary, room }, 201);
+    return sendSuccess(res, { trip, itinerary, room, teaStopFound }, 201);
   } catch (err) {
     next(err);
   }
