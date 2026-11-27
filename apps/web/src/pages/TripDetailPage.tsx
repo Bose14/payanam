@@ -292,15 +292,22 @@ export default function TripDetailPage() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // Live real-time polling for incoming join requests (Leader Only)
+  // Incoming join requests (leader only). Checked every 20 s while the page is visible, once more
+  // when the person comes back to the tab, never while it is hidden, and never two at a time.
   useEffect(() => {
     if (!id || !trip?.isOwner) return;
+    let busy = false;
+    let stopped = false;
 
-    const pollInterval = setInterval(() => {
+    const check = () => {
+      if (busy || stopped || document.visibilityState !== 'visible') return;
+      busy = true;
       tripService.getPendingRequests(id)
         .then((d) => {
           const reqs = d.requests ?? [];
           setPendingRequests((prev) => {
+            const same = prev.length === reqs.length && prev.every((r, i) => (r as { id?: string }).id === (reqs[i] as { id?: string }).id);
+            if (same) return prev; // nothing new: no re-render
             if (reqs.length > prev.length) {
               playNotificationSound();
               const newest = reqs[reqs.length - 1];
@@ -310,10 +317,13 @@ export default function TripDetailPage() {
             return reqs;
           });
         })
-        .catch(() => {});
-    }, 3500);
+        .catch(() => {})
+        .finally(() => { busy = false; });
+    };
 
-    return () => clearInterval(pollInterval);
+    const timer = setInterval(check, 20000);
+    document.addEventListener('visibilitychange', check);
+    return () => { stopped = true; clearInterval(timer); document.removeEventListener('visibilitychange', check); };
   }, [id, trip?.isOwner]);
 
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
