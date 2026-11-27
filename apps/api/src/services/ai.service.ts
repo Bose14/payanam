@@ -183,8 +183,11 @@ async function buildRouteBasedItinerary(
 }
 
 /** One chat completion. Tries the next model when one is missing; null when nothing answered. */
+// The model that last worked is tried first, so a model this key cannot use costs one request only once.
+let workingModel: string | undefined;
+
 async function groqText(prompt: string): Promise<string | null> {
-  const models = [env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant']
+  const models = [env.GROQ_MODEL, workingModel, 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant']
     .filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
   for (const model of models) {
     try {
@@ -201,6 +204,7 @@ async function groqText(prompt: string): Promise<string | null> {
         }),
       });
       if (r.ok) {
+        workingModel = model;
         console.log(`[ai.service] Groq model ${model} answered.`);
         const result = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
         return result.choices?.[0]?.message?.content ?? '';
