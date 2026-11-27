@@ -62,6 +62,10 @@ interface Trip {
   title: string;
   from_place: string;
   to_place: string;
+  from_lat?: number | null;
+  from_lng?: number | null;
+  to_lat?: number | null;
+  to_lng?: number | null;
   days: number;
   bike_type: string;
   status: string;
@@ -1090,6 +1094,8 @@ export default function TripDetailPage() {
                               onSubmit={() => addStop(day)}
                               onCancel={() => { setAddingToDay(null); setAddForm({ place: '', item_type: 'attraction', description: '' }); }}
                               submitting={addingStop}
+                              route={{ from: trip.from_place, to: trip.to_place, fromLat: trip.from_lat, fromLng: trip.from_lng, toLat: trip.to_lat, toLng: trip.to_lng }}
+                              existing={(trip.itinerary ?? []).map((st) => st.place)}
                             />
                           ) : (
                             <button

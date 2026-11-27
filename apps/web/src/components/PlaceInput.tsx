@@ -13,6 +13,8 @@ interface PlaceInputProps {
   onSelect?: (loc: PlaceLocation) => void;
   onLocationSelect?: (loc: PlaceLocation) => void;
   placeholder?: string;
+  /** Results near this point come first (the rider's position, or the trip's start). */
+  bias?: { lat: number; lng: number };
   style?: React.CSSProperties;
 }
 
@@ -26,9 +28,10 @@ export default function PlaceInput({
   onSelect,
   onLocationSelect,
   placeholder,
+  bias,
   style,
 }: PlaceInputProps) {
-  const { suggestions, status, search, clear } = usePlaceSearch();
+  const { suggestions, status, search, clear } = usePlaceSearch(bias);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -43,7 +46,7 @@ export default function PlaceInput({
     return () => document.removeEventListener('pointerdown', handler);
   }, [clear]);
 
-  const handleSelect = (s: { display_name: string; lat: string; lon: string }) => {
+  const handleSelect = (s: { display_name: string; lat: string; lon: string; kind?: string }) => {
     const name = shortName(s.display_name);
     const loc: PlaceLocation = { name, lat: parseFloat(s.lat), lng: parseFloat(s.lon) };
     onChange(name);
@@ -84,7 +87,7 @@ export default function PlaceInput({
           transition: 'border-color 0.15s ease, background-color 0.2s ease',
         }}
       />
-      {open && value.trim().length >= 3 && suggestions.length === 0 && status !== 'idle' && (
+      {open && value.trim().length >= 2 && suggestions.length === 0 && status !== 'idle' && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 6, padding: '10px 14px', zIndex: 9999,
           background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 10,
@@ -135,9 +138,12 @@ export default function PlaceInput({
                 (e.currentTarget as HTMLLIElement).style.background = 'transparent';
               }}
             >
-              <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{shortName(s.display_name)}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                {s.display_name.split(',').slice(2, 4).join(',').trim()}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, justifyContent: 'space-between' }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.display_name.split(',')[0]}</div>
+                {s.kind && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: 0.3 }}>{s.kind}</span>}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {s.display_name.split(',').slice(1, 4).join(',').trim()}
               </div>
             </li>
           ))}

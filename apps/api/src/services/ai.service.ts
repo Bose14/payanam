@@ -1,4 +1,11 @@
 import env from '../config/environment';
+import {
+  haversineKm, nearestOnPath, pointAtKm, buildPath, fetchBestRoute, getJson,
+  type LatLng, type RoutePath,
+} from './route.service';
+import { poisAlongRoute, KIND_LABEL, type RoutePoi } from './routePlaces.service';
+
+export { haversineKm, nearestOnPath };
 
 /**
  * Itinerary generation.
@@ -28,85 +35,9 @@ export interface ItineraryDay {
   stops: ItineraryStop[];
 }
 
-type LatLng = { lat: number; lng: number };
-
-const UA = 'Payanam-App/1.0 (trip planner)';
 const STOP_TYPES = ['fuel_stop', 'stay', 'attraction', 'meal', 'rest'] as const;
 
-// ───────────────────────── geometry ─────────────────────────
-
-export function haversineKm(a: LatLng, b: LatLng): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
-
-interface RoutePath {
-  points: LatLng[];
-  /** cumulative km from the start for each point */
-  cumKm: number[];
-  totalKm: number;
-}
-
-function buildPath(points: LatLng[], totalKmHint?: number): RoutePath {
-  const cumKm: number[] = [0];
-  for (let i = 1; i < points.length; i++) cumKm.push(cumKm[i - 1] + haversineKm(points[i - 1], points[i]));
-  const measured = cumKm[cumKm.length - 1] ?? 0;
-  // Prefer the router's own driving distance, scaling the cumulative values to match it.
-  const totalKm = totalKmHint && totalKmHint > 0 ? totalKmHint : measured;
-  const scale = measured > 0 ? totalKm / measured : 1;
-  return { points, cumKm: cumKm.map((k) => k * scale), totalKm };
-}
-
-/** Index of the path point closest to `p`, with its distance in km. */
-export function nearestOnPath(path: RoutePath, p: LatLng): { index: number; distKm: number } {
-  let best = 0;
-  let bestD = Infinity;
-  for (let i = 0; i < path.points.length; i++) {
-    const d = haversineKm(path.points[i], p);
-    if (d < bestD) { bestD = d; best = i; }
-  }
-  return { index: best, distKm: bestD };
-}
-
-function pointAtKm(path: RoutePath, km: number): LatLng {
-  const target = Math.max(0, Math.min(km, path.totalKm));
-  let lo = 0;
-  let hi = path.cumKm.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (path.cumKm[mid] < target) lo = mid + 1; else hi = mid;
-  }
-  return path.points[lo];
-}
-
-function decimate(points: LatLng[], maxPoints = 1500): LatLng[] {
-  if (points.length <= maxPoints) return points;
-  const step = Math.ceil(points.length / maxPoints);
-  const out = points.filter((_, i) => i % step === 0);
-  const last = points[points.length - 1];
-  if (out[out.length - 1] !== last) out.push(last);
-  return out;
-}
-
 // ───────────────────────── network helpers ─────────────────────────
-
-async function getJson<T>(url: string, timeoutMs: number): Promise<T | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'en', 'User-Agent': UA },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
 
 // Nominatim allows about one request per second; serialise our calls.
 let nominatimChain: Promise<unknown> = Promise.resolve();
@@ -148,19 +79,6 @@ export async function townNameAt(p: LatLng): Promise<string | null> {
   const town = a.city || a.town || a.village || a.municipality || a.suburb || a.county || a.state_district;
   if (!town) return null;
   return a.state && a.state !== town ? `${town}, ${a.state}` : town;
-}
-
-async function fetchRoute(from: LatLng, to: LatLng): Promise<RoutePath | null> {
-  const url =
-    `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}` +
-    `?overview=full&geometries=geojson`;
-  const data = await getJson<{
-    routes?: Array<{ distance: number; geometry: { coordinates: Array<[number, number]> } }>;
-  }>(url, 9000);
-  const r = data?.routes?.[0];
-  if (!r?.geometry?.coordinates?.length) return null;
-  const pts = decimate(r.geometry.coordinates.map(([lng, lat]) => ({ lat, lng })));
-  return buildPath(pts, r.distance / 1000);
 }
 
 // ───────────────────────── fallback built from the real road ─────────────────────────
@@ -262,6 +180,222 @@ async function buildRouteBasedItinerary(
     out.push({ day: d, stops: deduped });
   }
   return out;
+}
+
+/** One chat completion. Tries the next model when one is missing; null when nothing answered. */
+async function groqText(prompt: string): Promise<string | null> {
+  const models = [env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant']
+    .filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
+  for (const model of models) {
+    try {
+      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.GROQ_API_KEY.trim()}` },
+        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3,
+          max_tokens: 4096,
+          response_format: { type: 'json_object' },
+        }),
+      });
+      if (r.ok) {
+        console.log(`[ai.service] Groq model ${model} answered.`);
+        const result = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        return result.choices?.[0]?.message?.content ?? '';
+      }
+      console.warn(`[ai.service] Groq ${model} returned ${r.status}: ${(await r.text()).slice(0, 300)}`);
+      // Wrong key or rate limit will not be fixed by another model; a missing/retired model will.
+      if (r.status === 401 || r.status === 403 || r.status === 429) return null;
+    } catch (e) {
+      console.warn(`[ai.service] Groq ${model} failed: ${(e as Error).message}`);
+    }
+  }
+  return null;
+}
+
+// ───────────────────────── plan built from real places on the road ─────────────────────────
+
+interface DayWindow { day: number; lo: number; hi: number; forward: boolean; startKm: number; endKm: number }
+
+/** Where each day starts and ends along the road, outbound first, then back again. */
+function dayWindows(path: RoutePath, days: number, tripType: string): DayWindow[] {
+  const roundTrip = tripType === 'round_trip' || tripType === 'loop';
+  const outDays = roundTrip ? Math.max(1, Math.ceil(days / 2)) : days;
+  const retDays = days - outDays;
+  const endKm = (d: number) => (d <= outDays ? (path.totalKm * d) / outDays : path.totalKm * (1 - (d - outDays) / Math.max(retDays, 1)));
+  const out: DayWindow[] = [];
+  for (let d = 1; d <= days; d++) {
+    const startKm = d === 1 ? 0 : endKm(d - 1);
+    const e = endKm(d);
+    out.push({ day: d, lo: Math.min(startKm, e), hi: Math.max(startKm, e), forward: e >= startKm, startKm, endKm: e });
+  }
+  return out;
+}
+
+const describePoi = (p: RoutePoi): string => {
+  const label = KIND_LABEL[p.kind];
+  const where = p.offKm <= 0.5 ? 'right on your route' : `${p.offKm.toFixed(1)} km off the main road`;
+  return `${label}, ${where}.`;
+};
+
+const TIPS: Partial<Record<RoutePoi['kind'], string>> = {
+  waterfall: 'Check the water level and road condition before the last stretch. Wet rocks are slippery.',
+  viewpoint: 'Good light is early morning and late afternoon.',
+  fuel: 'Top up here if the tank is below half.',
+  restaurant: 'Eat early on highway stretches. Parking is usually easy to spot from the road.',
+  cafe: 'A good place for a tea break and a stretch.',
+  hotel: 'Ask for gated or covered parking for the bike.',
+};
+
+/** Picks the places for one day from those that really lie on that day's part of the road. */
+function selectForDay(
+  pois: RoutePoi[],
+  w: DayWindow,
+  used: Set<string>,
+  isLast: boolean,
+  chooseIds?: string[],
+): RoutePoi[] {
+  const dayKm = w.hi - w.lo;
+  const free = pois.filter((p) => p.km >= w.lo && p.km <= w.hi && !used.has(p.id));
+  const picked: RoutePoi[] = [];
+  const spaced = (p: RoutePoi, gap: number) => picked.every((q) => Math.abs(q.km - p.km) >= gap);
+
+  if (chooseIds?.length) {
+    for (const id of chooseIds) {
+      const p = free.find((x) => x.id === id);
+      if (p && spaced(p, 3) && !picked.includes(p)) picked.push(p);
+    }
+  }
+  if (picked.length < 2) {
+    const want = dayKm < 80 ? 2 : 3;
+    const scenic = free.filter((p) => p.type === 'attraction').sort((a, b) => b.score - a.score);
+    for (const p of scenic) {
+      if (picked.filter((x) => x.type === 'attraction').length >= want) break;
+      if (spaced(p, 12)) picked.push(p);
+    }
+  }
+  const mid = (w.lo + w.hi) / 2;
+  if (!picked.some((p) => p.type === 'meal' || p.type === 'rest') && dayKm > 60) {
+    const meal = free
+      .filter((p) => p.type === 'meal' || p.type === 'rest')
+      .sort((a, b) => (b.score - Math.abs(b.km - mid) * 0.05) - (a.score - Math.abs(a.km - mid) * 0.05))[0];
+    if (meal) picked.push(meal);
+  }
+  if (!picked.some((p) => p.type === 'fuel_stop') && dayKm >= 120) {
+    const fuelAt = w.forward ? w.lo + dayKm * 0.55 : w.hi - dayKm * 0.55;
+    const fuel = free.filter((p) => p.type === 'fuel_stop').sort((a, b) => Math.abs(a.km - fuelAt) - Math.abs(b.km - fuelAt))[0];
+    if (fuel) picked.push(fuel);
+  }
+  if (!isLast) {
+    const nearEnd = (p: RoutePoi) => (w.forward ? w.hi - p.km : p.km - w.lo);
+    const stay = free.filter((p) => p.type === 'stay' && nearEnd(p) >= -5 && nearEnd(p) <= 40)
+      .sort((a, b) => (b.score - nearEnd(b) * 0.1) - (a.score - nearEnd(a) * 0.1))[0];
+    if (stay) picked.push(stay);
+  }
+  picked.forEach((p) => used.add(p.id));
+  picked.sort((a, b) => (w.forward ? a.km - b.km : b.km - a.km));
+  return picked;
+}
+
+async function buildPoiItinerary(
+  from: string,
+  to: string,
+  days: number,
+  bikeType: string,
+  tripType: string,
+  path: RoutePath,
+  pois: RoutePoi[],
+  fromCoords: LatLng | null,
+  toCoords: LatLng | null,
+  ai?: Map<number, string[]>,
+): Promise<ItineraryDay[]> {
+  const windows = dayWindows(path, days, tripType);
+  const used = new Set<string>();
+  const roundTrip = tripType === 'round_trip';
+  const out: ItineraryDay[] = [];
+  let lookups = 0;
+
+  for (const w of windows) {
+    const isLast = w.day === days;
+    const picked = selectForDay(pois, w, used, isLast, ai?.get(w.day));
+    const stops: ItineraryStop[] = [];
+    let prevKm = w.startKm;
+    for (const p of picked) {
+      stops.push({
+        order: stops.length + 1,
+        place: p.name,
+        type: p.type,
+        description: describePoi(p),
+        estimatedKm: Math.round(Math.abs(p.km - prevKm)),
+        durationHours: p.type === 'attraction' ? 1 : p.type === 'fuel_stop' ? 0.25 : p.type === 'stay' ? 0 : 0.75,
+        tips: TIPS[p.kind] ?? '',
+        lat: p.lat,
+        lng: p.lng,
+      });
+      prevKm = p.km;
+    }
+
+    if (isLast) {
+      const endPlace = roundTrip ? from : to;
+      const endPoint = roundTrip ? fromCoords : toCoords;
+      stops.push({
+        order: stops.length + 1, place: endPlace, type: 'stay', description: 'Journey ends here.',
+        estimatedKm: Math.round(Math.abs(w.endKm - prevKm)), durationHours: 0,
+        tips: 'Check the chain and tyre pressure before turning in.', lat: endPoint?.lat, lng: endPoint?.lng,
+      });
+    } else if (!stops.some((s) => s.type === 'stay')) {
+      // No lodge mapped near the end of the day: name the town the road actually reaches.
+      const at = pointAtKm(path, w.endKm);
+      const town = lookups++ < 24 ? await townNameAt(at) : null;
+      stops.push({
+        order: stops.length + 1, place: town ?? `Day ${w.day} overnight town`, type: 'stay',
+        description: `End of day ${w.day}. Look for a lodge with gated parking for the ${bikeType}.`,
+        estimatedKm: Math.round(Math.abs(w.endKm - prevKm)), durationHours: 0,
+        tips: 'Check the chain and tyre pressure before turning in.', lat: at.lat, lng: at.lng,
+      });
+    }
+    stops.forEach((st, i) => { st.order = i + 1; });
+    out.push({ day: w.day, stops });
+  }
+  return out;
+}
+
+/** The AI only chooses among real candidates, by id. It cannot add a place that is not on the road. */
+async function aiChooseIds(
+  from: string, to: string, days: number, bikeType: string, tripType: string, preferences: string,
+  path: RoutePath, pois: RoutePoi[],
+): Promise<Map<number, string[]> | null> {
+  const windows = dayWindows(path, days, tripType);
+  const lines = windows.map((w) => {
+    const cand = pois
+      .filter((p) => p.km >= w.lo && p.km <= w.hi && p.type !== 'stay')
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 14)
+      .sort((a, b) => (w.forward ? a.km - b.km : b.km - a.km));
+    return `Day ${w.day} (${Math.round(w.hi - w.lo)} km of riding):\n` +
+      (cand.map((p) => `  ${p.id} | ${KIND_LABEL[p.kind]} | ${p.name} | ${Math.round(Math.abs(p.km - w.startKm))} km from the day's start`).join('\n') || '  (no candidates)');
+  }).join('\n');
+  const prefs = preferences ? `\nRider preferences (follow them): ${preferences}` : '';
+  const prompt = `You help plan a ${days}-day ${bikeType} motorcycle trip from ${from} to ${to} (${tripType.replace('_', ' ')}).
+Below are REAL places that lie on the road, per day, as "id | kind | name | distance". Choose which to visit.${prefs}
+
+${lines}
+
+RULES: choose 3 to 4 ids per day, only from that day's list. Prefer waterfalls, viewpoints, forts and other sights a rider would not want to miss, plus one place to eat. Do not choose two places close to each other.
+Return ONLY JSON: {"days":[{"day":1,"ids":["n123","w456"]}]}`;
+  const text = await groqText(prompt);
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as { days?: Array<{ day?: unknown; ids?: unknown }> };
+    const map = new Map<number, string[]>();
+    for (const d of parsed.days ?? []) {
+      const day = num(d.day);
+      if (day !== null && Array.isArray(d.ids)) map.set(day, d.ids.filter((x): x is string => typeof x === 'string'));
+    }
+    return map.size ? map : null;
+  } catch { return null; }
 }
 
 // ───────────────────────── AI path with verification ─────────────────────────
@@ -386,7 +520,9 @@ export async function generateItinerary(
     coords?.fromLat != null && coords?.fromLng != null ? { lat: coords.fromLat, lng: coords.fromLng } : await geocodePlace(from);
   const toCoords: LatLng | null =
     coords?.toLat != null && coords?.toLng != null ? { lat: coords.toLat, lng: coords.toLng } : await geocodePlace(to);
-  let path = fromCoords && toCoords ? await fetchRoute(fromCoords, toCoords) : null;
+  const best = fromCoords && toCoords ? await fetchBestRoute(fromCoords, toCoords) : null;
+  let path: RoutePath | null = best?.path ?? null;
+  if (best) console.log(`[ai.service] Route ${Math.round(best.distanceKm)} km, ${Math.round(best.durationMin)} min (best of ${best.alternatives}).`);
   let straightLine = false;
   if (!path && fromCoords && toCoords) {
     // Router unreachable: use the straight line (with a road-winding allowance) so towns can still be found.
@@ -397,6 +533,16 @@ export async function generateItinerary(
     path = buildPath(pts, haversineKm(fromCoords, toCoords) * 1.25);
     straightLine = true;
     console.warn('[ai.service] Route service unavailable. Using the straight line between start and end.');
+  }
+
+  // Real places that lie on the road. When there are enough, the plan is built from them only.
+  const pois = path && !straightLine ? await poisAlongRoute(path) : [];
+  console.log(`[ai.service] Places found on the route: ${pois.length}`);
+  if (path && pois.length >= safeDays * 3) {
+    const picks = isConfigured()
+      ? await aiChooseIds(from, to, safeDays, bikeType, tripType, preferences, path, pois)
+      : null;
+    return buildPoiItinerary(from, to, safeDays, bikeType, tripType, path, pois, fromCoords, toCoords, picks ?? undefined);
   }
 
   const fallback = () => buildRouteBasedItinerary(from, to, safeDays, bikeType, tripType, path, fromCoords, toCoords);
@@ -439,32 +585,8 @@ Return ONLY a JSON object, no explanation, in this shape:
 type must be one of: fuel_stop, stay, attraction, meal, rest.`;
 
   try {
-    const models = [env.GROQ_MODEL, 'llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'llama-3.1-8b-instant']
-      .filter((m, i, arr): m is string => !!m && arr.indexOf(m) === i);
-    let response: Response | null = null;
-    for (const model of models) {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.GROQ_API_KEY.trim()}` },
-        signal: AbortSignal.timeout(30000),
-        body: JSON.stringify({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
-          max_tokens: 4096,
-          response_format: { type: 'json_object' },
-        }),
-      });
-      if (r.ok) { response = r; console.log(`[ai.service] Groq model ${model} answered.`); break; }
-      const body = (await r.text()).slice(0, 300);
-      console.warn(`[ai.service] Groq ${model} returned ${r.status}: ${body}`);
-      // Wrong key or rate limit will not be fixed by another model; a missing/retired model will.
-      if (r.status === 401 || r.status === 403 || r.status === 429) break;
-    }
-    if (!response) return fallback();
-
-    const result = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const text = result.choices?.[0]?.message?.content ?? '';
+    const text = await groqText(prompt);
+    if (text === null) return fallback();
     let rawDays: RawDay[] = [];
     try {
       const parsed = JSON.parse(text) as { days?: RawDay[] } | RawDay[];

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from './Icon';
 import PlaceInput from './PlaceInput';
-import { placeService } from '../services/api';
+import { placeService, type RoutePlace } from '../services/api';
 
 export interface WaypointDraft {
   place: string;
@@ -18,6 +18,10 @@ interface Props {
   onSubmit: () => void;
   onCancel: () => void;
   submitting?: boolean;
+  /** The trip's start and end, so real places on the road between them can be suggested. */
+  route?: { from: string; to: string; fromLat?: number | null; fromLng?: number | null; toLat?: number | null; toLng?: number | null };
+  /** Names already in the itinerary, hidden from the suggestions. */
+  existing?: string[];
 }
 
 const TYPES: Array<{ value: string; label: string; icon: string }> = [
@@ -30,7 +34,39 @@ const TYPES: Array<{ value: string; label: string; icon: string }> = [
 
 const looksLikeLink = (v: string) => /https?:\/\/|maps\.apple|goo\.gl|google\.[a-z]+\/maps/i.test(v);
 
-export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCancel, submitting }: Props) {
+const FILTERS: Array<{ key: string; label: string; types: string[] }> = [
+  { key: 'all', label: 'All', types: [] },
+  { key: 'scenic', label: 'Scenic', types: ['attraction'] },
+  { key: 'food', label: 'Food', types: ['meal', 'rest'] },
+  { key: 'fuel', label: 'Fuel', types: ['fuel_stop'] },
+  { key: 'stay', label: 'Stay', types: ['stay'] },
+];
+
+// One lookup per route for the whole visit, shared by every day's form.
+const routeCache = new Map<string, Promise<RoutePlace[]>>();
+
+export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCancel, submitting, route, existing }: Props) {
+  const [onRoute, setOnRoute] = useState<RoutePlace[] | null>(null);
+  const [routeFailed, setRouteFailed] = useState(false);
+  const [filter, setFilter] = useState('all');
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    if (!route?.from || !route?.to) return;
+    const key = [route.from, route.to, route.fromLat, route.toLat].join('|');
+    let p = routeCache.get(key);
+    if (!p) { p = placeService.alongRoute(route).then((r) => r.places); routeCache.set(key, p); }
+    let live = true;
+    p.then((places) => { if (live) setOnRoute(places); })
+      .catch(() => { routeCache.delete(key); if (live) setRouteFailed(true); });
+    return () => { live = false; };
+  }, [route?.from, route?.to, route?.fromLat, route?.toLat]);
+
+  const visible = useMemo(() => {
+    const have = new Set((existing ?? []).map((n) => n.toLowerCase().split(',')[0].trim()));
+    const types = FILTERS.find((f) => f.key === filter)?.types ?? [];
+    return (onRoute ?? []).filter((p) => !have.has(p.name.toLowerCase()) && (types.length === 0 || types.includes(p.type)));
+  }, [onRoute, existing, filter]);
   const [link, setLink] = useState('');
   const [resolving, setResolving] = useState(false);
   const [linkError, setLinkError] = useState('');
@@ -78,6 +114,43 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
         </div>
         <button type="button" onClick={onCancel} style={S.closeBtn} aria-label="Close" title="Close"><Icon name="close" /></button>
       </div>
+
+      {/* 0. Real places on the road between the start and the destination */}
+      {!hasPin && route && !routeFailed && (
+        <div style={S.block}>
+          <div style={S.label}><span style={{ fontSize: 14 }}><Icon name="road" /></span> On your route</div>
+          {onRoute === null && <div style={S.hint}>Finding places along the road…</div>}
+          {onRoute !== null && (
+            <>
+              <div style={S.chips} role="tablist" aria-label="Filter places">
+                {FILTERS.map((f) => (
+                  <button key={f.key} type="button" role="tab" aria-selected={filter === f.key}
+                    onClick={() => { setFilter(f.key); setShowAll(false); }}
+                    style={{ ...S.chip, minHeight: 34, padding: '0 12px', ...(filter === f.key ? S.chipOn : null) }}>{f.label}</button>
+                ))}
+              </div>
+              {visible.length === 0 && <div style={S.hint}>No mapped places of this kind on the road. Search by name or paste a link below.</div>}
+              <div style={S.list}>
+                {(showAll ? visible : visible.slice(0, 6)).map((p) => (
+                  <button key={p.id} type="button" style={S.item}
+                    onClick={() => onChange({ ...draft, place: p.name, lat: p.lat, lng: p.lng, item_type: p.type })}>
+                    <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                      <span style={S.itemName}>{p.name}</span>
+                      <span style={S.itemSub}>{p.label} · {Math.round(p.km)} km from start · {p.offKm <= 0.5 ? 'on the road' : `${p.offKm.toFixed(1)} km off`}</span>
+                    </span>
+                    <span style={{ fontSize: 18, display: 'inline-flex', color: 'var(--pz-accent)' }}><Icon name="plus" /></span>
+                  </button>
+                ))}
+              </div>
+              {visible.length > 6 && (
+                <button type="button" onClick={() => setShowAll((v) => !v)} style={S.more}>
+                  {showAll ? 'Show fewer' : `Show all ${visible.length}`}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* 1. Paste a map link */}
       {!hasPin && (
@@ -151,6 +224,7 @@ export default function AddWaypointForm({ day, draft, onChange, onSubmit, onCanc
             onChange={(v) => onChange({ ...draft, place: v, lat: undefined, lng: undefined })}
             onSelect={(loc) => onChange({ ...draft, place: loc.name, lat: loc.lat, lng: loc.lng })}
             placeholder="Search a town or landmark"
+            bias={route?.fromLat != null && route?.fromLng != null ? { lat: route.fromLat, lng: route.fromLng } : undefined}
           />
         </div>
       )}
@@ -204,6 +278,11 @@ const S: Record<string, React.CSSProperties> = {
   title: { fontSize: 16, fontWeight: 900, color: 'var(--pz-ink)', letterSpacing: -0.2 },
   sub: { fontSize: 12, color: 'var(--pz-muted)', marginTop: 2, lineHeight: 1.35 },
   closeBtn: { width: 36, height: 36, flexShrink: 0, borderRadius: 999, border: '1px solid var(--pz-line)', background: 'var(--pz-surface)', color: 'var(--pz-ink)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, cursor: 'pointer' },
+  list: { display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto', WebkitOverflowScrolling: 'touch' },
+  item: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', boxSizing: 'border-box', padding: '10px 12px', minHeight: 52, borderRadius: 12, border: '1px solid var(--pz-line)', background: 'var(--pz-surface)', color: 'var(--pz-ink)', cursor: 'pointer', fontFamily: 'inherit', touchAction: 'manipulation' },
+  itemName: { display: 'block', fontSize: 14, fontWeight: 800, color: 'var(--pz-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  itemSub: { display: 'block', fontSize: 11, color: 'var(--pz-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  more: { alignSelf: 'flex-start', border: 'none', background: 'transparent', color: 'var(--pz-accent)', fontSize: 13, fontWeight: 800, cursor: 'pointer', padding: '4px 2px', fontFamily: 'inherit' },
   block: { display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 },
   label: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 800, letterSpacing: 0.4, color: 'var(--pz-muted)', textTransform: 'uppercase' },
   row: { display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 },
