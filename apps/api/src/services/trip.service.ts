@@ -342,9 +342,10 @@ export async function saveItinerary(
   }
 
   const lastDay = Math.max(...itineraryDays.map((d) => d.day), 1);
-  const lastDayMaxOrder = Math.max(
-    ...(itineraryDays.find((d) => d.day === lastDay)?.stops.map((s) => s.order) ?? [0])
-  );
+  // A day with no stops (point to point) has no order numbers: Math.max() of nothing is -Infinity,
+  // which was saved as null and made the whole insert fail, so the trip had no start or end.
+  const lastDayOrders = itineraryDays.find((d) => d.day === lastDay)?.stops.map((s) => s.order) ?? [];
+  const lastDayMaxOrder = lastDayOrders.length > 0 ? Math.max(...lastDayOrders) : 0;
 
   const midRows = itineraryDays.flatMap((day) =>
     day.stops.map((stop) => ({
