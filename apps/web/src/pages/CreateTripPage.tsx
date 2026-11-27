@@ -273,6 +273,7 @@ export default function CreateTripPage() {
                   value={form.to_place}
                   onChange={(v) => setForm(f => ({ ...f, to_place: v, to_lat: null, to_lng: null }))}
                   placeholder="e.g. Munnar, Kerala"
+                  bias={form.from_lat != null && form.from_lng != null ? { lat: form.from_lat, lng: form.from_lng } : undefined}
                 />
                 <button
                   type="button"

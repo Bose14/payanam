@@ -266,7 +266,26 @@ export const tripService = {
 
 export interface ResolvedMapPlace { name: string; lat: number; lng: number; source: 'google' | 'apple'; approximate?: boolean }
 
+export interface PlaceSuggestion { name: string; subtitle: string; lat: number; lng: number; kind?: string }
+export interface RoutePlace {
+  id: string; name: string; lat: number; lng: number; kind: string; label: string;
+  type: 'fuel_stop' | 'stay' | 'attraction' | 'meal' | 'rest'; km: number; offKm: number;
+}
+export interface AlongRoute { route: { distanceKm: number; durationMin: number } | null; places: RoutePlace[] }
+
 export const placeService = {
+  /** Search-as-you-type: many results, biased toward `near` when given. */
+  suggest: async (q: string, near?: { lat: number; lng: number }, signal?: AbortSignal): Promise<PlaceSuggestion[]> => {
+    const response = await api.get('/api/places/suggest', { params: { q, lat: near?.lat, lng: near?.lng }, signal });
+    return response.data.data.suggestions ?? [];
+  },
+
+  /** Real places that lie on the road between the trip's start and end. */
+  alongRoute: async (p: { from: string; to: string; fromLat?: number | null; fromLng?: number | null; toLat?: number | null; toLng?: number | null }): Promise<AlongRoute> => {
+    const response = await api.get('/api/places/along-route', { params: p, timeout: 60000 });
+    return response.data.data;
+  },
+
   /** Reads a pasted Google Maps or Apple Maps link (short links included) into a named point. */
   resolveLink: async (url: string): Promise<ResolvedMapPlace> => {
     try {
