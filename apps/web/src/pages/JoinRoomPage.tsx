@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { listenTrip, notifyTrip } from '../lib/tripEvents';
 import { tripService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
@@ -55,8 +56,6 @@ export default function JoinRoomPage() {
   const [toast, setToast] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
 
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const showToastMsg = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
@@ -109,32 +108,32 @@ export default function JoinRoomPage() {
       });
   }, [inviteCode, user]);
 
-  // Fast auto-polling when request is pending approval (every 2.5s)
+  // While the request is pending, the leader's answer arrives as a realtime message and the
+  // server is asked once. A slow check every 30 s covers a dropped connection.
   useEffect(() => {
-    if (pageState === 'pending' && inviteCode && user) {
-      pollTimerRef.current = setInterval(async () => {
-        try {
-          const res = await tripService.getRoomMemberStatus(inviteCode);
-          const st = res?.status;
-          if (st === 'approved') {
-            const destTripId = res.tripId ?? res.room?.trips?.id ?? res.room?.trip_id ?? tripId;
-            setPageState('approved');
-            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-            showToastMsg('Request Approved! Opening convoy mission control...');
-            if (destTripId) {
-              setTimeout(() => navigate(`/trips/${destTripId}`, { replace: true }), 1000);
-            }
-          } else if (st === 'rejected') {
-            setPageState('rejected');
-            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-          }
-        } catch { /* silent retry */ }
-      }, 2500);
-    }
-
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (pageState !== 'pending' || !inviteCode || !user) return;
+    let done = false;
+    const check = async () => {
+      if (done || document.visibilityState !== 'visible') return;
+      try {
+        const res = await tripService.getRoomMemberStatus(inviteCode);
+        const st = res?.status;
+        if (st === 'approved') {
+          done = true;
+          const destTripId = res.tripId ?? res.room?.trips?.id ?? res.room?.trip_id ?? tripId;
+          setPageState('approved');
+          showToastMsg('Request Approved! Opening convoy mission control...');
+          if (destTripId) setTimeout(() => navigate(`/trips/${destTripId}`, { replace: true }), 1000);
+        } else if (st === 'rejected') {
+          done = true;
+          setPageState('rejected');
+        }
+      } catch { /* silent retry on the next message or timer */ }
     };
+    const stop = tripId ? listenTrip(tripId, (ev) => { if (ev === 'join-response') void check(); }) : () => {};
+    const timer = setInterval(() => void check(), 30000);
+    document.addEventListener('visibilitychange', check);
+    return () => { done = true; stop(); clearInterval(timer); document.removeEventListener('visibilitychange', check); };
   }, [pageState, inviteCode, user, tripId, navigate]);
 
   const handleRequestJoin = async () => {
@@ -157,6 +156,7 @@ export default function JoinRoomPage() {
         if (roomTripId) navigate(`/trips/${roomTripId}`, { replace: true });
         else setPageState('approved');
       } else if (status === 'pending') {
+        if (roomTripId) { setTripId(roomTripId); notifyTrip(roomTripId, 'join-request'); }
         setPageState('pending');
         showToastMsg('Request sent! Awaiting leader confirmation.');
       } else if (status === 'rejected') {
