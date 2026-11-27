@@ -62,12 +62,16 @@ export default function AppShell() {
   // Unread count for the Chat tab badge.
   useEffect(() => {
     let alive = true;
+    // Checked when the screen changes and when the app comes back to the front. A slow check every
+    // 2 minutes while visible keeps the badge honest if a message arrives while nothing else happens.
     const tick = () => {
+      if (document.visibilityState !== 'visible') return;
       chatService.unread(false).then((n) => alive && setUnread(n)).catch(() => {});
     };
     tick();
-    const id = setInterval(tick, 20000);
-    return () => { alive = false; clearInterval(id); };
+    const id = setInterval(tick, 120000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', tick); };
   }, [pathname]);
 
   const modeLabel = mode === 'auto' ? 'Auto' : mode === 'day' ? 'Light' : 'Dark';

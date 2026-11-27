@@ -18,8 +18,6 @@ export interface TripWithSession extends TripRow {
   sessionId: string | null;
 }
 
-const REFRESH_MS = 30000;
-
 /** The user's trips, each with its live ride session id when one is running. One request. */
 export function useTripSessions() {
   const [items, setItems] = useState<TripWithSession[]>([]);
@@ -44,12 +42,12 @@ export function useTripSessions() {
   }, []);
 
   useEffect(() => {
+    // Loaded when the Ride tab opens, and again when the person returns to the app. No timer.
     void load();
-    // Refresh while the screen is visible, and once when the person comes back to it.
-    const tick = () => { if (document.visibilityState === 'visible') void load(); };
-    const id = setInterval(tick, REFRESH_MS);
-    document.addEventListener('visibilitychange', tick);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+    const onShow = () => { if (document.visibilityState === 'visible') void load(); };
+    document.addEventListener('visibilitychange', onShow);
+    window.addEventListener('focus', onShow);
+    return () => { document.removeEventListener('visibilitychange', onShow); window.removeEventListener('focus', onShow); };
   }, [load]);
 
   return { items, loading, error, reload: load };

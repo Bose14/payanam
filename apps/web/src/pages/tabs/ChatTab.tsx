@@ -18,9 +18,12 @@ function useLivePolling(fn: () => void, ms: number) {
   const ref = useRef(fn);
   ref.current = fn;
   useEffect(() => {
-    ref.current();
-    const id = setInterval(() => ref.current(), ms);
-    return () => clearInterval(id);
+    // Only while the chat is on screen: a hidden tab does not ask, and asks once on return.
+    const run = () => { if (document.visibilityState === 'visible') ref.current(); };
+    run();
+    const id = setInterval(run, ms);
+    document.addEventListener('visibilitychange', run);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', run); };
   }, [ms]);
 }
 
