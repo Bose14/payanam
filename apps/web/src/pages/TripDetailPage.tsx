@@ -4,6 +4,7 @@ import { tripService, rideService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import TripMap from '../components/TripMap';
 import { geocodeBest } from '../hooks/usePlaceSearch';
+import { listenTrip, notifyTrip } from '../lib/tripEvents';
 import AddWaypointForm from '../components/AddWaypointForm';
 import ExpenseTracker from '../components/ExpenseTracker';
 import Navbar from '../components/Navbar';
@@ -292,8 +293,8 @@ export default function TripDetailPage() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  // Incoming join requests (leader only). Checked every 20 s while the page is visible, once more
-  // when the person comes back to the tab, never while it is hidden, and never two at a time.
+  // Incoming join requests (leader only). A rider who asks to join sends a realtime message, and
+  // only then is the server asked. A slow check every 2 minutes covers a dropped connection.
   useEffect(() => {
     if (!id || !trip?.isOwner) return;
     let busy = false;
@@ -321,9 +322,10 @@ export default function TripDetailPage() {
         .finally(() => { busy = false; });
     };
 
-    const timer = setInterval(check, 20000);
+    const stopListening = listenTrip(id, (ev) => { if (ev === 'join-request') check(); });
+    const timer = setInterval(check, 120000);
     document.addEventListener('visibilitychange', check);
-    return () => { stopped = true; clearInterval(timer); document.removeEventListener('visibilitychange', check); };
+    return () => { stopped = true; stopListening(); clearInterval(timer); document.removeEventListener('visibilitychange', check); };
   }, [id, trip?.isOwner]);
 
   const doSave = useCallback(async (currentStops: Stop[], tid: string) => {
@@ -413,6 +415,7 @@ export default function TripDetailPage() {
     setRespondingId(memberId);
     try {
       await tripService.respondToRequest(id, memberId, action);
+      notifyTrip(id, 'join-response');
       setPendingRequests(prev => prev.filter(m => m.id !== memberId));
       if (action === 'approved') {
         const approved = pendingRequests.find(m => m.id === memberId);
