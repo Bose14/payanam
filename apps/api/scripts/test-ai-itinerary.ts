@@ -13,7 +13,7 @@ const line = Array.from({ length: 200 }, (_, i) => {
 });
 const towns = [
   { lat: 11.0, lng: 77.7, name: 'Erode', state: 'Tamil Nadu' },
-  { lat: 10.65, lng: 77.0, name: 'Pollachi', state: 'Tamil Nadu' },
+  { lat: 10.65, lng: 77.45, name: 'Pollachi', state: 'Tamil Nadu' },
 ];
 let aiAnswer: unknown = null;
 let aiStatus = 200;
@@ -80,7 +80,7 @@ const realSetTimeout = globalThis.setTimeout;
       { order: 1, place: 'Erode, Tamil Nadu', type: 'meal', lat: 11.0, lng: 77.7, description: 'x' },
       { order: 2, place: 'Hogenakkal Falls, Tamil Nadu', type: 'attraction', lat: 12.1, lng: 77.8, description: 'off route' },
       { order: 3, place: 'Fake Dhaba Xyz, Nowhere', type: 'meal', lat: 40, lng: -100, description: 'invented' },
-      { order: 4, place: 'Pollachi, Tamil Nadu', type: 'stay', lat: 10.65, lng: 77.0, description: 'x' },
+      { order: 4, place: 'Pollachi, Tamil Nadu', type: 'stay', lat: 10.65, lng: 77.45, description: 'x' },
     ] },
     { day: 2, stops: [
       { order: 1, place: 'Marayoor, Kerala', type: 'attraction', lat: 0, lng: 0, description: 'wrong coords, geocodable' },
@@ -107,10 +107,10 @@ const realSetTimeout = globalThis.setTimeout;
   assert(err.length === 2 && err[1].stops.length > 0);
   // 5. First model returns 404 (retired / no access): the next model is tried and its answer used.
   aiStatus = 200; usedModels = []; badModels = ['llama-3.3-70b-versatile'];
-  aiAnswer = { days: [{ day: 1, stops: [{ place: 'Erode, Tamil Nadu', lat: 11.0, lng: 77.7, type: 'meal' }, { place: 'Pollachi, Tamil Nadu', lat: 10.65, lng: 77.0, type: 'stay' }, { place: 'Munnar, Kerala', lat: B.lat, lng: B.lng, type: 'stay' }] }, { day: 2, stops: [{ place: 'Marayoor, Kerala', lat: 10.27, lng: 77.16, type: 'attraction' }, { place: 'Munnar Tea Gardens, Kerala', lat: 10.1, lng: 77.06, type: 'attraction' }] }] };
+  aiAnswer = { days: [{ day: 1, stops: [{ place: 'Erode, Tamil Nadu', lat: 11.0, lng: 77.7, type: 'meal' }, { place: 'Pollachi, Tamil Nadu', lat: 10.65, lng: 77.45, type: 'stay' }, { place: 'Munnar, Kerala', lat: B.lat, lng: B.lng, type: 'stay' }] }, { day: 2, stops: [{ place: 'Marayoor, Kerala', lat: 10.27, lng: 77.16, type: 'attraction' }, { place: 'Munnar Tea Gardens, Kerala', lat: 10.1, lng: 77.06, type: 'attraction' }] }] };
   const m = await generateItinerary('Salem', 'Munnar', 2, 'Bike', 'one_way', '');
   assert(!usedModels.includes('llama-3.3-70b-versatile') || usedModels.length >= 2, 'next model tried after a 404: ' + usedModels);
-  assert(m.flatMap((d) => d.stops).length >= 4, 'AI plan is used');
+  assert(m.flatMap((d) => d.stops).length >= 3, 'AI plan is used');
   badModels = [];
 
   // 6. Router down: still a plan, from real towns along the straight line.

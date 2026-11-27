@@ -40,6 +40,7 @@ globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (url.includes('nominatim') && url.includes('/search')) {
     const q = decodeURIComponent(new URL(url).searchParams.get('q') || '').toLowerCase();
     if (q.includes('salem')) return json([{ lat: String(A.lat), lon: String(A.lng), display_name: 'Salem, Tamil Nadu, India', type: 'city' }]);
+    if (q.includes('kalipatti')) return json([{ lat: String(at(0.08).lat), lon: String(at(0.08).lng), display_name: 'Kalipatti, Tamil Nadu', type: 'village' }]);
     if (q.includes('munnar')) return json([{ lat: String(B.lat), lon: String(B.lng), display_name: 'Munnar, Kerala, India', type: 'town' }]);
     if (q.includes('falls')) return json([{ lat: '12.1', lon: '77.8', display_name: 'Hogenakkal Falls, Dharmapuri, Tamil Nadu, India', type: 'waterfall' }]);
     return json([]);
@@ -116,6 +117,21 @@ const realSetTimeout = globalThis.setTimeout;
   const fb = await generateItinerary('Salem', 'Munnar', 2, 'Bike', 'one_way', '');
   assert(fb.every((d) => d.stops.length > 0), 'fallback not empty');
   assert((await p2((await fetchBestRoute(A, B))!.path)).length === 0, 'no places when Overpass is down');
+
+  // 5b. A 22 km ride: the AI suggests a dam 30 km sideways and the city next to the destination.
+  osrm = [{ distance: 22000, duration: 1800, geometry: { coordinates: Array.from({ length: 60 }, (_, i) => { const p = at((i / 59) * 0.08); return [p.lng, p.lat]; }) } }];
+  aiIds = { days: [{ day: 1, stops: [
+    { place: 'Mettur Dam, Salem', lat: 11.9, lng: 77.8, type: 'attraction', description: 'x' },          // far to the side
+    { place: 'Pretty Lake View, Salem', lat: at(0.04, 0.01).lat, lng: at(0.04, 0.01).lng, type: 'attraction', description: 'on the way' },
+    { place: 'Salem City Centre', lat: at(0.08, 0.005).lat, lng: at(0.08, 0.005).lng, type: 'stay', description: 'destination area' },
+  ] }] };
+  const short = await generateItinerary('Salem', 'Kalipatti', 1, 'Bike', 'one_way', '');
+  const shortNames = short.flatMap((d) => d.stops.map((x) => x.place));
+  console.log('short trip:', shortNames.join(' | '));
+  assert(!shortNames.includes('Mettur Dam, Salem'), 'place 30 km sideways dropped on a 22 km ride');
+  assert(!shortNames.includes('Salem City Centre'), 'stop on top of the destination dropped');
+  assert(shortNames.includes('Pretty Lake View, Salem'), 'stop on the way kept');
+  overpassDown = true;
 
   // 6. Suggestions: many results, de-duplicated, Indian first, with a kind label.
   const s = await suggestPlaces('falls', { lat: 11, lng: 77 });
