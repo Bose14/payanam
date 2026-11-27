@@ -418,16 +418,21 @@ function num(v: unknown): number | null {
   return typeof n === 'number' && Number.isFinite(n) ? n : null;
 }
 
+function clamp(v: number, lo: number, hi: number): number { return Math.max(lo, Math.min(hi, v)); }
+
 async function verifyAiItinerary(
   raw: RawDay[],
   days: number,
   path: RoutePath | null,
   tripType: string,
   straightLine = false,
+  ends: LatLng[] = [],
 ): Promise<ItineraryDay[]> {
   const oneWay = tripType === 'one_way';
-  // How far from the real road a stop may be. Detours for a waterfall or viewpoint are fine.
-  const corridorKm = (oneWay ? 60 : 150) + (straightLine ? 60 : 0);
+  // How far from the real road a stop may be: a small part of the trip's length, so a 25 km
+  // ride never sends anyone 30 km sideways. A loop may use a different road back, so it gets more.
+  const total = path?.totalKm ?? 200;
+  const corridorKm = clamp(total * (tripType === 'loop' ? 0.35 : 0.1), tripType === 'loop' ? 10 : 3, tripType === 'loop' ? 80 : 30) + (straightLine ? 20 : 0);
   const seen = new Set<string>();
   let geocodeBudget = 6;
   const result: ItineraryDay[] = [];
@@ -454,6 +459,9 @@ async function verifyAiItinerary(
         if (g && (!path || nearestOnPath(path, g).distKm <= corridorKm)) { point = g; onRoute = true; }
       }
       if (!point || !onRoute) continue; // cannot verify it, so it is not shown
+
+      // The start and the destination are added by the app. A stop right on top of them is a repeat.
+      if (ends.some((e) => haversineKm(e, point as LatLng) < 3)) continue;
 
       lat = point.lat;
       lng = point.lng;
@@ -581,7 +589,9 @@ STRICT RULES:
 - Do NOT invent names of restaurants, hotels, dhabas or fuel stations. Use well-known towns, named tourist spots (waterfalls, ghats, viewpoints, temples, forts) or a named, well-known restaurant only if you are certain it exists.
 - Latitude and longitude must be the real coordinates of that exact place. If you are not sure, leave the place out.
 - Stops must lie on or close to the road route. Never backtrack on a one-way trip.
-- Each day: 3 to 5 stops, finishing at a town with places to stay, with the last stop of the day typed "stay".
+- Number of stops: about one per 30 to 40 km of riding, 1 to 5 per day. For a short trip suggest only 1 or 2, or none if nothing worthwhile is on the road.
+- Every stop must be BETWEEN the start and the destination, on the road itself or within a few km of it. Never suggest a place that needs a ride in another direction.
+- Do not list the start or the destination themselves. Do not add a "stay" stop on the last day. On earlier days finish with a town for the night, typed "stay".
 - No place may appear twice in the whole plan.
 
 Return ONLY a JSON object, no explanation, in this shape:
@@ -601,13 +611,14 @@ type must be one of: fuel_stop, stay, attraction, meal, rest.`;
     }
     if (rawDays.length === 0) return fallback();
 
-    const verified = await verifyAiItinerary(rawDays, safeDays, path, tripType, straightLine);
+    const verified = await verifyAiItinerary(rawDays, safeDays, path, tripType, straightLine, [fromCoords, toCoords].filter((c): c is LatLng => !!c));
     const kept = verified.reduce((n, d) => n + d.stops.length, 0);
     const asked = rawDays.reduce((n, d) => n + (Array.isArray(d.stops) ? d.stops.length : 0), 0);
     console.log(`[ai.service] AI stops verified: ${kept}/${asked}`);
 
     // If too little survived checking, the AI answer is not trustworthy. Use the real route.
-    if (kept < Math.max(2, Math.ceil(safeDays * 1.5)) || kept < asked * 0.4) return fallback();
+    const shortTrip = (path?.totalKm ?? 999) < 60 && safeDays === 1;
+    if ((!shortTrip && kept < Math.max(2, Math.ceil(safeDays * 1.5))) || kept < asked * 0.3) return fallback();
 
     // Make sure every requested day exists, even if it lost all its stops.
     const have = new Set(verified.map((d) => d.day));
