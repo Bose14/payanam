@@ -7,72 +7,62 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { rideService, tripService, chatService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import {
-  NavigationAppModal,
-  CaptainAnnouncementModal,
-  QuickStatusDrawer,
-  PinStopModal,
-  createRiderMarkerIcon,
-  RiderRosterRow,
-  StopDetailSheet,
-  NextStopBottomDock,
-  PresetsTellGroupSheet,
-  NearbyHelpSheet,
-  OfflineSignalBanner,
-  RouteDeviationCard,
-  BatterySaverNote,
-  MeRideSettingsTab,
-  RouteProgressStrip,
-  StopApproachCard,
-  MissedStopPromptCard,
-  ArrivalOfferBanner,
-  PresetCard,
-  ChatLocationCard,
-  ShareLocationModal,
-  ItineraryStopItem,
-  ItineraryProposalCard,
-  ProposeEditModal,
-  ConvoyInviteCard,
-  PublishItineraryModal,
-  DiscoverTab,
-  isTripPublished,
-  ShareMilestoneModal,
-  TripCompletedBanner,
-  buildTripMilestoneSummary,
-  getStoredProposals,
-  addProposal,
-  resolveProposal,
-  getFreshness,
-  evaluateRiderDeviation,
-  getMinDistanceToRoute,
-  formatOffRouteDistance,
-  getBatterySaverPreference,
-  setBatterySaverPreference,
-  calculateRouteProgress,
-  getRouteTotalDistance,
-  evaluateRiderRouteStatus,
-  evaluateStopApproach,
-  detectArrivalZone,
-  detectMissedStop,
-  getPresetInfo,
-  RIDER_STATUS_PRESETS,
-  CAPTAIN_ALERT_VIBRATION_PATTERN,
-  CAPTAIN_SENT_VIBRATION_PATTERN,
-  parseLocationFromMessage,
-  isStopConfirmedInItinerary,
-  formatLocationShareMessage,
-  getCachedNearbyServices,
-  makeServicePinIcon,
-  TrackingPausedBanner,
-  PictureInPictureHud,
-  PipRiderData,
-  ScreenTouchLockOverlay,
-  backgroundTrackingEngine,
-} from '../components';
-import type { RiderDeviationTracker, OffRouteAlert, RouteProgressRider, RouteMilestoneStop, DeliveryReceipt, ItineraryProposal, NearbyServiceItem, BackgroundTrackingStatus } from '../components';
+import NavigationAppModal from '../components/NavigationAppModal';
+import CaptainAnnouncementModal from '../components/CaptainAnnouncementModal';
+import QuickStatusDrawer from '../components/QuickStatusDrawer';
+import PinStopModal from '../components/PinStopModal';
+import { createRiderMarkerIcon } from '../components/RiderMarkerIcon';
+import { RiderRosterRow } from '../components/RiderRosterRow';
+import { StopDetailSheet } from '../components/StopDetailSheet';
+import { NextStopBottomDock } from '../components/NextStopBottomDock';
+import { PresetsTellGroupSheet } from '../components/PresetsTellGroupSheet';
+import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
+import { OfflineSignalBanner } from '../components/OfflineSignalBanner';
+import { RouteDeviationCard } from '../components/RouteDeviationCard';
+import { BatterySaverNote } from '../components/BatterySaverNote';
+import { MeRideSettingsTab } from '../components/MeRideSettingsTab';
+import { RouteProgressStrip } from '../components/RouteProgressStrip';
+import { StopApproachCard } from '../components/StopApproachCard';
+import { MissedStopPromptCard } from '../components/MissedStopPromptCard';
+import { ArrivalOfferBanner } from '../components/ArrivalOfferBanner';
+import { PresetCard } from '../components/PresetCard';
+import ChatLocationCard from '../components/ChatLocationCard';
+import ShareLocationModal from '../components/ShareLocationModal';
+import ItineraryStopItem from '../components/ItineraryStopItem';
+import ItineraryProposalCard from '../components/ItineraryProposalCard';
+import ProposeEditModal from '../components/ProposeEditModal';
+import ConvoyInviteCard from '../components/ConvoyInviteCard';
+import PublishItineraryModal from '../components/PublishItineraryModal';
+import DiscoverTab from '../components/DiscoverTab';
+import { isTripPublished } from '../utils/publicItinerary';
+import ShareMilestoneModal from '../components/ShareMilestoneModal';
+import TripCompletedBanner from '../components/TripCompletedBanner';
+import { buildTripMilestoneSummary } from '../utils/tripMilestones';
+import { getStoredProposals, addProposal, resolveProposal } from '../utils/itineraryProposals';
+import { getFreshness } from '../utils/lastSeen';
+import { evaluateRiderDeviation, getMinDistanceToRoute, formatOffRouteDistance } from '../utils/routeDeviation';
+import { getBatterySaverPreference, setBatterySaverPreference } from '../utils/batterySaver';
+import { calculateRouteProgress, getRouteTotalDistance, evaluateRiderRouteStatus } from '../utils/plannedRouteProgress';
+import { evaluateStopApproach, detectArrivalZone, detectMissedStop } from '../utils/stopPinning';
+import { getPresetInfo, RIDER_STATUS_PRESETS } from '../utils/statusPresets';
+import { CAPTAIN_ALERT_VIBRATION_PATTERN, CAPTAIN_SENT_VIBRATION_PATTERN } from '../utils/captainAnnouncement';
+import { parseLocationFromMessage, isStopConfirmedInItinerary, formatLocationShareMessage } from '../utils/tripChatItinerary';
+import { getCachedNearbyServices, makeServicePinIcon } from '../utils/nearbyServices';
+import TrackingPausedBanner from '../components/TrackingPausedBanner';
+import { PictureInPictureHud } from '../components/PictureInPictureHud';
+import type { PipRiderData } from '../components/PictureInPictureHud';
+import { ScreenTouchLockOverlay } from '../components/ScreenTouchLockOverlay';
+import { backgroundTrackingEngine } from '../utils/backgroundTracking';
+import type { RiderDeviationTracker, OffRouteAlert } from '../utils/routeDeviation';
+import type { RouteProgressRider, RouteMilestoneStop } from '../components/RouteProgressStrip';
+import type { DeliveryReceipt } from '../utils/statusPresets';
+import type { ItineraryProposal } from '../utils/itineraryProposals';
+import type { NearbyServiceItem } from '../utils/nearbyServices';
+import type { BackgroundTrackingStatus } from '../utils/backgroundTracking';
+
 import { offlinePositionQueue, OfflineQueueState } from '../lib/offlinePositionQueue';
 import type { PinnedStopData } from '../components/PinStopModal';
-import type { RiderArrivalInfo } from '../components/StopArrivalTracker';
+import type { RiderArrivalInfo } from '../utils/riderArrival';
 import type { RiderRosterData } from '../components/RiderRosterRow';
 import Icon, { iconSvg } from '../components/Icon';
 import { saveResumeRide, clearResumeRide } from '../utils/rideResume';

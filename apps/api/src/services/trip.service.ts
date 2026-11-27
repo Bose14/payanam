@@ -36,6 +36,78 @@ async function geocodePlace(name: string): Promise<{ lat: number; lng: number } 
   return null;
 }
 
+type MemberWithUser = { user_id: string; users?: { full_name?: string | null; email?: string | null; avatar_url?: string | null } | null };
+
+/** Fills in name, email and avatar for members whose user row was not joined: one query for all of them. */
+async function fillMemberUsers(db: ReturnType<typeof getDatabase>, members: MemberWithUser[]): Promise<void> {
+  const missing = [...new Set(members.filter((m) => !m.users?.full_name || !m.users?.email).map((m) => m.user_id))];
+  if (missing.length === 0) return;
+  try {
+    const { data } = await db.from('users').select('id, full_name, email, avatar_url').in('id', missing);
+    const byId = new Map((data ?? []).map((u) => [u.id as string, u]));
+    for (const m of members) {
+      const u = byId.get(m.user_id);
+      if (u && (!m.users?.full_name || !m.users?.email)) {
+        m.users = { full_name: u.full_name || 'Rider', email: u.email || '', avatar_url: u.avatar_url };
+      }
+    }
+  } catch { /* names stay as they were */ }
+}
+
+const FULL_PROFILE_COLUMNS = 'user_id, phone, blood_group, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, bike_model, bike_reg_no, city';
+const SHORT_PROFILE_COLUMNS = 'user_id, phone, blood_group, bike_model, city';
+
+type MemberRow = MemberWithUser & { id: string; role: string; status: string; joined_at: string };
+
+/** Adds members that only exist in the local request store, skipping anyone already in the list. */
+function mergeLocalMembers(
+  members: MemberRow[],
+  localReqs: Array<{ id: string; user_id: string; role: string; status: string; joined_at: string; users?: MemberWithUser['users'] }>,
+): void {
+  const seenUsers = new Set(members.map((m) => m.user_id));
+  const seenIds = new Set(members.map((m) => m.id));
+  for (const lr of localReqs) {
+    if (seenUsers.has(lr.user_id) || seenIds.has(lr.id)) continue;
+    members.push({ id: lr.id, user_id: lr.user_id, role: lr.role, status: lr.status, joined_at: lr.joined_at, users: lr.users ?? null });
+    seenUsers.add(lr.user_id);
+    seenIds.add(lr.id);
+  }
+}
+
+/**
+ * Rider profiles keyed by user id. Falls back to the local profile store, and (for the full
+ * list) to the audit log, when the profile table has nothing.
+ */
+async function loadRiderProfiles(
+  db: ReturnType<typeof getDatabase>,
+  userIds: string[],
+  columns: string,
+  useAuditFallback: boolean,
+): Promise<Record<string, Record<string, unknown>>> {
+  const map: Record<string, Record<string, unknown>> = {};
+  if (userIds.length === 0) return map;
+  const fromLocal = () => {
+    const local = readLocalProfiles();
+    for (const uid of userIds) if (local[uid]) map[uid] = local[uid];
+  };
+  try {
+    const { data: profiles } = await db.from('rider_profiles').select(columns).in('user_id', userIds);
+    if (profiles && profiles.length > 0) {
+      for (const p of profiles as unknown as Array<{ user_id: string }>) map[p.user_id] = p as unknown as Record<string, unknown>;
+      return map;
+    }
+    fromLocal();
+    if (useAuditFallback) {
+      const { data: logs } = await db.from('audit_logs').select('user_id, details')
+        .eq('action', 'RIDER_PROFILE').in('user_id', userIds).order('created_at', { ascending: false });
+      for (const l of logs ?? []) if (!map[l.user_id] && l.details) map[l.user_id] = l.details as Record<string, unknown>;
+    }
+  } catch {
+    fromLocal();
+  }
+  return map;
+}
+
 interface CreateTripData {
   title: string;
   from_place: string;
@@ -277,16 +349,25 @@ export async function getUserTrips(userId: string) {
     }
   }
 
-  console.log(`[getUserTrips] userId=${userId} owned=${ownedTrips.length} joined=${joinedTrips.length}`);
-  const pendingCounts = await getPendingRequestsCount(userId);
+  const allIds = [...ownedTripIds, ...joinedTripIds];
+  // One query for every trip's live ride, instead of one request per trip from the app.
+  const [pendingCounts, activeSessions] = await Promise.all([
+    getPendingRequestsCount(userId),
+    allIds.length
+      ? db.from('ride_sessions').select('id, trip_id').in('trip_id', allIds).eq('status', 'active')
+      : Promise.resolve({ data: [] as Array<{ id: string; trip_id: string }> }),
+  ]);
+  const activeByTrip = new Map<string, string>();
+  for (const r of (activeSessions.data ?? []) as Array<{ id: string; trip_id: string }>) activeByTrip.set(r.trip_id, r.id);
 
   return [
     ...ownedTrips.map((t) => ({
       ...t,
       isOwner: true,
       pendingRequestCount: pendingCounts[t.id] ?? 0,
+      activeSessionId: activeByTrip.get(t.id) ?? null,
     })),
-    ...joinedTrips,
+    ...(joinedTrips as Array<{ id: string }>).map((t) => ({ ...t, activeSessionId: activeByTrip.get(t.id) ?? null })),
   ];
 }
 
@@ -444,7 +525,7 @@ export async function getTripMemberIds(tripId: string): Promise<string[]> {
   return [...memberIds];
 }
 
-export async function getTripCapacity(tripId: string): Promise<{ max: number | null; taken: number }> {
+async function getTripCapacity(tripId: string): Promise<{ max: number | null; taken: number }> {
   const db = getDatabase();
   const { data: trip } = await db.from('trips').select('id, max_members').eq('id', tripId).maybeSingle();
   if (!trip) return { max: null, taken: 0 };
@@ -775,76 +856,12 @@ export async function getApprovedMembers(tripId: string, currentUserId: string) 
     }
   }
 
-  const seenUserIds = new Set(dbMembers.map((m) => m.user_id));
-  const seenMemberIds = new Set(dbMembers.map((m) => m.id));
+  mergeLocalMembers(dbMembers, localReqs);
 
-  for (const lr of localReqs) {
-    if (!seenUserIds.has(lr.user_id) && !seenMemberIds.has(lr.id)) {
-      dbMembers.push({
-        id: lr.id,
-        user_id: lr.user_id,
-        role: lr.role,
-        status: lr.status,
-        joined_at: lr.joined_at,
-        users: lr.users ?? null,
-      });
-      seenUserIds.add(lr.user_id);
-      seenMemberIds.add(lr.id);
-    }
-  }
+  await fillMemberUsers(db, dbMembers);
 
-  // Ensure all members have user name/email info
-  for (const m of dbMembers) {
-    if (!m.users?.full_name || !m.users?.email) {
-      try {
-        const { data: u } = await db.from('users').select('full_name, email, avatar_url').eq('id', m.user_id).maybeSingle();
-        if (u) {
-          m.users = { full_name: u.full_name || 'Rider', email: u.email || '', avatar_url: u.avatar_url };
-        }
-      } catch { /* silent */ }
-    }
-  }
-
-  // Enrich with rider profiles if available
-  const userIds = dbMembers.map((m) => m.user_id);
-  let profilesMap: Record<string, Record<string, unknown>> = {};
-  if (userIds.length > 0) {
-    try {
-      const { data: profiles } = await db
-        .from('rider_profiles')
-        .select('user_id, phone, blood_group, emergency_contact_name, emergency_contact_phone, emergency_contact_relation, bike_model, bike_reg_no, city')
-        .in('user_id', userIds);
-
-      if (profiles && profiles.length > 0) {
-        profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
-      } else {
-        const localProfiles = readLocalProfiles();
-        for (const uid of userIds) {
-          if (localProfiles[uid]) {
-            profilesMap[uid] = localProfiles[uid];
-          }
-        }
-        const { data: logs } = await db
-          .from('audit_logs')
-          .select('user_id, details')
-          .eq('action', 'RIDER_PROFILE')
-          .in('user_id', userIds)
-          .order('created_at', { ascending: false });
-        if (logs) {
-          for (const l of logs) {
-            if (!profilesMap[l.user_id] && l.details) {
-              profilesMap[l.user_id] = l.details as Record<string, unknown>;
-            }
-          }
-        }
-      }
-    } catch { /* silent */ }
-  }
-
-  return dbMembers.map((m) => ({
-    ...m,
-    profile: profilesMap[m.user_id] ?? null,
-  }));
+  const profilesMap = await loadRiderProfiles(db, dbMembers.map((m) => m.user_id), FULL_PROFILE_COLUMNS, true);
+  return dbMembers.map((m) => ({ ...m, profile: profilesMap[m.user_id] ?? null }));
 }
 
 export async function getPendingRequests(tripId: string, ownerId: string) {
@@ -880,70 +897,12 @@ export async function getPendingRequests(tripId: string, ownerId: string) {
 
   // Merge local requests
   const localReqs = getLocalRequestsForRoom(room.id).filter((r) => r.status === 'pending');
-  const seenUserIds = new Set(dbMembers.map((m) => m.user_id));
-  const seenMemberIds = new Set(dbMembers.map((m) => m.id));
+  mergeLocalMembers(dbMembers, localReqs);
 
-  for (const lr of localReqs) {
-    if (!seenUserIds.has(lr.user_id) && !seenMemberIds.has(lr.id)) {
-      dbMembers.push({
-        id: lr.id,
-        user_id: lr.user_id,
-        role: lr.role,
-        status: lr.status,
-        joined_at: lr.joined_at,
-        users: lr.users ?? null,
-      });
-      seenUserIds.add(lr.user_id);
-      seenMemberIds.add(lr.id);
-    }
-  }
+  await fillMemberUsers(db, dbMembers);
 
-  // Ensure all members have user name/email info
-  for (const m of dbMembers) {
-    if (!m.users?.full_name || !m.users?.email) {
-      try {
-        const { data: u } = await db.from('users').select('full_name, email, avatar_url').eq('id', m.user_id).maybeSingle();
-        if (u) {
-          m.users = { full_name: u.full_name || 'Rider', email: u.email || '', avatar_url: u.avatar_url };
-        }
-      } catch { /* silent */ }
-    }
-  }
-
-  // Enrich with rider profiles
-  const userIds = dbMembers.map((m) => m.user_id);
-  let profilesMap: Record<string, Record<string, unknown>> = {};
-  if (userIds.length > 0) {
-    try {
-      const { data: profiles } = await db
-        .from('rider_profiles')
-        .select('user_id, phone, blood_group, bike_model, city')
-        .in('user_id', userIds);
-
-      if (profiles && profiles.length > 0) {
-        profilesMap = Object.fromEntries(profiles.map((p) => [p.user_id, p]));
-      } else {
-        const localProfiles = readLocalProfiles();
-        for (const uid of userIds) {
-          if (localProfiles[uid]) {
-            profilesMap[uid] = localProfiles[uid];
-          }
-        }
-      }
-    } catch {
-      const localProfiles = readLocalProfiles();
-      for (const uid of userIds) {
-        if (localProfiles[uid]) {
-          profilesMap[uid] = localProfiles[uid];
-        }
-      }
-    }
-  }
-
-  return dbMembers.map((m) => ({
-    ...m,
-    profile: profilesMap[m.user_id] ?? null,
-  }));
+  const profilesMap = await loadRiderProfiles(db, dbMembers.map((m) => m.user_id), SHORT_PROFILE_COLUMNS, false);
+  return dbMembers.map((m) => ({ ...m, profile: profilesMap[m.user_id] ?? null }));
 }
 
 export async function respondToRequest(roomMemberId: string, action: 'approved' | 'rejected', ownerId: string) {
@@ -1255,9 +1214,3 @@ export async function updateTripStatus(tripId: string, userId: string, status: '
   return data;
 }
 
-export async function getRoomByTripId(tripId: string) {
-  const db = getDatabase();
-  const { data, error } = await db.from('rooms').select('*').eq('trip_id', tripId).maybeSingle();
-  if (error) throw new Error(error.message);
-  return data;
-}

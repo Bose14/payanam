@@ -5,8 +5,6 @@ import { iconSvg } from '../components/Icon';
 
 import L from 'leaflet';
 
-export type ServiceCategory = 'ALL' | 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY';
-
 export interface NearbyServiceItem {
   id: string;
   category: 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY';
@@ -28,7 +26,7 @@ export interface NearbyServiceItem {
 const STORAGE_KEY = 'payanam_cached_nearby_services';
 
 // Initial pre-cached corridor dataset along touring routes (Western Ghats, NH48, NH66, Coorg, Sagar)
-export const SEED_CORRIDOR_SERVICES: NearbyServiceItem[] = [
+const SEED_CORRIDOR_SERVICES: NearbyServiceItem[] = [
   {
     id: 'srv-fuel-1',
     category: 'FUEL',
@@ -176,7 +174,7 @@ export function getCachedNearbyServices(): NearbyServiceItem[] {
 /**
  * Save services to offline cache
  */
-export function saveCachedNearbyServices(items: NearbyServiceItem[]): void {
+function saveCachedNearbyServices(items: NearbyServiceItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   } catch (err) {
@@ -267,7 +265,7 @@ export function addNearbyPlace(newPlace: {
 /**
  * Step 1 & 3: Haversine distance calculator and sorting by distance
  */
-export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;

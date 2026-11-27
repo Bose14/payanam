@@ -1,3 +1,4 @@
+import { useToast } from '../hooks/useToast';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { listenTrip, notifyTrip } from '../lib/tripEvents';
@@ -53,13 +54,8 @@ export default function JoinRoomPage() {
   const [stopsPreview, setStopsPreview] = useState<StopPreview[]>([]);
   const [tripId, setTripId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
-  const [toast, setToast] = useState('');
+  const [toast, showToastMsg] = useToast(3000);
   const [showQrModal, setShowQrModal] = useState(false);
-
-  const showToastMsg = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
 
   useEffect(() => {
     if (!inviteCode) {

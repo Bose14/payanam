@@ -69,7 +69,7 @@ interface ReverseResult {
 }
 
 /** A human place name ("Pollachi, Tamil Nadu") for the nearest town to a point. */
-export async function townNameAt(p: LatLng): Promise<string | null> {
+async function townNameAt(p: LatLng): Promise<string | null> {
   const data = await throttled(() =>
     getJson<ReverseResult>(
       `https://nominatim.openstreetmap.org/reverse?lat=${p.lat}&lon=${p.lng}&format=json&zoom=10&addressdetails=1`, 4000),

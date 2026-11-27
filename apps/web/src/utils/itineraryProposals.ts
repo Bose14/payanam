@@ -54,7 +54,7 @@ export function getStoredProposals(tripId: string): ItineraryProposal[] {
   return [];
 }
 
-export function saveProposals(tripId: string, proposals: ItineraryProposal[]): void {
+function saveProposals(tripId: string, proposals: ItineraryProposal[]): void {
   if (!tripId) return;
   try {
     localStorage.setItem(`${STORAGE_PREFIX}${tripId}`, JSON.stringify(proposals));

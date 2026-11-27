@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../context/AuthContext';
-import { DiscoverTab } from '../../components';
+import DiscoverTab from '../../components/DiscoverTab';
 
 export default function DiscoverPage() {
   const { user } = useAuth();
-  const [toast, setToast] = useState('');
+  const [toast, showToast] = useToast();
 
   return (
     <>
@@ -13,8 +13,7 @@ export default function DiscoverPage() {
       <DiscoverTab
         currentUser={user}
         onTripCopied={(draft) => {
-          setToast(`Copied "${draft.title}" to your trips, with credit to the source.`);
-          setTimeout(() => setToast(''), 3500);
+          showToast(`Copied "${draft.title}" to your trips, with credit to the source.`);
         }}
       />
     </>

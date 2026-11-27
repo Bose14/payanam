@@ -26,7 +26,7 @@ export function readLocalProfiles(): Record<string, Record<string, unknown>> {
   return {};
 }
 
-export function writeLocalProfile(userId: string, data: Record<string, unknown>): void {
+function writeLocalProfile(userId: string, data: Record<string, unknown>): void {
   try {
     ensureDataDir();
     const all = readLocalProfiles();

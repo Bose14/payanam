@@ -3,7 +3,7 @@
 // Robust client-side IndexedDB persistent storage for GPS fixes
 // ========================================================
 
-export interface QueuedFix {
+interface QueuedFix {
   id?: number;
   sessionId: string;
   userId: string;

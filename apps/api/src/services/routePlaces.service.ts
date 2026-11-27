@@ -1,4 +1,4 @@
-import { haversineKm, nearestOnPath, UA, type LatLng, type RoutePath } from './route.service';
+import { nearestOnPath, UA, type LatLng, type RoutePath } from './route.service';
 
 /**
  * Real places that lie ON the road route, read from OpenStreetMap (Overpass).
@@ -12,7 +12,7 @@ export type PoiKind =
   | 'waterfall' | 'viewpoint' | 'attraction' | 'fort' | 'temple' | 'peak' | 'beach' | 'lake'
   | 'restaurant' | 'cafe' | 'fuel' | 'hotel';
 
-export type PoiStopType = 'fuel_stop' | 'stay' | 'attraction' | 'meal' | 'rest';
+type PoiStopType = 'fuel_stop' | 'stay' | 'attraction' | 'meal' | 'rest';
 
 export interface RoutePoi {
   id: string;
@@ -234,5 +234,3 @@ export async function poisAlongRoute(path: RoutePath, opts: { maxPerKind?: numbe
   if (cache.size > 40) cache.delete(cache.keys().next().value as string);
   return kept;
 }
-
-export function distanceKm(a: LatLng, b: LatLng): number { return haversineKm(a, b); }

@@ -1,28 +1,30 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import WelcomePage from './pages/WelcomePage';
-import CreateTripPage from './pages/CreateTripPage';
-import TripDetailPage from './pages/TripDetailPage';
-import JoinRoomPage from './pages/JoinRoomPage';
-import RidePage from './pages/RidePage';
-import ProfilePage from './pages/ProfilePage';
-import PlanTab from './pages/tabs/PlanTab';
-import RideTab from './pages/tabs/RideTab';
-import DiscoverPage from './pages/tabs/DiscoverPage';
-import ChatTab from './pages/tabs/ChatTab';
-import MeTab from './pages/tabs/MeTab';
 import { enablePush } from './utils/push';
 import { resumeLiveShares } from './utils/liveShare';
 import { getResumeRide, clearResumeRide } from './utils/rideResume';
 import { rideService } from './services/api';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/shell/AppShell';
+
+// Each screen is loaded when it is first opened, so the first page does not carry the ride screen's code.
+const CreateTripPage = lazy(() => import('./pages/CreateTripPage'));
+const TripDetailPage = lazy(() => import('./pages/TripDetailPage'));
+const JoinRoomPage = lazy(() => import('./pages/JoinRoomPage'));
+const RidePage = lazy(() => import('./pages/RidePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ChatTab = lazy(() => import('./pages/tabs/ChatTab'));
+const DiscoverPage = lazy(() => import('./pages/tabs/DiscoverPage'));
+const MeTab = lazy(() => import('./pages/tabs/MeTab'));
+const PlanTab = lazy(() => import('./pages/tabs/PlanTab'));
+const RideTab = lazy(() => import('./pages/tabs/RideTab'));
+const WelcomePage = lazy(() => import('./pages/WelcomePage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
 function Home() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -60,6 +62,7 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <PushSync />
+          <Suspense fallback={<div className="pz-loading" role="status" aria-label="Loading" style={{ minHeight: '60vh', display: 'grid', placeItems: 'center', color: 'var(--pz-muted, #888)' }}>Loading…</div>}>
           <Routes>
             <Route path="/" element={<Home />} />
 
@@ -99,6 +102,7 @@ function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </ThemeProvider>
     </Router>

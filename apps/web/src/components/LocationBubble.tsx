@@ -12,7 +12,7 @@ function tileFor(lat: number, lng: number) {
 }
 
 /** Small map picture centred on the point, built from four OpenStreetMap tiles. */
-export function MapPreview({ lat, lng, height = 120 }: { lat: number; lng: number; height?: number }) {
+function MapPreview({ lat, lng, height = 120 }: { lat: number; lng: number; height?: number }) {
   const { x, y } = tileFor(lat, lng);
   const tx = Math.floor(x);
   const ty = Math.floor(y);

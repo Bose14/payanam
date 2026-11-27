@@ -1,3 +1,4 @@
+import { useToast } from '../hooks/useToast';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { tripService, rideService } from '../services/api';
@@ -12,19 +13,15 @@ import NavigationAppModal from '../components/NavigationAppModal';
 import { NearbyHelpSheet } from '../components/NearbyHelpSheet';
 import Icon from '../components/Icon';
 import { apiMessage } from '../utils/apiMessage';
-import {
-  ItineraryProposalCard,
-  ProposeEditModal,
-  getStoredProposals,
-  addProposal,
-  resolveProposal,
-  ItineraryProposal,
-  PublishItineraryModal,
-  isTripPublished,
-  ShareMilestoneModal,
-  TripCompletedBanner,
-  buildTripMilestoneSummary,
-} from '../components';
+import ItineraryProposalCard from '../components/ItineraryProposalCard';
+import ProposeEditModal from '../components/ProposeEditModal';
+import { getStoredProposals, addProposal, resolveProposal } from '../utils/itineraryProposals';
+import type { ItineraryProposal } from '../utils/itineraryProposals';
+import PublishItineraryModal from '../components/PublishItineraryModal';
+import { isTripPublished } from '../utils/publicItinerary';
+import ShareMilestoneModal from '../components/ShareMilestoneModal';
+import TripCompletedBanner from '../components/TripCompletedBanner';
+import { buildTripMilestoneSummary } from '../utils/tripMilestones';
 
 const typeIcons: Record<string, string> = {
   fuel_stop: 'fuel',
@@ -172,7 +169,7 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [error, setError] = useState('');
-  const [toast, setToast] = useState('');
+  const [toast, showToast] = useToast(3000);
   const [copied, setCopied] = useState(false);
   const [openDays, setOpenDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]));
   const [addingToDay, setAddingToDay] = useState<number | null>(null);
@@ -220,8 +217,7 @@ export default function TripDetailPage() {
       description: data.description,
     });
     setProposals((prev) => [newProp, ...prev]);
-    setToast('Proposal submitted to Captain!');
-    setTimeout(() => setToast(''), 3000);
+    showToast('Proposal submitted to Captain!');
   };
 
   const handleAcceptProposal = (prop: ItineraryProposal) => {
@@ -230,8 +226,7 @@ export default function TripDetailPage() {
     setProposals((prev) =>
       prev.map((p) => (p.id === prop.id ? { ...p, status: 'accepted', resolvedBy: user?.fullName || 'Captain' } : p))
     );
-    setToast(`Approved proposal from ${prop.proposerName}`);
-    setTimeout(() => setToast(''), 3000);
+    showToast(`Approved proposal from ${prop.proposerName}`);
   };
 
   const handleDeclineProposal = (prop: ItineraryProposal) => {
@@ -240,8 +235,7 @@ export default function TripDetailPage() {
     setProposals((prev) =>
       prev.map((p) => (p.id === prop.id ? { ...p, status: 'declined', resolvedBy: user?.fullName || 'Captain' } : p))
     );
-    setToast('Proposal declined');
-    setTimeout(() => setToast(''), 2500);
+    showToast('Proposal declined');
   };
 
   const handleToggleTripStatus = async () => {
@@ -287,11 +281,6 @@ export default function TripDetailPage() {
       else setError(msg);
     }).finally(() => setLoading(false));
   }, [id]);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 3000);
-  };
 
   // Incoming join requests (leader only). A rider who asks to join sends a realtime message, and
   // only then is the server asked. A slow check every 2 minutes covers a dropped connection.
@@ -1250,12 +1239,10 @@ export default function TripDetailPage() {
           stops={stops}
           user={user}
           onPublishedSuccess={(published) => {
-            setToast(`Published "${published.title}" publicly in Discover!`);
-            setTimeout(() => setToast(''), 3500);
+            showToast(`Published "${published.title}" publicly in Discover!`);
           }}
           onUnpublishedSuccess={() => {
-            setToast('Itinerary unpublished from Discover');
-            setTimeout(() => setToast(''), 3000);
+            showToast('Itinerary unpublished from Discover');
           }}
         />
       )}

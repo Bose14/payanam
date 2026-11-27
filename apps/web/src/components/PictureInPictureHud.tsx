@@ -843,4 +843,3 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
   );
 };
 
-export default PictureInPictureHud;

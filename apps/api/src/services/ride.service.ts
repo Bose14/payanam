@@ -262,11 +262,19 @@ export async function checkMissingRiders() {
   const db = getDatabase();
   const { data: sessions } = await db.from('ride_sessions').select('id, trip_id, started_by').eq('status', 'active');
   const now = Date.now();
-  for (const s of sessions ?? []) {
-    const { data: locs } = await db.from('rider_locations')
-      .select('user_id, user_name, updated_at').eq('session_id', s.id);
+  if (!sessions?.length) return;
+  const { data: allLocs } = await db.from('rider_locations')
+    .select('session_id, user_id, user_name, updated_at').in('session_id', sessions.map((x) => x.id));
+  const locsBySession = new Map<string, NonNullable<typeof allLocs>>();
+  for (const l of allLocs ?? []) {
+    const list = locsBySession.get(l.session_id as string) ?? [];
+    list.push(l);
+    locsBySession.set(l.session_id as string, list);
+  }
+  for (const s of sessions) {
+    const locs = locsBySession.get(s.id as string) ?? [];
     const lines: string[] = [];
-    for (const l of locs ?? []) {
+    for (const l of locs) {
       if (l.user_id === s.started_by) continue;
       const k = `${s.id}:${l.user_id}`;
       const age = now - new Date(l.updated_at as string).getTime();

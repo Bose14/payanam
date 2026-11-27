@@ -6,7 +6,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
 }
 
-export function pushSupported(): boolean {
+function pushSupported(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
 
@@ -32,16 +32,4 @@ export async function enablePush(): Promise<'subscribed' | 'unsupported' | 'unav
   } catch {
     return 'unavailable';
   }
-}
-
-export async function disablePush(): Promise<void> {
-  if (!pushSupported()) return;
-  try {
-    const reg = await navigator.serviceWorker.getRegistration();
-    const sub = await reg?.pushManager.getSubscription();
-    if (sub) {
-      await api.post('/api/push/unsubscribe', { endpoint: sub.endpoint });
-      await sub.unsubscribe();
-    }
-  } catch { /* ignore */ }
 }

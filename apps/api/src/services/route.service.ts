@@ -58,7 +58,7 @@ export function pointAtKm(path: RoutePath, km: number): LatLng {
   return path.points[lo];
 }
 
-export function decimate(points: LatLng[], maxPoints = 1500): LatLng[] {
+function decimate(points: LatLng[], maxPoints = 1500): LatLng[] {
   if (points.length <= maxPoints) return points;
   const step = Math.ceil(points.length / maxPoints);
   const out = points.filter((_, i) => i % step === 0);
@@ -89,7 +89,7 @@ export interface BestRoute { path: RoutePath; distanceKm: number; durationMin: n
 interface OsrmRoute { distance: number; duration?: number; geometry: { coordinates: Array<[number, number]> } }
 
 /** Lower is better: minutes of driving, plus a small penalty per km so a much longer road loses. */
-export function routeScore(r: { distance: number; duration?: number }): number {
+function routeScore(r: { distance: number; duration?: number }): number {
   const km = r.distance / 1000;
   const minutes = typeof r.duration === 'number' ? r.duration / 60 : km * 1.4;
   return minutes + km * 0.25;

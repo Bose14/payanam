@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import env from './config/environment';
 import { initializeDatabase } from './config/database';
 import { requestIdMiddleware } from './middleware/request-id.middleware';
@@ -9,6 +10,16 @@ import { checkMissingRiders } from './services/ride.service';
 import { pushEnabled } from './services/push.service';
 
 const app = express();
+
+// Behind Render's proxy: use the real client address, hide the framework, compress JSON, add basic headers.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use(compression());
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -48,11 +59,21 @@ registerRoutes(app);
 app.use(errorHandler);
 
 const PORT = env.PORT;
-if (pushEnabled) {
-  setInterval(() => { checkMissingRiders().catch(() => undefined); }, 60 * 1000);
-}
+const missingRidersTimer = pushEnabled
+  ? setInterval(() => { checkMissingRiders().catch(() => undefined); }, 60 * 1000)
+  : null;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Environment: ${env.NODE_ENV}`);
 });
+
+// Render stops the old server when a new deploy goes live: finish the requests in flight first.
+function shutdown(signal: string) {
+  console.log(`${signal} received, closing the server`);
+  if (missingRidersTimer) clearInterval(missingRidersTimer);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

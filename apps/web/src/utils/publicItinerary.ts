@@ -12,7 +12,7 @@ export interface PublicItinerarySettings {
   hiddenStopIds: string[]; // specific stops the rider marked private
 }
 
-export interface PublicStopItem {
+interface PublicStopItem {
   id: string;
   place: string;
   item_type?: string;
@@ -67,7 +67,7 @@ export const DEFAULT_PUBLISH_SETTINGS: PublicItinerarySettings = {
 };
 
 // Seed content so Discover is immediately rich & usable at launch (Mockup Screen 8 + Test 3 requirement)
-export const SEED_PUBLISHED_TRIPS: PublishedTrip[] = [
+const SEED_PUBLISHED_TRIPS: PublishedTrip[] = [
   {
     id: 'pub-blr-ksd-3d',
     sourceTripId: 'seed-trip-1',
@@ -441,17 +441,4 @@ export function copyTripToMyTrips(
   }
 
   return draft;
-}
-
-/**
- * Get all user's copied draft trips
- */
-export function getCopiedDraftTrips(): CopiedDraftTrip[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(COPIED_TRIPS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
 }

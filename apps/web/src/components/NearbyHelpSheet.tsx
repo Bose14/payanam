@@ -11,22 +11,7 @@ import {
 import AddNearbyServiceModal from './AddNearbyServiceModal';
 import Icon from './Icon';
 
-export type NearbyCategory = 'ALL' | 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY';
-
-export interface NearbyPlaceItem {
-  id: string;
-  category: 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY';
-  name: string;
-  subtitle: string;
-  distanceKm: number;
-  verifiedAt: string;
-  source?: string;
-  phone?: string;
-  isOpen?: boolean;
-  lat: number;
-  lng: number;
-  notes?: string;
-}
+type NearbyCategory = 'ALL' | 'FUEL' | 'REPAIR' | 'FOOD' | 'REST' | 'STAY';
 
 interface NearbyHelpSheetProps {
   isOpen: boolean;

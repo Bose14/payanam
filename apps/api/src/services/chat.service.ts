@@ -15,7 +15,7 @@ interface ParsedKey {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function dmKey(a: string, b: string): string {
+function dmKey(a: string, b: string): string {
   return `dm:${[a, b].sort().join(':')}`;
 }
 
@@ -334,17 +334,20 @@ export async function listConversations(userId: string) {
 export async function unreadCount(userId: string, stopsOnly: boolean) {
   const convs = await listConversations(userId);
   if (!stopsOnly) return { unread: convs.reduce((n, c) => n + c.unread, 0) };
-  // "Stops and alerts only": count unread shared locations in trip chats.
+  // "Stops and alerts only": count unread shared locations in trip chats. Two queries in total.
   const db = getDatabase();
-  let n = 0;
-  for (const c of convs.filter((x) => x.type === 'trip' && x.unread > 0)) {
-    const { data: r } = await db.from('chat_reads').select('last_read_at').eq('user_id', userId).eq('conversation_key', c.key).maybeSingle();
-    let q = db.from('chat_messages').select('id', { count: 'exact', head: true })
-      .eq('conversation_key', c.key).eq('kind', 'location').neq('sender_id', userId);
-    if (r?.last_read_at) q = q.gt('created_at', r.last_read_at);
-    const { count } = await q;
-    n += count ?? 0;
-  }
+  const keys = convs.filter((x) => x.type === 'trip' && x.unread > 0).map((c) => c.key);
+  if (keys.length === 0) return { unread: 0 };
+  const [{ data: reads }, { data: locs }] = await Promise.all([
+    db.from('chat_reads').select('conversation_key, last_read_at').eq('user_id', userId).in('conversation_key', keys),
+    db.from('chat_messages').select('conversation_key, created_at')
+      .in('conversation_key', keys).eq('kind', 'location').neq('sender_id', userId),
+  ]);
+  const readAt = new Map((reads ?? []).map((r) => [r.conversation_key as string, r.last_read_at as string | null]));
+  const n = (locs ?? []).filter((m) => {
+    const last = readAt.get(m.conversation_key as string);
+    return !last || (m.created_at as string) > last;
+  }).length;
   return { unread: n };
 }
 

@@ -90,7 +90,7 @@ export function setPreferredNavigationApp(app: NavigationAppType): void {
 /**
  * Builds the platform-specific URL to hand coordinates off to external navigation apps.
  */
-export function buildNavigationHandoffUrl(
+function buildNavigationHandoffUrl(
   target: NavigationTargetCoords,
   app: NavigationAppType = 'google_bike'
 ): string {
