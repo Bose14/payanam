@@ -91,7 +91,7 @@ function buildQuery(points: LatLng[]): string {
   const coords = points.map((p) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join(',');
   const scenic = `(around:9000,${coords})`;
   const service = `(around:2500,${coords})`;
-  return `[out:json][timeout:25];
+  return `[out:json][timeout:18];
 (
   nwr["natural"="waterfall"]["name"]${scenic};
   nwr["waterway"="waterfall"]["name"]${scenic};
@@ -105,29 +105,45 @@ function buildQuery(points: LatLng[]): string {
 out center tags 500;`;
 }
 
-const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+];
 
+async function askOverpass(url: string, query: string): Promise<OverpassElement[]> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
+    body: `data=${encodeURIComponent(query)}`,
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  const json = (await res.json()) as { elements?: OverpassElement[]; remark?: string };
+  // Overpass answers 200 with an empty list and a remark when it ran out of time or memory.
+  if (!json.elements?.length && json.remark) throw new Error(json.remark.slice(0, 80));
+  return json.elements ?? [];
+}
+
+/** Asks every mirror at once and takes the first answer: any one of them being down costs nothing. */
 async function runOverpass(query: string): Promise<OverpassElement[] | null> {
-  for (const url of ENDPOINTS) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded', 'User-Agent': UA },
-        body: `data=${encodeURIComponent(query)}`,
-        signal: AbortSignal.timeout(28000),
+  const reasons: string[] = [];
+  const first = await new Promise<OverpassElement[] | null>((resolve) => {
+    let pending = ENDPOINTS.length;
+    for (const u of ENDPOINTS) {
+      askOverpass(u, query).then(resolve, (e: Error) => {
+        reasons.push(`${new URL(u).host}: ${e.message}`);
+        if (--pending === 0) resolve(null);
       });
-      if (!res.ok) { console.warn(`[routePlaces] ${url} returned ${res.status}`); continue; }
-      const json = (await res.json()) as { elements?: OverpassElement[] };
-      return json.elements ?? [];
-    } catch (e) {
-      console.warn(`[routePlaces] ${url} failed: ${(e as Error).message}`);
     }
-  }
-  return null;
+  });
+  if (!first) console.warn(`[routePlaces] every Overpass mirror failed: ${reasons.join('; ')}`);
+  return first;
 }
 
 /** Splits the road into stretches of about `chunkKm` and samples a point every `stepKm`. */
-function corridors(path: RoutePath, chunkKm = 120, stepKm = 8): LatLng[][] {
+function corridors(path: RoutePath, chunkKm = 60, stepKm = 6): LatLng[][] {
   const out: LatLng[][] = [];
   let current: LatLng[] = [];
   let lastKm = -Infinity;
@@ -168,11 +184,11 @@ export async function poisAlongRoute(path: RoutePath, opts: { maxPerKind?: numbe
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.pois;
 
-  const stretches = corridors(path).slice(0, 12);
+  const stretches = corridors(path).slice(0, 24);
   const results: Array<OverpassElement[] | null> = [];
   // Overpass is a shared service: a few at a time.
-  for (let i = 0; i < stretches.length; i += 3) {
-    results.push(...(await Promise.all(stretches.slice(i, i + 3).map((s) => runOverpass(buildQuery(s))))));
+  for (let i = 0; i < stretches.length; i += 4) {
+    results.push(...(await Promise.all(stretches.slice(i, i + 4).map((s) => runOverpass(buildQuery(s))))));
   }
   if (results.every((r) => r === null)) return [];
 
@@ -214,7 +230,7 @@ export async function poisAlongRoute(path: RoutePath, opts: { maxPerKind?: numbe
   const kept = [...byKind.values()].flatMap((list) => list.sort((a, b) => b.score - a.score).slice(0, cap));
   kept.sort((a, b) => a.km - b.km);
 
-  cache.set(key, { at: Date.now(), pois: kept });
+  if (kept.length) cache.set(key, { at: Date.now(), pois: kept });
   if (cache.size > 40) cache.delete(cache.keys().next().value as string);
   return kept;
 }
