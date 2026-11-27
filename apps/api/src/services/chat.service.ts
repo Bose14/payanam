@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { getDatabase } from '../config/database';
 import { AppError, ForbiddenError, NotFoundError, ValidationError } from '../utils/errors';
+import { broadcastToUsers } from './realtime.service';
 import { assertUserTripMembership, getUserTrips, addStopToTrip, getTripMemberIds } from './trip.service';
 import { sendPush } from './push.service';
 
@@ -170,32 +171,48 @@ export async function sendMessage(key: string, userId: string, input: SendInput)
   return shape(data as MessageRow, names, userId);
 }
 
-/** Push to everyone else in the conversation. Best effort, never blocks the send. */
+/** Everyone in a conversation, with the label used in push titles. */
+async function conversationMembers(auth: ParsedKey, senderName: string): Promise<{ members: string[]; title: string }> {
+  const db = getDatabase();
+  if (auth.type === 'dm') return { members: [auth.id], title: senderName };
+  if (auth.type === 'trip') {
+    const [members, { data: trip }] = await Promise.all([
+      getTripMemberIds(auth.id),
+      db.from('trips').select('title').eq('id', auth.id).maybeSingle(),
+    ]);
+    return { members, title: `${senderName} in ${trip?.title ?? 'your trip'}` };
+  }
+  const [{ data: g }, { data: grp }] = await Promise.all([
+    db.from('chat_group_members').select('user_id').eq('group_id', auth.id).eq('status', 'member'),
+    db.from('chat_groups').select('name').eq('id', auth.id).maybeSingle(),
+  ]);
+  return { members: (g ?? []).map((m) => m.user_id as string), title: `${senderName} in ${grp?.name ?? 'group'}` };
+}
+
+/** Tell everyone else's open app to look at this conversation again. Best effort. */
+async function pingConversation(auth: ParsedKey, key: string, exceptUserId: string): Promise<void> {
+  try {
+    const { members } = await conversationMembers(auth, '');
+    await broadcastToUsers(members.filter((id) => id !== exceptUserId), 'chat', { key });
+  } catch { /* ignore */ }
+}
+
+/** Push and live ping to everyone else in the conversation. Best effort, never blocks the send. */
 async function notifyChat(
   auth: ParsedKey, key: string, senderId: string, kind: string, body: string, senderName: string, meta: Record<string, unknown> | null,
 ) {
   try {
-    let recipients: string[] = [];
-    let title = senderName;
-    if (auth.type === 'dm') {
-      recipients = [auth.id];
-    } else if (auth.type === 'trip') {
-      recipients = await getTripMemberIds(auth.id);
-      const { data: trip } = await getDatabase().from('trips').select('title').eq('id', auth.id).maybeSingle();
-      title = `${senderName} in ${trip?.title ?? 'your trip'}`;
-    } else {
-      const { data: g } = await getDatabase().from('chat_group_members').select('user_id').eq('group_id', auth.id).eq('status', 'member');
-      recipients = (g ?? []).map((m) => m.user_id as string);
-      const { data: grp } = await getDatabase().from('chat_groups').select('name').eq('id', auth.id).maybeSingle();
-      title = `${senderName} in ${grp?.name ?? 'group'}`;
-    }
-    recipients = recipients.filter((id) => id !== senderId);
-    await sendPush(recipients, {
-      title,
-      body: kind === 'location' ? (meta && (meta as { live?: unknown }).live ? 'Started sharing live location' : `Shared a place: ${body}`) : body.slice(0, 140),
-      url: `/chat?c=${encodeURIComponent(key)}`,
-      tag: `chat:${key}`,
-    });
+    const { members, title } = await conversationMembers(auth, senderName);
+    const recipients = members.filter((id) => id !== senderId);
+    await Promise.all([
+      broadcastToUsers(recipients, 'chat', { key }),
+      sendPush(recipients, {
+        title,
+        body: kind === 'location' ? (meta && (meta as { live?: unknown }).live ? 'Started sharing live location' : `Shared a place: ${body}`) : body.slice(0, 140),
+        url: `/chat?c=${encodeURIComponent(key)}`,
+        tag: `chat:${key}`,
+      }),
+    ]);
   } catch { /* ignore */ }
 }
 
@@ -217,6 +234,7 @@ export async function updateLiveLocation(key: string, userId: string, messageId:
   if (Date.now() >= until) return { active: false };
   await getDatabase().from('chat_messages')
     .update({ meta: { ...msg.meta, lat, lng, updatedAt: new Date().toISOString() } }).eq('id', messageId);
+  void pingConversation(await authorize(key, userId), key, userId);
   return { active: true };
 }
 
@@ -224,6 +242,7 @@ export async function stopLiveLocation(key: string, userId: string, messageId: s
   const msg = await ownLiveMessage(key, userId, messageId);
   await getDatabase().from('chat_messages')
     .update({ meta: { ...msg.meta, live: { until: new Date().toISOString() } } }).eq('id', messageId);
+  void pingConversation(await authorize(key, userId), key, userId);
   return { active: false };
 }
 
@@ -252,6 +271,7 @@ export async function confirmStop(key: string, userId: string, messageId: string
     lng: meta.lng,
   });
   await db.from('chat_messages').update({ meta: { ...msg.meta, confirmed: true } }).eq('id', messageId);
+  void pingConversation(auth, key, userId);
   return { alreadyConfirmed: false };
 }
 

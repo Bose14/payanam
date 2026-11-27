@@ -460,6 +460,12 @@ export default function RidePage() {
   const [justSynced, setJustSynced] = useState(false);
   const [riderTrails, setRiderTrails] = useState<Record<string, Array<[number, number]>>>({});
   const isSyncingBatchRef = useRef(false);
+  // Last position the server was sent. Sending is movement-based, with a heartbeat when standing still.
+  const lastSentRef = useRef<{ lat: number; lng: number; t: number } | null>(null);
+  // The rider's route is only fetched again when they leave it, not on a timer.
+  const osrmRouteRef = useRef<[number, number][]>([]);
+  const refreshRouteRef = useRef<(() => void) | null>(null);
+  const lastRouteFetchRef = useRef(0);
 
   // Feature C: Route Deviation Tracker State
   const [deviationTrackers, setDeviationTrackers] = useState<Record<string, RiderDeviationTracker>>({});
@@ -546,7 +552,7 @@ export default function RidePage() {
   }, [session?.trip_id, sessionId]);
 
   // Fetch road-following route from trip plan: start → itinerary stops → destination
-  // Loads immediately from trip plan (Plan tab) even before GPS, and refreshes every 2 min
+  // Loads immediately from trip plan (Plan tab) even before GPS, and again if the rider leaves the route
   const routeFetchedRef = useRef(false);
   useEffect(() => {
     if (!session) return;
@@ -581,16 +587,18 @@ export default function RidePage() {
       if (waypoints.length < 2) return;
 
       const { route, steps } = await fetchOsrmRoute(waypoints);
+      osrmRouteRef.current = route;
+      lastRouteFetchRef.current = Date.now();
       setOsrmRoute(route);
       setNavSteps(steps);
       routeFetchedRef.current = true;
     };
 
-    // Initial fetch — immediately load planned route from trip plan
-    buildRoute();
-    // Refresh every 2 min so route updates as you progress
-    const interval = setInterval(buildRoute, 120_000);
-    return () => { clearInterval(interval); };
+    // Fetched when the ride opens and when the plan changes. After that only when the rider leaves
+    // the route (see the GPS watch), so there is no timer.
+    refreshRouteRef.current = () => { void buildRoute(); };
+    void buildRoute();
+    return () => { refreshRouteRef.current = null; };
   }, [session]);
 
   // Wake Lock + background visibility tracking
@@ -663,6 +671,9 @@ export default function RidePage() {
 
       const ids = pending.map((p) => p.id!).filter(Boolean);
       await offlinePositionQueue.markFixesSynced(sessionId, ids);
+      offlinePositionQueue.setOnlineStatus(true);
+      const newest = pending[pending.length - 1];
+      lastSentRef.current = { lat: newest.lat, lng: newest.lng, t: Date.now() };
 
       // Requirement 5: Group map catches up: Riders' trails fill in and their markers move to current position
       channelRef.current?.send({
@@ -727,19 +738,22 @@ export default function RidePage() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    const queueTimer = setInterval(() => {
-      syncPendingBatch();
-    }, 15000);
-
     return () => {
       unsubscribe();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      clearInterval(queueTimer);
     };
   }, [sessionId, user?.id, syncPendingBatch]);
 
-  // Start GPS watch — broadcast on every fix, DB upsert every 15s
+  // Fixes are uploaded when the rider has moved, when the app returns, and when the network comes
+  // back. A timer only runs while an upload has failed, to try again. Nothing polls while healthy.
+  useEffect(() => {
+    if (!sessionId || queueState.isOnline || !navigator.onLine) return;
+    const t = setTimeout(() => { void syncPendingBatch(); }, 15000);
+    return () => clearTimeout(t);
+  }, [sessionId, queueState.isOnline, queueState.isSyncing, queueState.pendingCount, syncPendingBatch]);
+
+  // Start GPS watch — broadcast on every fix, upload to the server when moved
   useEffect(() => {
     if (!sessionId || !session || ended) return;
     if (!navigator.geolocation) { setGpsError('GPS not supported on this device'); return; }
@@ -808,7 +822,25 @@ export default function RidePage() {
             type: 'broadcast', event: 'location',
             payload: { userId: user.id, userName, lat, lng, speedKmh, heading: hdg, updatedAt: nowIso },
           });
-          syncPendingBatch();
+          // Upload to the server only after moving a real distance. Standing still is covered by the heartbeat.
+          const last = lastSentRef.current;
+          const movedM = last ? haversineKm(lat, lng, last.lat, last.lng) * 1000 : Infinity;
+          if (movedM >= (batterySaver ? 100 : 40)) void syncPendingBatch();
+
+          // Leaving the planned route (more than 250 m from it): fetch a new one from here, at most once a minute.
+          const line = osrmRouteRef.current;
+          if (line.length > 1 && nowMs - lastRouteFetchRef.current > 60_000) {
+            let nearest = Infinity;
+            for (const [la, ln] of line) {
+              const d = haversineKm(lat, lng, la, ln);
+              if (d < nearest) nearest = d;
+            }
+            if (nearest * 1000 > 250) { lastRouteFetchRef.current = nowMs; refreshRouteRef.current?.(); }
+          } else if (line.length <= 1 && nowMs - lastRouteFetchRef.current > 60_000) {
+            // No route yet (the first fetch failed or had no start): try again now that there is a position.
+            lastRouteFetchRef.current = nowMs;
+            refreshRouteRef.current?.();
+          }
         } else if (!navigator.onLine) {
           offlinePositionQueue.setOnlineStatus(false);
         }
@@ -824,13 +856,14 @@ export default function RidePage() {
       { enableHighAccuracy: !batterySaver, maximumAge: batterySaver ? 15000 : 2000, timeout: 10000 },
     );
 
-    // DB upsert throttled based on battery saver (30s vs 15s)
-    const dbIntervalMs = batterySaver ? 30000 : 15000;
+    // Heartbeat: when standing still the server still hears from the rider once a minute, so the
+    // "may be missing" alert (after 5 minutes of silence) stays accurate.
     dbSyncRef.current = setInterval(() => {
-      if (myPosRef.current && navigator.onLine) {
-        rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => { });
-      }
-    }, dbIntervalMs);
+      const last = lastSentRef.current;
+      if (!myPosRef.current || !navigator.onLine || (last && Date.now() - last.t < 55_000)) return;
+      lastSentRef.current = { ...myPosRef.current, t: Date.now() };
+      rideService.updateLocation(sessionId, { ...myPosRef.current, speedKmh: 0, userName }).catch(() => { });
+    }, 60_000);
 
     return () => {
       if (watchIdRef.current != null) navigator.geolocation.clearWatch(watchIdRef.current);

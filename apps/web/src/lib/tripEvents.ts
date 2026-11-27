@@ -22,11 +22,12 @@ export function notifyTrip(tripId: string, event: TripEvent): void {
   } catch { /* the receiver still re-checks on a slow timer */ }
 }
 
-export function listenTrip(tripId: string, onEvent: (event: TripEvent) => void): () => void {
+/** `onSubscribed` runs each time the channel connects, so anything missed while offline is fetched once. */
+export function listenTrip(tripId: string, onEvent: (event: TripEvent) => void, onSubscribed?: () => void): () => void {
   const ch = supabase.channel(channelName(tripId));
   (['join-request', 'join-response'] as TripEvent[]).forEach((ev) => {
     ch.on('broadcast', { event: ev }, () => onEvent(ev));
   });
-  ch.subscribe();
+  ch.subscribe((status) => { if (status === 'SUBSCRIBED') onSubscribed?.(); });
   return () => { void supabase.removeChannel(ch); };
 }

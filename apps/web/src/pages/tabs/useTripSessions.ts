@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useLiveRefresh } from '../../lib/userEvents';
 import { tripService } from '../../services/api';
 
 interface TripRow {
@@ -17,8 +18,6 @@ interface TripRow {
 export interface TripWithSession extends TripRow {
   sessionId: string | null;
 }
-
-const REFRESH_MS = 30000;
 
 /** The user's trips, each with its live ride session id when one is running. One request. */
 export function useTripSessions() {
@@ -43,14 +42,8 @@ export function useTripSessions() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-    // Refresh while the screen is visible, and once when the person comes back to it.
-    const tick = () => { if (document.visibilityState === 'visible') void load(); };
-    const id = setInterval(tick, REFRESH_MS);
-    document.addEventListener('visibilitychange', tick);
-    return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick); };
-  }, [load]);
+  // Loaded when the Ride tab opens, when the app returns, and when the server pings that a ride started or ended.
+  useLiveRefresh(load, { events: ['ride'], slowMs: 600000, fastMs: 60000 });
 
   return { items, loading, error, reload: load };
 }
