@@ -10,6 +10,16 @@ interface WebkitHTMLVideoElement extends HTMLVideoElement {
   webkitPresentationMode?: string;
 }
 
+interface WindowWithDocPiP extends Window {
+  documentPictureInPicture?: {
+    requestWindow: (options?: { width?: number; height?: number }) => Promise<Window>;
+  };
+}
+
+const HUD_WIDTH = 420;
+const HUD_HEIGHT = 155;
+const HUD_SCALE = 3; // 3x HiDPI (1260 x 465) for crisp text & sharp stream capture
+
 export interface PipRiderData {
   userId: string;
   userName: string;
@@ -113,6 +123,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const docPipWindowRef = useRef<Window | null>(null);
+  const docPipCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const autoOpenedRef = useRef(false);
@@ -188,7 +200,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
     // Sleek Border: Flashing red on SOS, otherwise subtle gold border
     ctx.lineWidth = 2;
-    ctx.strokeStyle = sos ? 'var(--pz-bad)' : 'var(--pz-warn-bg)';
+    ctx.strokeStyle = sos ? '#EF4444' : 'rgba(240, 194, 58, 0.35)';
     ctx.strokeRect(1, 1, width - 2, height - 2);
 
     // =========================================================================
@@ -198,7 +210,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const liveRiders = riderList.filter((r) => r.isLive !== false).length;
 
     // Live Dot
-    ctx.fillStyle = 'var(--pz-ok)';
+    ctx.fillStyle = '#10B981';
     ctx.beginPath();
     ctx.arc(16, 20, 3.5 + pulse * 1.5, 0, Math.PI * 2);
     ctx.fill();
@@ -211,11 +223,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     ctx.fillText(`${roundedSpeed}`, 28, 27);
 
     ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = 'var(--pz-accent)';
+    ctx.fillStyle = '#F0C23A';
     ctx.fillText('KM/H', 62, 26);
 
     ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = 'var(--pz-ok)';
+    ctx.fillStyle = '#10B981';
     ctx.fillText(`● ${liveRiders}/${total} LIVE`, 104, 25);
 
     // Next Stop Compact Pill (Center-Right)
@@ -226,7 +238,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'right';
       ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = 'var(--pz-accent)';
+      ctx.fillStyle = '#F0C23A';
       ctx.fillText(`${stopIcon} ${stopShort} ${distStr} (${arrived}/${Math.max(total, 1)})`, width - 64, 25);
     }
 
@@ -235,7 +247,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     ctx.textAlign = 'right';
     ctx.font = '600 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = 'var(--pz-muted)';
+    ctx.fillStyle = '#9CA3AF';
     ctx.fillText(timeStr, width - 12, 25);
 
     // Divider
@@ -253,7 +265,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       // 🚨 Full Emergency Override Mode
       const sosPulse = (Math.sin(time / 120) + 1) / 2;
       ctx.fillStyle = `rgba(239, 68, 68, ${0.2 + sosPulse * 0.3})`;
-      ctx.strokeStyle = 'var(--pz-bad)';
+      ctx.strokeStyle = '#EF4444';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
@@ -262,7 +274,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'center';
       ctx.font = '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = 'var(--pz-bad)';
+      ctx.fillStyle = '#EF4444';
       ctx.fillText('🚨 SOS: FELLOW RIDER NEEDS HELP!', width / 2, 70);
 
       ctx.font = 'bold 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -270,8 +282,8 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.fillText('Emergency reported on road · Check group coordinates', width / 2, 92);
     } else if (announcement) {
       // 📢 Captain Announcement Override
-      ctx.fillStyle = 'var(--pz-warn-bg)';
-      ctx.strokeStyle = 'var(--pz-accent)';
+      ctx.fillStyle = 'rgba(240, 194, 58, 0.16)';
+      ctx.strokeStyle = '#F0C23A';
       ctx.lineWidth = 1;
       ctx.beginPath();
       drawRoundRect(ctx, 10, 42, width - 20, 68, 8);
@@ -280,7 +292,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'left';
       ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = 'var(--pz-accent)';
+      ctx.fillStyle = '#F0C23A';
       ctx.fillText('📢 CAPTAIN CALL:', 20, 64);
 
       ctx.font = 'bold 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -313,15 +325,15 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       ctx.textAlign = 'left';
       ctx.font = '900 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = 'var(--pz-ok)';
+      ctx.fillStyle = '#10B981';
       ctx.fillText(`▲ IN FRONT (${ridersAhead.length})`, leftColX + 8, 54);
 
       if (ridersAhead.length === 0) {
         ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = 'var(--pz-accent)';
+        ctx.fillStyle = '#F0C23A';
         ctx.fillText('👑 You lead convoy', leftColX + 8, 76);
         ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = 'var(--pz-muted)';
+        ctx.fillStyle = '#9CA3AF';
         ctx.fillText('No riders ahead', leftColX + 8, 94);
       } else {
         // Up to 2 riders stacked
@@ -337,7 +349,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
         ctx.textAlign = 'right';
         ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = 'var(--pz-ok)';
+        ctx.fillStyle = '#10B981';
         ctx.fillText(`${formatDist(r1.relativeDistanceMeters)} ▲`, leftColX + colWidth - 8, 73);
 
         // Rider 2 (or speed subtitle if only 1 rider)
@@ -351,12 +363,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
           ctx.textAlign = 'right';
           ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = 'var(--pz-ok)';
+          ctx.fillStyle = '#10B981';
           ctx.fillText(`${formatDist(r2.relativeDistanceMeters)} ▲`, leftColX + colWidth - 8, 97);
         } else if (r1.speedKmh != null && r1.speedKmh > 0) {
           ctx.textAlign = 'left';
           ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = 'var(--pz-muted)';
+          ctx.fillStyle = '#9CA3AF';
           ctx.fillText(`Riding at ${Math.round(r1.speedKmh)} km/h`, leftColX + 8, 94);
         }
       }
@@ -377,10 +389,10 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       if (ridersBehind.length === 0) {
         ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = 'var(--pz-muted)';
+        ctx.fillStyle = '#E5E7EB';
         ctx.fillText('🏁 You are at tail', rightColX + 8, 76);
         ctx.font = '500 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = 'var(--pz-muted)';
+        ctx.fillStyle = '#9CA3AF';
         ctx.fillText('Sweep position', rightColX + 8, 94);
       } else {
         const r1 = ridersBehind[0];
@@ -396,7 +408,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
         ctx.textAlign = 'right';
         ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = isLag1 ? 'var(--pz-bad)' : '#F59E0B';
+        ctx.fillStyle = isLag1 ? '#EF4444' : '#F59E0B';
         ctx.fillText(`${formatDist(r1.relativeDistanceMeters)} ▼`, rightColX + colWidth - 8, 73);
 
         // Rider 2
@@ -411,12 +423,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
           ctx.textAlign = 'right';
           ctx.font = '900 11.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = isLag2 ? 'var(--pz-bad)' : '#F59E0B';
+          ctx.fillStyle = isLag2 ? '#EF4444' : '#F59E0B';
           ctx.fillText(`${formatDist(r2.relativeDistanceMeters)} ▼`, rightColX + colWidth - 8, 97);
         } else if (r1.speedKmh != null && r1.speedKmh > 0) {
           ctx.textAlign = 'left';
           ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-          ctx.fillStyle = 'var(--pz-muted)';
+          ctx.fillStyle = '#9CA3AF';
           ctx.fillText(`Riding at ${Math.round(r1.speedKmh)} km/h`, rightColX + 8, 94);
         }
       }
@@ -446,12 +458,12 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
       if (r.isMe) {
         // Pulsing glow for YOU
-        ctx.fillStyle = 'var(--pz-warn-bg)';
+        ctx.fillStyle = 'rgba(240, 194, 58, 0.25)';
         ctx.beginPath();
         ctx.arc(pipX, railY, 7 + pulse * 2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = 'var(--pz-accent)';
+        ctx.fillStyle = '#F0C23A';
         ctx.beginPath();
         ctx.arc(pipX, railY, 4.5, 0, Math.PI * 2);
         ctx.fill();
@@ -459,10 +471,10 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
         // "YOU" Label
         ctx.textAlign = 'center';
         ctx.font = '900 8.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = 'var(--pz-accent)';
+        ctx.fillStyle = '#F0C23A';
         ctx.fillText('YOU', pipX, railY - 8);
       } else {
-        ctx.fillStyle = r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? 'var(--pz-ok)' : '#3B82F6';
+        ctx.fillStyle = r.isCaptain ? '#F59E0B' : r.relativePosition === 'ahead' ? '#10B981' : '#3B82F6';
         ctx.beginPath();
         ctx.arc(pipX, railY, 3.5, 0, Math.PI * 2);
         ctx.fill();
@@ -470,7 +482,7 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     });
   }, []);
 
-  // Animation Loop: 60 FPS
+  // Animation Loop: 60 FPS at 3x HiDPI (1260 x 465)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -481,7 +493,22 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
 
     const render = (time: number) => {
       if (!isRunning) return;
-      drawFrame(ctx, canvas.width, canvas.height, time);
+      ctx.save();
+      ctx.scale(HUD_SCALE, HUD_SCALE);
+      drawFrame(ctx, HUD_WIDTH, HUD_HEIGHT, time);
+      ctx.restore();
+
+      const docCanvas = docPipCanvasRef.current;
+      if (docCanvas) {
+        const docCtx = docCanvas.getContext('2d');
+        if (docCtx) {
+          docCtx.save();
+          docCtx.scale(HUD_SCALE, HUD_SCALE);
+          drawFrame(docCtx, HUD_WIDTH, HUD_HEIGHT, time);
+          docCtx.restore();
+        }
+      }
+
       animFrameRef.current = requestAnimationFrame(render);
     };
 
@@ -493,8 +520,17 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     };
   }, [drawFrame]);
 
-  // Close PiP HUD (both native OS PiP and in-app floating ribbon)
+  // Close PiP HUD (Document PiP, Video OS PiP, and in-app floating ribbon)
   const closePip = useCallback(async () => {
+    if (docPipWindowRef.current) {
+      try {
+        docPipWindowRef.current.close();
+      } catch {
+        // ignore
+      }
+      docPipWindowRef.current = null;
+      docPipCanvasRef.current = null;
+    }
     const video = videoRef.current;
     if (typeof document !== 'undefined' && document.pictureInPictureElement) {
       try {
@@ -518,14 +554,52 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
     onPipStateChange?.(false);
   }, [onPipStateChange]);
 
-  // Open PiP HUD (Native OS PiP on supported Android/Desktop & Apple iOS WebKit; 60 FPS In-App ribbon as fallback)
+  // Open PiP HUD (Document PiP -> Video PiP / WebKit -> In-App ribbon fallback)
   const openPip = useCallback(async () => {
     const prefs = getPipPreferences();
     const forceInApp = prefs.preferredMode === 'in_app';
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
-    // 1. Try Native OS PiP if available (Desktop, Android Chrome, and Apple iOS WebKit)
+    // 0. Try Document Picture-in-Picture first (Desktop Chrome/Edge: crisp HTML window, ZERO video controls!)
+    const docPip = typeof window !== 'undefined' ? (window as WindowWithDocPiP).documentPictureInPicture : undefined;
+    if (!forceInApp && docPip && typeof docPip.requestWindow === 'function') {
+      try {
+        const pipWin = await docPip.requestWindow({ width: HUD_WIDTH, height: HUD_HEIGHT });
+        docPipWindowRef.current = pipWin;
+
+        pipWin.document.title = 'Payanam Live HUD';
+        pipWin.document.body.style.margin = '0';
+        pipWin.document.body.style.padding = '0';
+        pipWin.document.body.style.backgroundColor = '#090B0E';
+        pipWin.document.body.style.overflow = 'hidden';
+
+        const docCanvas = pipWin.document.createElement('canvas');
+        docCanvas.width = HUD_WIDTH * HUD_SCALE;
+        docCanvas.height = HUD_HEIGHT * HUD_SCALE;
+        docCanvas.style.width = '100vw';
+        docCanvas.style.height = '100vh';
+        docCanvas.style.display = 'block';
+        pipWin.document.body.appendChild(docCanvas);
+        docPipCanvasRef.current = docCanvas;
+
+        pipWin.addEventListener('pagehide', () => {
+          docPipWindowRef.current = null;
+          docPipCanvasRef.current = null;
+          setIsPipActive(false);
+          onPipStateChange?.(false);
+        });
+
+        setIsPipActive(true);
+        setIsFloatingInApp(false);
+        onPipStateChange?.(true);
+        return;
+      } catch (err) {
+        console.warn('[PiP HUD] Document PiP failed, falling back to Video PiP:', err);
+      }
+    }
+
+    // 1. Try Native Video OS PiP if available (Android Chrome, Apple iOS WebKit, or fallback)
     if (!forceInApp && nativePipAvailable && canvas && video) {
       try {
         if (!streamRef.current) {
@@ -778,11 +852,11 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
           </div>
         </div>
 
-        {/* Persistent 60 FPS Canvas in Ribbon Ratio */}
+        {/* Persistent 60 FPS Canvas in 3x HiDPI Ribbon Ratio */}
         <canvas
           ref={canvasRef}
-          width={420}
-          height={155}
+          width={HUD_WIDTH * HUD_SCALE}
+          height={HUD_HEIGHT * HUD_SCALE}
           style={{
             width: '100%',
             height: 'auto',
