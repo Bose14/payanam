@@ -431,49 +431,106 @@ export const PictureInPictureHud: React.FC<PictureInPictureHudProps> = ({
       ctx.fill();
       ctx.stroke();
 
+      // Left colored accent stripe for instant 0.3s glance differentiation
+      ctx.fillStyle = titleColor;
+      ctx.beginPath();
+      drawRoundRect(ctx, 10, yStart + 6, 3, cardH - 12, 1.5);
+      ctx.fill();
+
+      // Header row
       ctx.textAlign = 'left';
       ctx.font = `900 10px ${FONT}`;
       ctx.fillStyle = titleColor;
-      ctx.fillText(`${arrow} ${title} (${list.length})`, 18, yStart + 16);
+      ctx.fillText(`${arrow} ${title} (${list.length})`, 20, yStart + 16);
+
+      if (list.length > 2) {
+        ctx.textAlign = 'right';
+        ctx.font = `700 9px ${FONT}`;
+        ctx.fillStyle = '#9CA3AF';
+        ctx.fillText(`+${list.length - 2} more`, width - 16, yStart + 16);
+      }
 
       if (list.length === 0) {
+        ctx.textAlign = 'left';
         ctx.font = `700 11px ${FONT}`;
         ctx.fillStyle = emptyPrimaryColor;
-        ctx.fillText(emptyPrimary, 18, yStart + 42);
+        ctx.fillText(emptyPrimary, 20, yStart + 44);
         ctx.font = `500 9.5px ${FONT}`;
         ctx.fillStyle = '#9CA3AF';
-        ctx.fillText(emptySub, 18, yStart + 59);
+        ctx.fillText(emptySub, 20, yStart + 61);
         return;
       }
 
       list.slice(0, 2).forEach((r, idx) => {
-        const rowY = yStart + 38 + idx * 24;
+        const rowTop = yStart + 23 + idx * 29;
+        const rowH = 26;
         const isLag = isBehindSection && (r.relativeDistanceMeters ?? 0) > 1200;
-        const tag = isLag ? '⚠️ ' : r.isCaptain ? '👑 ' : '';
-        const name = r.userName.length > 10 ? `${r.userName.slice(0, 9)}…` : r.userName;
+        const accentColor = r.isStale
+          ? '#6B7280'
+          : isBehindSection
+            ? (isLag ? '#EF4444' : '#F59E0B')
+            : '#10B981';
 
+        // Subtle row card container
+        ctx.fillStyle = '#171D28';
+        ctx.beginPath();
+        drawRoundRect(ctx, 18, rowTop, width - 34, rowH, 5);
+        ctx.fill();
+
+        // Avatar initial circle
+        const cx = 29;
+        const cy = rowTop + rowH / 2;
+        ctx.fillStyle = r.isCaptain ? '#F0C23A' : accentColor;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        const initial = (r.userName || '?').trim().charAt(0).toUpperCase();
+        ctx.textAlign = 'center';
+        ctx.font = `900 9px ${FONT}`;
+        ctx.fillStyle = '#090B0E';
+        ctx.fillText(initial, cx, cy + 3);
+
+        // Rider name + status prefix
+        const prefix = isLag ? '⚠️ ' : r.isCaptain ? '👑 ' : '';
+        const maxLen = prefix ? 8 : 10;
+        const cleanName = r.userName.length > maxLen ? `${r.userName.slice(0, maxLen - 1)}…` : r.userName;
         ctx.textAlign = 'left';
-        ctx.font = `700 11px ${FONT}`;
+        ctx.font = `700 10.5px ${FONT}`;
         ctx.fillStyle = r.isStale ? '#9CA3AF' : '#FFFFFF';
-        ctx.fillText(`${tag}${name}`, 18, rowY);
+        ctx.fillText(`${prefix}${cleanName}`, 42, rowTop + 16.5);
 
-        // Stale age badge or speed tag in middle-right
+        // Speed or Stale age tag (aligned cleanly left of the distance pill)
         if (r.isStale) {
           ctx.textAlign = 'right';
-          ctx.font = `600 9px ${FONT}`;
+          ctx.font = `600 8.5px ${FONT}`;
           ctx.fillStyle = '#9CA3AF';
-          ctx.fillText(r.staleAgeLabel ? `🕒 ${r.staleAgeLabel}` : '🕒 stale', width - 68, rowY);
+          ctx.fillText(r.staleAgeLabel ? `🕒${r.staleAgeLabel}` : '🕒stale', width - 70, rowTop + 16);
         } else if (r.speedKmh != null && r.speedKmh > 0) {
           ctx.textAlign = 'right';
-          ctx.font = `600 9px ${FONT}`;
+          ctx.font = `600 8.5px ${FONT}`;
           ctx.fillStyle = '#9CA3AF';
-          ctx.fillText(`${Math.round(r.speedKmh)}k/h`, width - 68, rowY);
+          ctx.fillText(`${Math.round(r.speedKmh)}k/h`, width - 70, rowTop + 16);
         }
 
-        ctx.textAlign = 'right';
-        ctx.font = `900 11px ${FONT}`;
-        ctx.fillStyle = isBehindSection ? (isLag ? '#EF4444' : '#F59E0B') : '#10B981';
-        ctx.fillText(`${formatDist(r.relativeDistanceMeters)} ${arrow}`, width - 18, rowY);
+        // Distance badge pill on the right
+        const pillW = 48;
+        const pillH = 18;
+        const pillX = width - 16 - pillW - 2;
+        const pillY = rowTop + 4;
+        ctx.fillStyle = r.isStale
+          ? 'rgba(107, 114, 128, 0.2)'
+          : isBehindSection
+            ? (isLag ? 'rgba(239, 68, 68, 0.22)' : 'rgba(245, 158, 11, 0.16)')
+            : 'rgba(16, 185, 129, 0.16)';
+        ctx.beginPath();
+        drawRoundRect(ctx, pillX, pillY, pillW, pillH, 4);
+        ctx.fill();
+
+        ctx.textAlign = 'center';
+        ctx.font = `900 10px ${FONT}`;
+        ctx.fillStyle = accentColor;
+        ctx.fillText(`${formatDist(r.relativeDistanceMeters)} ${arrow}`, pillX + pillW / 2, rowTop + 16.5);
       });
     };
 
