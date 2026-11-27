@@ -59,7 +59,8 @@ export default function CreateTripPage() {
     trip_type: 'one_way',
     preferences: '',
   });
-  const [mode, setMode] = useState<'ai' | 'manual'>('ai');
+  const [mode, setMode] = useState<'ai' | 'manual' | 'direct'>('ai')
+  const [teaStop, setTeaStop] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [gettingFrom, setGettingFrom] = useState(false);
@@ -117,7 +118,9 @@ export default function CreateTripPage() {
         ...form,
         preferences: mode === 'ai' ? form.preferences : '',
         itinerary_mode: mode,
-        days: Number(form.days) || 1,
+        tea_stop: mode === 'direct' ? teaStop : undefined,
+        ...(mode === 'direct' ? { trip_type: 'one_way' } : {}),
+        days: mode === 'direct' ? 1 : Number(form.days) || 1,
       });
       navigate(`/trips/${result.trip.id}`);
     } catch (err: unknown) {
@@ -156,7 +159,7 @@ export default function CreateTripPage() {
             </div>
             <h1 style={styles.title}>Plan Your Expedition</h1>
             <p style={styles.subtitle}>
-              {mode === 'ai' ? 'Enter your route details and AI will generate day-wise fuel stops, scenic viewpoints, dhabas, and stays.' : 'Enter your route details, then add the places you want to stop at one by one.'}
+              {mode === 'ai' ? 'Enter your route details and AI will generate day-wise fuel stops, scenic viewpoints, dhabas, and stays.' : mode === 'direct' ? 'Pick where you start and where you end. No stops to plan.' : 'Enter your route details, then add the places you want to stop at one by one.'}
             </p>
           </div>
 
@@ -171,8 +174,9 @@ export default function CreateTripPage() {
             {/* Itinerary mode */}
             <div style={styles.fieldGroup}>
               <label style={styles.label}>How do you want to plan this trip?</label>
-              <div role="radiogroup" aria-label="Itinerary mode" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div role="radiogroup" aria-label="Itinerary mode" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
                 {([
+                  { value: 'direct', title: 'Point to point', desc: 'Straight from A to B. No stops, or one tea break on the way.', icon: 'road' },
                   { value: 'ai', title: 'Generate with AI', desc: 'AI suggests a day-by-day route with fuel, food and rest stops. You can edit it afterwards.', icon: 'spark' },
                   { value: 'manual', title: 'Build step by step', desc: 'Start with an empty plan. Search for places and add them one at a time.', icon: 'list' },
                 ] as const).map(o => {
@@ -205,6 +209,7 @@ export default function CreateTripPage() {
             </div>
 
             {/* Trip Type */}
+            {mode !== 'direct' && (
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Trip Style</label>
               <div className="responsive-trip-type-grid" style={styles.tripTypeGrid}>
@@ -234,6 +239,7 @@ export default function CreateTripPage() {
                 })}
               </div>
             </div>
+            )}
 
             {/* From & To Row with Swap */}
             <div className="responsive-route-row" style={styles.routeRow}>
@@ -287,6 +293,7 @@ export default function CreateTripPage() {
             </div>
 
             {/* Number of Days */}
+            {mode !== 'direct' && (
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Number of Days</label>
               <div style={styles.stepperBox}>
@@ -314,6 +321,18 @@ export default function CreateTripPage() {
                 </button>
               </div>
             </div>
+            )}
+
+            {/* Tea stop (point to point) */}
+            {mode === 'direct' && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12, cursor: 'pointer', border: '1px solid var(--border-color, var(--pz-line))', background: 'var(--bg-card, transparent)', color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={teaStop} onChange={(e) => setTeaStop(e.target.checked)} style={{ width: 22, height: 22, accentColor: 'var(--pz-accent)', flexShrink: 0 }} />
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 15 }}><Icon name="coffee" /> Add one tea stop</span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-secondary)', marginTop: 2, lineHeight: 1.4 }}>A cafe or tea shop near the middle of the road. Skipped if none is mapped on your route.</span>
+                </span>
+              </label>
+            )}
 
             {/* Group size */}
             <div style={styles.fieldGroup}>
@@ -416,9 +435,9 @@ export default function CreateTripPage() {
               }}
             >
               {loading ? (
-                <span>{mode === 'ai' ? 'AI is planning your waypoints...' : 'Creating your trip...'}</span>
+                <span>{mode === 'ai' ? 'AI is planning your waypoints...' : mode === 'direct' && teaStop ? 'Finding a tea stop on your route...' : 'Creating your trip...'}</span>
               ) : (
-                <span>{mode === 'ai' ? 'Generate Itinerary with AI' : 'Create Trip and Add Stops'}</span>
+                <span>{mode === 'ai' ? 'Generate Itinerary with AI' : mode === 'direct' ? 'Create Point to Point Trip' : 'Create Trip and Add Stops'}</span>
               )}
             </button>
           </form>

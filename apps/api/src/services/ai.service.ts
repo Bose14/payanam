@@ -629,3 +629,55 @@ type must be one of: fuel_stop, stay, attraction, meal, rest.`;
     return fallback();
   }
 }
+
+
+/**
+ * Point to point: no plan at all, or exactly one tea / refreshment stop that really lies on the
+ * road, closest to the middle of the ride. A cafe is preferred over a restaurant.
+ */
+export async function buildDirectItinerary(
+  from: string,
+  to: string,
+  coords: { fromLat?: number | null; fromLng?: number | null; toLat?: number | null; toLng?: number | null },
+  teaStop: boolean,
+): Promise<{ plan: ItineraryDay[]; teaStopFound: boolean }> {
+  const empty = { plan: [{ day: 1, stops: [] }] as ItineraryDay[], teaStopFound: false };
+  if (!teaStop) return empty;
+
+  const a: LatLng | null = coords.fromLat != null && coords.fromLng != null ? { lat: coords.fromLat, lng: coords.fromLng } : await geocodePlace(from);
+  const b: LatLng | null = coords.toLat != null && coords.toLng != null ? { lat: coords.toLat, lng: coords.toLng } : await geocodePlace(to);
+  const route = a && b ? await fetchBestRoute(a, b) : null;
+  if (!route || !a || !b) return empty;
+
+  const pois = await poisAlongRoute(route.path, { maxPerKind: 40 });
+  const total = route.path.totalKm;
+  const usable = pois.filter((p) => (p.kind === 'cafe' || p.kind === 'restaurant') && p.offKm <= 1.5
+    && haversineKm(p, a) > 1 && haversineKm(p, b) > 1);
+  const pick = (lo: number, hi: number) => usable
+    .filter((p) => p.km >= total * lo && p.km <= total * hi)
+    .sort((x, y) => teaScore(y, total) - teaScore(x, total))[0];
+  const tea = pick(0.25, 0.75) ?? pick(0.1, 0.9);
+  if (!tea) return empty;
+
+  return {
+    teaStopFound: true,
+    plan: [{
+      day: 1,
+      stops: [{
+        order: 1,
+        place: tea.name,
+        type: 'rest',
+        description: `Tea and refreshment break, ${Math.round(tea.km)} km into the ride, ${tea.offKm <= 0.5 ? 'right on your route' : `${tea.offKm.toFixed(1)} km off the road`}.`,
+        estimatedKm: Math.round(tea.km),
+        durationHours: 0.25,
+        tips: 'A short break halfway keeps you fresh for the second half.',
+        lat: tea.lat,
+        lng: tea.lng,
+      }],
+    }],
+  };
+}
+
+function teaScore(p: RoutePoi, total: number): number {
+  return p.score + (p.kind === 'cafe' ? 2 : 0) - (Math.abs(p.km - total / 2) / Math.max(total, 1)) * 10;
+}
