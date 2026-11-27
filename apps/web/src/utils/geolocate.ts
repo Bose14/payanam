@@ -7,13 +7,14 @@
 export type GeoFailure = 'denied' | 'unavailable' | 'timeout' | 'unsupported' | 'insecure';
 
 export class GeoError extends Error {
-  constructor(public reason: GeoFailure) { super(reason); }
+  /** `detail` is the browser's own wording, kept so a failure can be diagnosed. */
+  constructor(public reason: GeoFailure, public detail = '') { super(reason); }
 }
 
 export const GEO_MESSAGES: Record<GeoFailure, string> = {
   denied: 'Location is blocked for this site. Allow Location in your browser or phone settings for this site, then try again.',
-  unavailable: 'Your phone could not find its position. Turn on device Location (GPS) and try again.',
-  timeout: 'Finding your position took too long. Step outside or near a window, make sure Location is on, and try again.',
+  unavailable: 'Your device could not work out its position. Phone: turn on Location (GPS). Laptop: turn on Location services in the system settings and allow your browser (Windows: Settings > Privacy & security > Location. Mac: System Settings > Privacy & Security > Location Services). Or just type the place.',
+  timeout: 'Finding your position took too long. Make sure Location is on (on a laptop it uses Wi-Fi, so be connected to Wi-Fi), then try again, or type the place.',
   unsupported: 'This browser cannot share your location. Type the place instead.',
   insecure: 'Location only works on a secure (https) page. Open the app from its https address.',
 };
@@ -32,11 +33,11 @@ export async function getPosition(): Promise<GeolocationPosition> {
   try {
     return await once({ enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
   } catch (first) {
-    if (reasonOf(first) === 'denied') throw new GeoError('denied');
+    if (reasonOf(first) === 'denied') throw new GeoError('denied', (first as GeolocationPositionError).message ?? '');
     try {
       return await once({ enableHighAccuracy: false, timeout: 12000, maximumAge: 5 * 60 * 1000 });
     } catch (second) {
-      throw new GeoError(reasonOf(second));
+      throw new GeoError(reasonOf(second), (second as GeolocationPositionError | undefined)?.message ?? '');
     }
   }
 }
